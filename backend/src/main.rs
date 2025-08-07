@@ -1,17 +1,11 @@
-use std::net::Ipv4Addr;
-
-use axum::handler::HandlerWithoutStateExt;
-use tokio::net::TcpListener;
+mod app_config;
+mod db;
+mod entity;
+mod logger;
+mod server;
+mod http;
 
 #[tokio::main]
 async fn main() {
-    let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, 10086))
-        .await
-        .unwrap();
-
-    axum::serve(listener, service.into_service()).await.unwrap()
-}
-
-async fn service() -> &'static str {
-    "Hello world!"
+    server::start().await;
 }
