@@ -12,7 +12,9 @@ static CONFIG: LazyLock<AppConfig> = LazyLock::new(|| AppConfig::load());
 #[derive(Deserialize)]
 pub struct AppConfig {
     server: ServerConfig,     // server 配置字段
-    database: DatabaseConfig, // database 配置字段
+
+    #[serde(rename = "database")]
+    db: DatabaseConfig, // db 配置字段
 }
 
 impl AppConfig {
@@ -46,5 +48,5 @@ pub fn get_server() -> &'static ServerConfig {
 }
 
 pub fn get_database() -> &'static DatabaseConfig {
-    &CONFIG.database
+    &CONFIG.db
 }

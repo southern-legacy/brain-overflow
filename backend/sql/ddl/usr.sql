@@ -3,10 +3,11 @@ CREATE DATABASE br_ovfl OWNER postgres;
 CREATE SCHEMA "usr" AUTHORIZATION postgres;
 
 CREATE TABLE "usr"."usr_info" (
-    "id" SERIAL PRIMARY KEY,
+    "id" BIGSERIAL PRIMARY KEY,
     "name" CHAR(32) NOT NULL,
-    "email" VARCHAR(256) UNIQUE CHECK ("email" ~* '^[\w\d._%+-]+@[\w\d.-]+\.[\w\d]{2,}$'),
+    "email" VARCHAR(256) UNIQUE CHECK ("email" ~* '^[\w._%+-]+@[\w.-]+\.\w{2,}$'),
     "phone" CHAR(16) UNIQUE CHECK ("phone" ~* '^\+\d{1,15}$'),
+    "salt" CHAR(22) NOT NULL,
     "passwd_hash" TEXT NOT NULL,
 
     CONSTRAINT login_method CHECK (("email" IS NOT NULL) OR ("phone" IS NOT NULL))

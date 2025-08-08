@@ -9,23 +9,25 @@ pub async fn init() -> sea_orm::DbConn {
     let _ = span.enter();
 
     let db_config = app_config::get_database();
-    let mut conn_opts = ConnectOptions::new(
-        format!("postgres://{}:{}@{}:{}/{}",
-                db_config.usr(),
-                db_config.passwd(),
-                db_config.host(),
-                db_config.port(),
-                db_config.db()
-        ));
+    let url = format!("postgres://{}:{}@{}:{}/{}",
+        db_config.usr(),
+        db_config.passwd(),
+        db_config.host(),
+        db_config.port(),
+        db_config.db()
+    );
+    tracing::info!("Connecting to database: {url}");
+
+    let mut conn_opts = ConnectOptions::new(url);
 
     conn_opts
         .min_connections(db_config.min_conn())
         .max_connections(db_config.max_conn())
+        .sqlx_logging(db_config.log_sql())
         .connect_timeout(Duration::from_secs(20))
         .acquire_timeout(Duration::from_secs(20))
         .idle_timeout(Duration::from_secs(5))
-        .max_lifetime(Duration::from_secs(300))
-        .sqlx_logging(false);
+        .max_lifetime(Duration::from_secs(300));
 
 
     let conn = sea_orm::Database::connect(conn_opts).await.unwrap();
@@ -38,7 +40,7 @@ pub async fn init() -> sea_orm::DbConn {
         .await.unwrap().ok_or("Cannot get the version of database".to_string());
 
     match version {
-        Ok(version) => info!("数据库版本: {}", version.try_get_by_index::<String>(0).unwrap()),
+        Ok(version) => info!("Database version: {}", version.try_get_by_index::<String>(0).unwrap()),
         Err(e) => panic!("{}", e),
     }
 

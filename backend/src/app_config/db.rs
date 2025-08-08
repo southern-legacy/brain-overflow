@@ -7,9 +7,17 @@ pub struct DatabaseConfig {
     port: Option<u16>,
     usr: Option<String>,
     passwd: Option<String>,
+
+    #[serde(rename = "database")]
     db: Option<String>,
+
+    #[serde(rename = "max_connection")]
     max_conn: Option<u32>,
+
+    #[serde(rename = "min_connection")]
     min_conn: Option<u32>,
+
+    log_sql: Option<bool>,
 }
 
 impl DatabaseConfig {
@@ -39,5 +47,9 @@ impl DatabaseConfig {
     
     pub fn min_conn(&self) -> u32 {
         self.min_conn.unwrap_or(min((num_cpus::get() * 4) as u32, 10))
+    }
+
+    pub fn log_sql(&self) -> bool {
+        self.log_sql.unwrap_or(false)
     }
 }

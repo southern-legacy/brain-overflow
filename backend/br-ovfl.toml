@@ -2,10 +2,12 @@
 port = 10086
 ipv4_enabled = false
 ipv6_enabled = true
+log_level = "info"
 
 [database]
-host = "127.0.0.1"
+host = "localhost"
 port = 5432
 user = "postgres"
 passwd = "123456"
-database = "postgres"
+database = "br_ovfl"
+log_sql = false
