@@ -77,7 +77,7 @@ pub(super) async fn signup(
             ).into_response()
         }
         Err(e) => {
-            tracing::error!("Failed to sign up a user! details: {e}");
+            tracing::error!("Failed to sign up a user! details: {:#?}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
