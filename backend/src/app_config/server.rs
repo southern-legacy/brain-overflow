@@ -27,9 +27,9 @@ impl ServerConfig {
     }
 
     pub fn secret_key(&self) -> &str {
-        // 默认值为 "default secret key of web-starter"
+        // 默认值为 "Brain Overflow, designed neither for merchant, nor for fortune, but for cultivating skills, by Southern Lagecy, under MIT lisence."
         self.secret_key
             .as_deref()
-            .unwrap_or("ZGVmYXVsdCBzZWNyZXQga2V5IG9mIHdlYi1zdGFydGVy")
+            .unwrap_or("QnJhaW4gT3ZlcmZsb3csIGRlc2lnbmVkIG5laXRoZXIgZm9yIG1lcmNoYW50LCBub3IgZm9yIGZvcnR1bmUsIGJ1dCBmb3IgY3VsdGl2YXRpbmcgc2tpbGxzLCBieSBTb3V0aGVybiBMYWdlY3ksIHVuZGVyIE1JVCBsaXNlbmNlLg")
     }
 }
