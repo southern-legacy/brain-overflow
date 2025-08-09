@@ -1,26 +1,18 @@
 use std::{pin::Pin, sync::LazyLock};
-
 use crate::http::jwt::{DEFAULT_VALIDATION, Jwt};
+use crate::http::api::usr::UsrIdent;
 use axum::http::HeaderValue;
+use axum::response::Response;
 use axum::{
     body::Body,
     extract::Request,
-    http::{Response, StatusCode, header},
+    http::{StatusCode, header},
     response::IntoResponse,
 };
-use serde::{Deserialize, Serialize};
 use tower_http::auth::{AsyncAuthorizeRequest, AsyncRequireAuthorizationLayer};
 
 pub static AUTH_LAYER: LazyLock<AsyncRequireAuthorizationLayer<Auth>> =
     LazyLock::new(|| AsyncRequireAuthorizationLayer::new(Auth));
-
-#[derive(Deserialize, Serialize, Clone)]
-pub struct UsrIdent {
-    pub id: i64,
-    pub name: String,
-    pub email: Option<String>,
-    pub phone: Option<String>,
-}
 
 #[derive(Clone)]
 pub struct Auth;
@@ -57,7 +49,7 @@ impl AsyncAuthorizeRequest<Body> for Auth {
     }
 }
 
-fn decode_header(token: &HeaderValue) -> Result<&str, Response<Body>> {
+fn decode_header(token: &HeaderValue) -> Result<&str, Response> {
     match token.to_str() {
         Ok(h) => Ok(h),
         Err(e) => {
@@ -70,7 +62,7 @@ fn decode_header(token: &HeaderValue) -> Result<&str, Response<Body>> {
     }
 }
 
-fn strip_prefix_bearer(field: &str) -> Result<&str, Response<Body>> {
+fn strip_prefix_bearer(field: &str) -> Result<&str, Response> {
     match field.strip_prefix("Bearer ") {
         Some(token) => Ok(token),
         None => {
@@ -83,7 +75,7 @@ fn strip_prefix_bearer(field: &str) -> Result<&str, Response<Body>> {
     }
 }
 
-fn get_usr_ident(token: &str) -> Result<UsrIdent, Response<Body>> {
+fn get_usr_ident(token: &str) -> Result<UsrIdent, Response> {
     match Jwt::<UsrIdent>::decode_with(token, &DEFAULT_VALIDATION) {
         Ok(usr_ident) => Ok(usr_ident),
         Err(e) => {

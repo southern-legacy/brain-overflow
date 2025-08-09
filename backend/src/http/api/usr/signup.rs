@@ -1,98 +1,84 @@
-use std::borrow::Cow;
-
-use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse, Json};
-use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine};
-use sea_orm::{ActiveValue::{NotSet, Set}, EntityTrait, IntoActiveModel};
-use serde::Deserialize;
-use validator::{Validate, ValidationError, ValidationErrors};
-
-use crate::entity::usr::{prelude::UsrInfo, usr_info::{self}};
-use crate::http::{
-    api::usr::ARGON2_CONFIG,
-    jwt::Jwt,
-    middelware::auth::UsrIdent,
-    utils
+use axum::{debug_handler, extract::State, http::{header, StatusCode}, response::{IntoResponse, Response}, Json};
+use axum_valid::Valid;
+use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
+use sea_orm::{
+    ActiveValue::{NotSet, Set},
+    EntityTrait, IntoActiveModel,
 };
+use serde::Deserialize;
+use validator::Validate;
+
+use crate::http::{api::usr::{UsrIdent, ARGON2_CONFIG}, jwt::Jwt};
 use crate::server::ServerState;
+use crate::{
+    entity::usr::{
+        prelude::UsrInfo,
+        usr_info::{self},
+    },
+    http::api::usr::{LoginMethod, Param},
+};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub(super) struct SignupParam {
+    #[validate(length(max = 32))]
     name: String,
-    email: Option<String>,
-    phone: Option<String>,
-    passwd: String,
-}
 
-impl Validate for SignupParam {
-    fn validate(&self) -> Result<(), ValidationErrors> {
-        let mut errors = ValidationErrors::new();
-        if self.name.len() > 32 {
-            errors.add(
-                "Name",
-                ValidationError::new("Too long for a name").with_message(Cow::Borrowed("Expected ONE sign up method"))
-            );
-        }
-
-        if !(self.email.is_some() ^ self.phone.is_some()) {
-            errors.add(
-                "Sign up method",
-                ValidationError::new("Incorrect method").with_message(Cow::Borrowed("Expected ONE sign up method"))
-            );
-        }
-
-        if self.email.is_some() && !utils::meet_email_format(&self.email.as_ref().unwrap()) {
-            errors.add(
-                "Validation",
-                ValidationError::new("format invalid").with_message(Cow::Borrowed("email address format is invalid")),
-            );
-        }
-
-        if self.phone.is_some() && !utils::meet_phone_format(&self.phone.as_ref().unwrap()) {
-            errors.add(
-                "Validation",
-                ValidationError::new("format invalid").with_message(Cow::Borrowed("phone number format is invalid")),
-            );
-        }
-
-        if errors.is_empty() { Ok(()) }
-        else { Err(errors) }
-    }
+    #[validate(nested)]
+    #[serde(flatten)]
+    usr_param: Param,
 }
 
 #[debug_handler]
+#[tracing::instrument(name = "[usr/signup]", skip_all)]
 pub(super) async fn signup(
     state: State<ServerState>,
-    param: Json<SignupParam>
-) -> impl IntoResponse {
+    Valid(Json(param)): Valid<Json<SignupParam>>,
+) -> Response {
     let salt = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::new_v4().into_bytes());
-    let SignupParam { name, email, phone, passwd } = param.0;
+    let SignupParam { name, usr_param } = param;
+    let Param { method, passwd } = usr_param;
+
+    let (email, phone) = match method.clone() {
+        LoginMethod::Email(email) => (Set(Some(email)), NotSet),
+        LoginMethod::Phone(phone) => (NotSet, Set(Some(phone))),
+    };
 
     let new_usr = usr_info::ActiveModel {
         id: NotSet,
+        email: email,
+        phone: phone,
         name: Set(name.clone()),
-        email: Set(email.clone()),
-        phone: Set(phone.clone()),
         salt: Set(salt.clone()),
-        passwd_hash: match argon2::hash_encoded(passwd.as_bytes(), salt.as_bytes(), &ARGON2_CONFIG) {
+        passwd_hash: match argon2::hash_encoded(passwd.as_bytes(), salt.as_bytes(), &ARGON2_CONFIG)
+        {
             Ok(val) => Set(val),
             Err(e) => {
                 tracing::error!("Error occured while hashing the password! {e}");
-                return (StatusCode::INTERNAL_SERVER_ERROR, Cow::Borrowed(""))
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }
-        }
+        },
     };
 
-    match UsrInfo::insert(new_usr.into_active_model()).exec(state.db()).await {
+    match UsrInfo::insert(new_usr.into_active_model())
+        .exec(state.db())
+        .await
+    {
         Ok(val) => {
             tracing::info!("Successfully insert a user into database.");
-            (StatusCode::OK, Cow::Owned(Jwt::generate(UsrIdent {
-                id: val.last_insert_id,
-                email, phone, name,
-            })))
-        },
+            (
+                StatusCode::CREATED,
+                [(header::LOCATION, format!("/usr/{}", val.last_insert_id))],
+                Jwt::generate(UsrIdent {
+                    id: val.last_insert_id,
+                    email: method.get_email().map(|v| String::from(v)),
+                    phone: method.get_phone().map(|v| String::from(v)),
+                    name,
+                }),
+            ).into_response()
+        }
         Err(e) => {
             tracing::error!("Failed to sign up a user! details: {e}");
-            (StatusCode::INTERNAL_SERVER_ERROR, Cow::Owned("Failed to sign up".to_string()))
-        },
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }

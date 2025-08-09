@@ -1,107 +1,93 @@
-use std::borrow::Cow;
-
+use crate::entity::usr::usr_info::Model;
 use crate::entity::usr::{prelude::UsrInfo, usr_info};
-use crate::http::{jwt::Jwt, middelware::auth::UsrIdent, utils};
+use crate::http::api::usr::{Param, UsrIdent};
+use crate::http::jwt::Jwt;
 use crate::server::ServerState;
 
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
+use axum::response::{IntoResponse, Response};
 use axum::{Json, debug_handler};
 use axum_valid::Valid;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryTrait};
-use serde::Deserialize;
-use validator::{Validate, ValidationError, ValidationErrors};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, QueryTrait};
 
-#[derive(Deserialize, Debug)]
-pub(super) struct LoginParam {
-    id: Option<i64>,
-    email: Option<String>,
-    phone: Option<String>,
+type LoginParam = Param;
+
+#[debug_handler]
+#[tracing::instrument(name = "[usr/login] by id", skip_all, fields(usr_id = %id))]
+pub(crate) async fn login_by_id(
+    state: State<ServerState>,
+    Path(id): Path<i64>,
     passwd: String,
-}
+) -> Response {
+    let res = UsrInfo::find_by_id(id).one(state.db());
 
-impl Validate for LoginParam {
-    fn validate(&self) -> Result<(), ValidationErrors> {
-        let mut errors = ValidationErrors::new();
-
-        let mut count: u8 = 0;
-        if self.id.is_some() { count += 1; }
-        if self.email.is_some() { count += 1; }
-        if self.phone.is_some() { count += 1; }
-
-        if count > 1 {
-            errors.add(
-                "Login method",
-                ValidationError::new("identifier").with_message(Cow::Borrowed("multiple identifier supplied")),
-            );
-        } else if count == 0 {
-            errors.add(
-                "Login method",
-                ValidationError::new("identifier").with_message(Cow::Borrowed("no identifier supplied")),
-            );
-        }
-
-        if self.email.is_some() && !utils::meet_email_format(&self.email.as_ref().unwrap()) {
-            errors.add(
-                "Validation",
-                ValidationError::new("format invalid").with_message(Cow::Borrowed("email address format is invalid")),
-            );
-        }
-
-        if self.phone.is_some() && !utils::meet_phone_format(&self.phone.as_ref().unwrap()) {
-            errors.add(
-                "Validation",
-                ValidationError::new("format invalid").with_message(Cow::Borrowed("phone number format is invalid")),
-            );
-        }
-
-        if errors.is_empty() { Ok(()) }
-        else { Err(errors) }
-    }
+    check_passwd_and_respond(res.await, &passwd)
 }
 
 #[debug_handler]
-#[tracing::instrument(name = "[Login]", skip(state))]
-pub(super) async fn login(state: State<ServerState>, param: Valid<Json<LoginParam>>) -> impl IntoResponse {
+#[tracing::instrument(name = "[usr/login] by phone/email", skip_all, fields(method = %param.method.get_anyway()))]
+pub(super) async fn login_by_email_or_phone(
+    state: State<ServerState>,
+    param: Valid<Json<LoginParam>>,
+) -> Response {
+    let method = &param.method;
     let res = UsrInfo::find()
-        .apply_if(param.id.as_ref(),    |rows, id| rows.filter(usr_info::Column::Id.eq(*id)))
-        .apply_if(param.email.as_ref(), |rows, email| rows.filter(usr_info::Column::Email.eq(email)))
-        .apply_if(param.phone.as_ref(), |rows, phone| rows.filter(usr_info::Column::Phone.eq(phone)))
+        .apply_if(method.get_email(), |rows, email| {
+            rows.filter(usr_info::Column::Email.eq(email))
+        })
+        .apply_if(method.get_phone(), |rows, phone| {
+            rows.filter(usr_info::Column::Phone.eq(phone))
+        })
         .one(state.db());
 
-    match res.await {
-        Ok(Some(val)) => {
-            match argon2::verify_encoded(&val.passwd_hash, param.passwd.as_bytes()) {
-                Ok(true) => {
-                    tracing::info!("User {} login successfully", val.id);
-                    (StatusCode::OK, Cow::Owned(Jwt::generate(UsrIdent {
-                        id: val.id,
-                        name: val.name,
-                        email: val.email,
-                        phone: val.phone,
-                    })))
-                },
-                Ok(false) => {
-                    tracing::info!("User {} login with incrrect pasword", val.id);
-                    (StatusCode::UNAUTHORIZED, Cow::Borrowed("Your password or account don't match"))
-                }
-                Err(e) => {
-                    tracing::error!("Error checking password! {e}");
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Cow::Borrowed("Error occurs while checking your account info! Please change your pasword!")
-                    )
-                }
-            }
-        },
+    check_passwd_and_respond(res.await, &param.passwd)
+}
+
+fn check_passwd_and_respond(
+    query_res: Result<Option<Model>, DbErr>,
+    passwd: &str,
+) -> Response {
+    match query_res {
+        Ok(Some(val)) => check_passwd(val, passwd),
         Ok(None) => {
             tracing::info!("No account for this user");
-            (StatusCode::UNAUTHORIZED, Cow::Borrowed("You don't have an account!"))
-        },
+            StatusCode::UNAUTHORIZED.into_response()
+        }
         Err(e) => {
             tracing::error!("Database error! details: {e}");
-            (StatusCode::INTERNAL_SERVER_ERROR, Cow::Owned(e.to_string()))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "You can't login now, because of database error, which is my fault."
+            ).into_response()
+        }
+    }
+}
+
+fn check_passwd(val: Model, passwd: &str) -> Response {
+    match argon2::verify_encoded(&val.passwd_hash, passwd.as_bytes()) {
+        Ok(true) => {
+            tracing::info!("User {} login successfully", val.id);
+            (
+                StatusCode::OK,
+                Jwt::generate(UsrIdent {
+                    id: val.id,
+                    name: val.name,
+                    email: val.email,
+                    phone: val.phone,
+                }),
+            ).into_response()
+        }
+        Ok(false) => {
+            tracing::info!("User {} login with incrrect pasword", val.id);
+            StatusCode::UNAUTHORIZED.into_response()
+        }
+        Err(e) => {
+            tracing::error!("Error checking password! {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Error occurs while checking your password, which is my fault!",
+            ).into_response()
         }
     }
 }

@@ -28,9 +28,7 @@ impl ServerState {
 
 pub async fn start() {
     logger::init();
-    let conn = crate::db::init().await;
-
-    let router = http::build_router().with_state(ServerState { db: conn });
+    let conn = crate::db::init();
 
     let tracing_layer = TraceLayer::new_for_http()
         .make_span_with(|req: &Request| {
@@ -42,16 +40,21 @@ pub async fn start() {
         .on_failure(())
         .on_request(())
         .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
+
     let timeout_layer = TimeoutLayer::new(Duration::from_secs(120));
+
     let body_limit_layer = DefaultBodyLimit::max((1024 * 1024 * 16) as usize); // 16 MB 的最大报文大小
+
     let cors_layer = CorsLayer::new()
         .allow_methods(cors::Any)
         .allow_headers(cors::Any)
         .allow_origin(cors::Any)
         .allow_credentials(false)
         .max_age(Duration::from_secs(3600 * 24));
+
     let path_normalize_layer = NormalizePathLayer::trim_trailing_slash();
 
+    let router = http::build_router();
     let router = router
         .layer(timeout_layer)
         .layer(body_limit_layer)
@@ -64,12 +67,12 @@ pub async fn start() {
             .await
             .unwrap();
         info!("Listening on {}", listener.local_addr().unwrap());
-        axum::serve(listener, router).await.unwrap()
+        axum::serve(listener, router.with_state(ServerState { db: conn.await })).await.unwrap()
     } else if app_config::get_server().ipv6_enabled() {
         let listener = TcpListener::bind((Ipv6Addr::UNSPECIFIED, app_config::get_server().port()))
             .await
             .unwrap();
         info!("Listening on {}", listener.local_addr().unwrap());
-        axum::serve(listener, router).await.unwrap()
+        axum::serve(listener, router.with_state(ServerState { db: conn.await })).await.unwrap()
     }
 }

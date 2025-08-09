@@ -46,3 +46,16 @@ pub async fn init() -> sea_orm::DbConn {
 
     return conn;
 }
+
+// pub fn error_handling(e: DbErr) -> Cow<'static, str> {
+//     match e {
+//         DbErr::Exec(RuntimeErr::SqlxError(error)) => match error {
+//             sqlx::Error::Database(e) => {
+//                 assert_eq!(e.code().unwrap(), "23000");
+//             }
+//             _ => tracing::error!("Unexpected sqlx::Error kind"),
+//         },
+//         _ => tracing::error!("Database error! details: {e}"),
+//     }
+//     todo!()
+// }

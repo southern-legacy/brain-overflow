@@ -70,7 +70,7 @@ impl<T: Serialize + for<'de> Deserialize<'de>> Jwt<T> {
         // 查看源码可知, encode 函数仅在 header.alg.algorithmfamily 和 key 的 algorithm family不一样的时候
         // 此处: Encoding Key 和 Decoding Key 均为二进制序列, 不可能抛出异常, 故直接 unwrap
         let res = jsonwebtoken::encode(&header, &self, &ENCODING_KEY).unwrap();
-        tracing::info!("生成一个 JSON Web Toke");
+        tracing::info!("Generated a JSON Web Token");
         res
     }
 
