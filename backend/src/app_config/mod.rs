@@ -11,7 +11,7 @@ static CONFIG: LazyLock<AppConfig> = LazyLock::new(|| AppConfig::load());
 
 #[derive(Deserialize)]
 pub struct AppConfig {
-    server: ServerConfig,     // server 配置字段
+    server: ServerConfig, // server 配置字段
 
     #[serde(rename = "database")]
     db: DatabaseConfig, // db 配置字段
@@ -29,11 +29,13 @@ impl AppConfig {
             .build() // 启动 I/O 读取配置文件（可能出错）
             .map_err(|e| {
                 println!("读取配置时出错: {e}");
-            }).unwrap()
+            })
+            .unwrap()
             .try_deserialize() // 解析配置文件（可能出错）
             .map_err(|e| {
                 println!("无法反序列化配置文件: {e}");
-            }).unwrap();
+            })
+            .unwrap();
 
         let server_config = &configuration.server;
         if !server_config.ipv6_enabled() ^ server_config.ipv4_enabled() {

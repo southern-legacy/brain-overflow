@@ -14,6 +14,7 @@ pub fn init() {
                 .with_line_number(true)
                 .with_thread_names(true)
                 .with_thread_ids(false)
-                .pretty()
-        ).init()
+                .pretty(),
+        )
+        .init()
 }

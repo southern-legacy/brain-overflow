@@ -1,15 +1,16 @@
-use std::time::Duration;
+use crate::app_config;
 use sea_orm::{ConnectOptions, ConnectionTrait, DbBackend, Statement};
+use std::time::Duration;
 use tracing::info_span;
 use tracing::log::info;
-use crate::app_config;
 
 pub async fn init() -> sea_orm::DbConn {
     let span = info_span!("Setting up database connection...");
     let _ = span.enter();
 
     let db_config = app_config::get_database();
-    let url = format!("postgres://{}:{}@{}:{}/{}",
+    let url = format!(
+        "postgres://{}:{}@{}:{}/{}",
         db_config.usr(),
         db_config.passwd(),
         db_config.host(),
@@ -29,7 +30,6 @@ pub async fn init() -> sea_orm::DbConn {
         .idle_timeout(Duration::from_secs(5))
         .max_lifetime(Duration::from_secs(300));
 
-
     let conn = sea_orm::Database::connect(conn_opts).await.unwrap();
 
     let version = conn
@@ -37,10 +37,15 @@ pub async fn init() -> sea_orm::DbConn {
             DbBackend::Postgres,
             String::from("SELECT version()"),
         ))
-        .await.unwrap().ok_or("Cannot get the version of database".to_string());
+        .await
+        .unwrap()
+        .ok_or("Cannot get the version of database".to_string());
 
     match version {
-        Ok(version) => info!("Database version: {}", version.try_get_by_index::<String>(0).unwrap()),
+        Ok(version) => info!(
+            "Database version: {}",
+            version.try_get_by_index::<String>(0).unwrap()
+        ),
         Err(e) => panic!("{}", e),
     }
 

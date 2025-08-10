@@ -1,6 +1,5 @@
-use std::{pin::Pin, sync::LazyLock};
-use crate::http::jwt::{DEFAULT_VALIDATION, Jwt};
 use crate::http::api::usr::UsrIdent;
+use crate::http::jwt::{DEFAULT_VALIDATION, Jwt};
 use axum::http::HeaderValue;
 use axum::response::Response;
 use axum::{
@@ -9,6 +8,7 @@ use axum::{
     http::{StatusCode, header},
     response::IntoResponse,
 };
+use std::{pin::Pin, sync::LazyLock};
 use tower_http::auth::{AsyncAuthorizeRequest, AsyncRequireAuthorizationLayer};
 
 pub static AUTH_LAYER: LazyLock<AsyncRequireAuthorizationLayer<Auth>> =

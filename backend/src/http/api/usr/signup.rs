@@ -1,4 +1,9 @@
-use axum::{debug_handler, extract::State, http::{header, StatusCode}, response::{IntoResponse, Response}, Json};
+use axum::{
+    Json, debug_handler,
+    extract::State,
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
+};
 use axum_valid::Valid;
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
 use sea_orm::{
@@ -8,12 +13,15 @@ use sea_orm::{
 use serde::Deserialize;
 use validator::Validate;
 
-use crate::http::{api::usr::{UsrIdent, ARGON2_CONFIG}, jwt::Jwt};
+use crate::http::{
+    api::usr::{ARGON2_CONFIG, UsrIdent},
+    jwt::Jwt,
+};
 use crate::server::ServerState;
 use crate::{
     entity::usr::{
         prelude::UsrInfo,
-        usr_info::{self},
+        usr_info
     },
     http::api::usr::{LoginMethod, Param},
 };
@@ -74,7 +82,8 @@ pub(super) async fn signup(
                     phone: method.get_phone().map(|v| String::from(v)),
                     name,
                 }),
-            ).into_response()
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::error!("Failed to sign up a user! details: {:#?}", e);

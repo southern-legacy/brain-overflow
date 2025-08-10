@@ -67,12 +67,16 @@ pub async fn start() {
             .await
             .unwrap();
         info!("Listening on {}", listener.local_addr().unwrap());
-        axum::serve(listener, router.with_state(ServerState { db: conn.await })).await.unwrap()
+        axum::serve(listener, router.with_state(ServerState { db: conn.await }))
+            .await
+            .unwrap()
     } else if app_config::get_server().ipv6_enabled() {
         let listener = TcpListener::bind((Ipv6Addr::UNSPECIFIED, app_config::get_server().port()))
             .await
             .unwrap();
         info!("Listening on {}", listener.local_addr().unwrap());
-        axum::serve(listener, router.with_state(ServerState { db: conn.await })).await.unwrap()
+        axum::serve(listener, router.with_state(ServerState { db: conn.await }))
+            .await
+            .unwrap()
     }
 }

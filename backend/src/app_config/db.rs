@@ -1,5 +1,5 @@
-use std::cmp::{max, min};
 use serde::Deserialize;
+use std::cmp::{max, min};
 
 #[derive(Deserialize)]
 pub struct DatabaseConfig {
@@ -42,11 +42,13 @@ impl DatabaseConfig {
     }
 
     pub fn max_conn(&self) -> u32 {
-        self.max_conn.unwrap_or(max((num_cpus::get() * 8) as u32, 10))
+        self.max_conn
+            .unwrap_or(max((num_cpus::get() * 8) as u32, 10))
     }
-    
+
     pub fn min_conn(&self) -> u32 {
-        self.min_conn.unwrap_or(min((num_cpus::get() * 4) as u32, 10))
+        self.min_conn
+            .unwrap_or(min((num_cpus::get() * 4) as u32, 10))
     }
 
     pub fn log_sql(&self) -> bool {

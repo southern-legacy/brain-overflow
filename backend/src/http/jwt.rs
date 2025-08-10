@@ -33,7 +33,7 @@ static ENCODING_KEY: LazyLock<EncodingKey> = LazyLock::new(|| {
 static DECODING_KEY: LazyLock<DecodingKey> = LazyLock::new(|| {
     let key = BASE64_STANDARD
         .decode(app_config::get_server().secret_key())
-        .expect("secret_key should be a string encoded in base64.");    
+        .expect("secret_key should be a string encoded in base64.");
     DecodingKey::from_secret(&key)
 });
 

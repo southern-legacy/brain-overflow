@@ -1,3 +1,4 @@
+mod bio;
 mod delete_account;
 mod info;
 mod login;
@@ -12,7 +13,7 @@ use crate::http::{middelware::auth::AUTH_LAYER, utils};
 use crate::server::ServerState;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::{routing, Extension, Router};
+use axum::{Extension, Router, routing};
 use sea_orm::{DbConn, EntityTrait};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError, ValidationErrors};
@@ -26,8 +27,9 @@ pub(super) fn build_router() -> Router<ServerState> {
             "/delete_account",
             routing::post(delete_account::delete_account),
         )
-        .route("/info", routing::get(info::info))
+        .route("/bio", routing::get(bio::bio_get))
         .route_layer(&*AUTH_LAYER)
+        .route("/info/{id}", routing::get(info::info))
         .route("/login", routing::post(login::login_by_email_or_phone))
         .route("/login/{id}", routing::post(login::login_by_id))
         .route("/signup", routing::post(signup::signup))
@@ -49,7 +51,7 @@ impl UsrIdent {
             Err(_) => {
                 tracing::error!("Cannot find the user {}", self.id);
                 Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-            },
+            }
         }
     }
 }
@@ -59,16 +61,6 @@ impl UsrIdent {
 enum LoginMethod {
     Phone(String),
     Email(String),
-}
-
-#[derive(Deserialize, Validate)]
-#[serde(deny_unknown_fields)]
-struct Param {
-    #[validate(nested)]
-    #[serde(flatten)]
-    method: LoginMethod,
-
-    passwd: String,
 }
 
 impl LoginMethod {
@@ -104,29 +96,82 @@ impl Validate for LoginMethod {
             Phone(phone) => {
                 if !utils::meet_phone_format(phone) {
                     let mut errors = ValidationErrors::new();
-                    errors.add("format", 
-                        ValidationError::new("1")
-                            .with_message(Cow::Borrowed("phone number didn't meet the reqiurement of format"))
+                    errors.add(
+                        "format",
+                        ValidationError::new("1").with_message(Cow::Borrowed(
+                            "phone number didn't meet the reqiurement of format",
+                        )),
                     );
                     Err(errors)
                 } else {
                     Ok(())
                 }
-            },
+            }
 
             Email(email) => {
                 if !utils::meet_email_format(email) {
                     let mut errors = ValidationErrors::new();
-                    errors.add("format", 
-                    ValidationError::new("1")
-                            .with_message(Cow::Borrowed("email number didn't meet the reqiurement of format"))
+                    errors.add(
+                        "format",
+                        ValidationError::new("1").with_message(Cow::Borrowed(
+                            "email number didn't meet the reqiurement of format",
+                        )),
                     );
                     Err(errors)
                 } else {
                     Ok(())
                 }
-            },
+            }
         }
+    }
+}
+
+#[derive(Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+struct Param {
+    #[validate(nested)]
+    #[serde(flatten)]
+    method: LoginMethod,
+
+    #[validate(custom(function = "validate_passwd"))]
+    passwd: String,
+}
+
+/// ## 验证密码复杂度
+///
+/// 三种字符，字母、数字、特殊字符，此函数将统计字母数、数字数、特殊字符数
+///
+/// 每种字符如果总数大于2，将被统计进字符种类数，如密码 "01234567891a" 就只算**一种字符**，因为只有**一个字母 'a'**
+///
+/// 这三种字符中必须有**两种以上**，如不满足，则无法通过校验
+///
+fn validate_passwd(val: &str) -> Result<(), ValidationError> {
+    let mut alphas = 0;
+    let mut numerics = 0;
+    let mut specials = 0;
+    for c in val.chars() {
+        if c.is_alphabetic() {
+            alphas += 1;
+        } else if c.is_numeric() {
+            numerics += 1;
+        } else {
+            specials += 1;
+        }
+    }
+
+    let count = |val| match val {
+        2.. => 1,
+        _ => 0,
+    };
+
+    let count = count(alphas) + count(numerics) + count(specials);
+
+    if alphas + numerics + specials <= 12 {
+        Err(ValidationError::new("password").with_message(Cow::Borrowed("Password is too short!")))
+    } else if count < 2 {
+        Err(ValidationError::new("password").with_message(Cow::Borrowed("Password is too simple!")))
+    } else {
+        Ok(())
     }
 }
 
@@ -140,9 +185,7 @@ async fn danger_zone_auth(
         Ok(Some(val)) => {
             tracing::info!("Found the specified account!");
             match argon2::verify_encoded(&val.passwd_hash, passwd.as_bytes()) {
-                Ok(true) => {
-                    Ok(val)
-                },
+                Ok(true) => Ok(val),
                 Ok(false) => {
                     tracing::info!("User intended to delete the account with incrrect pasword");
                     Err(StatusCode::UNAUTHORIZED.into_response())
@@ -155,14 +198,18 @@ async fn danger_zone_auth(
                     ).into_response())
                 }
             }
-        },
+        }
         Ok(None) => {
             tracing::info!("Seems like there's no user in database.");
             Err(StatusCode::UNAUTHORIZED.into_response())
-        },
+        }
         Err(err) => {
             tracing::error!("Failed to find the user in the database! {}", err);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, "Can't locate your account!").into_response())
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Can't locate your account!",
+            )
+                .into_response())
         }
     }
 }
