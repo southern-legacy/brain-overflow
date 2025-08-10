@@ -6,25 +6,17 @@ use axum::{
 };
 use axum_valid::Valid;
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
-use sea_orm::{
-    ActiveValue::{NotSet, Set},
-    EntityTrait, IntoActiveModel,
-};
 use serde::Deserialize;
 use validator::Validate;
 
-use crate::http::{
-    api::usr::{ARGON2_CONFIG, UsrIdent},
-    jwt::Jwt,
+use crate::{
+    entity::usr::usr_info::{InsertParam, UsrInfo},
+    http::{
+        api::usr::{UsrIdent, ARGON2_CONFIG, Param},
+        jwt::Jwt,
+    }
 };
 use crate::server::ServerState;
-use crate::{
-    entity::usr::{
-        prelude::UsrInfo,
-        usr_info
-    },
-    http::api::usr::{LoginMethod, Param},
-};
 
 #[derive(Deserialize, Validate)]
 pub(super) struct SignupParam {
@@ -46,41 +38,33 @@ pub(super) async fn signup(
     let SignupParam { name, usr_param } = param;
     let Param { method, passwd } = usr_param;
 
-    let (email, phone) = match method.clone() {
-        LoginMethod::Email(email) => (Set(Some(email)), NotSet),
-        LoginMethod::Phone(phone) => (NotSet, Set(Some(phone))),
-    };
+    let (phone, email) = method.get_tup_phone_email();
 
-    let new_usr = usr_info::ActiveModel {
-        id: NotSet,
+    let new_usr = InsertParam {
         email: email,
         phone: phone,
-        name: Set(name.clone()),
-        salt: Set(salt.clone()),
-        passwd_hash: match argon2::hash_encoded(passwd.as_bytes(), salt.as_bytes(), &ARGON2_CONFIG)
+        name: name,
+        passwd: match argon2::hash_encoded(passwd.as_bytes(), salt.as_bytes(), &ARGON2_CONFIG)
         {
-            Ok(val) => Set(val),
+            Ok(val) => val,
             Err(e) => {
                 tracing::error!("Error occured while hashing the password! {e}");
                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }
-        },
+        }
     };
 
-    match UsrInfo::insert(new_usr.into_active_model())
-        .exec(state.db())
-        .await
-    {
+    match UsrInfo::insert_and_return_all(state.db(), new_usr).await {
         Ok(val) => {
             tracing::info!("Successfully insert a user into database.");
             (
                 StatusCode::CREATED,
-                [(header::LOCATION, format!("/usr/{}", val.last_insert_id))],
+                [(header::LOCATION, format!("/usr/{}", val.id))],
                 Jwt::generate(UsrIdent {
-                    id: val.last_insert_id,
-                    email: method.get_email().map(|v| String::from(v)),
-                    phone: method.get_phone().map(|v| String::from(v)),
-                    name,
+                    id: val.id,
+                    email: val.email,
+                    phone: val.phone,
+                    name: val.name,
                 }),
             )
                 .into_response()

@@ -1,7 +1,7 @@
-use crate::entity::usr::usr_info::Model;
-use crate::entity::usr::{prelude::UsrInfo, usr_info};
+use crate::db::SqlxError;
+use crate::entity::usr::usr_info::UsrInfo;
 use crate::http::api::ApiResult;
-use crate::http::api::usr::{Param, UsrIdent};
+use crate::http::api::usr::{LoginMethod, Param, UsrIdent};
 use crate::http::jwt::Jwt;
 use crate::server::ServerState;
 
@@ -10,7 +10,6 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Json, debug_handler};
 use axum_valid::Valid;
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, QueryTrait};
 
 type LoginParam = Param;
 
@@ -21,9 +20,8 @@ pub(crate) async fn login_by_id(
     Path(id): Path<i64>,
     passwd: String,
 ) -> ApiResult {
-    let res = UsrInfo::find_by_id(id).one(state.db());
-
-    check_passwd_and_respond(res.await, &passwd)
+    let res = UsrInfo::find_by_id(state.db(), id).await;
+    Ok(check_passwd_and_respond(res, &passwd)?)
 }
 
 #[debug_handler]
@@ -33,19 +31,14 @@ pub(super) async fn login_by_email_or_phone(
     param: Valid<Json<LoginParam>>,
 ) -> ApiResult {
     let method = &param.method;
-    let res = UsrInfo::find()
-        .apply_if(method.get_email(), |rows, email| {
-            rows.filter(usr_info::Column::Email.eq(email))
-        })
-        .apply_if(method.get_phone(), |rows, phone| {
-            rows.filter(usr_info::Column::Phone.eq(phone))
-        })
-        .one(state.db());
-
-    Ok(check_passwd_and_respond(res.await, &param.passwd)?)
+    let res = match method {
+        LoginMethod::Phone(phone) => UsrInfo::find_by_phone(state.db(), phone).await,
+        LoginMethod::Email(email) => UsrInfo::find_by_email(state.db(), email).await,
+    };
+    Ok(check_passwd_and_respond(res, &param.passwd)?)
 }
 
-fn check_passwd_and_respond(query_res: Result<Option<Model>, DbErr>, passwd: &str) -> ApiResult {
+fn check_passwd_and_respond(query_res: Result<Option<UsrInfo>, SqlxError>, passwd: &str) -> ApiResult {
     match query_res {
         Ok(Some(val)) => check_passwd(val, passwd),
         Ok(None) => {
@@ -63,7 +56,7 @@ fn check_passwd_and_respond(query_res: Result<Option<Model>, DbErr>, passwd: &st
     }
 }
 
-fn check_passwd(val: Model, passwd: &str) -> ApiResult {
+fn check_passwd(val: UsrInfo, passwd: &str) -> ApiResult {
     match argon2::verify_encoded(&val.passwd_hash, passwd.as_bytes()) {
         Ok(true) => {
             tracing::info!("User {} login successfully", val.id);

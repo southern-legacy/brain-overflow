@@ -1,13 +1,10 @@
 use axum::{Extension, debug_handler, extract::State, http::StatusCode, response::IntoResponse};
-use sea_orm::{ActiveModelTrait, DbConn, IntoActiveModel};
+use sqlx::PgPool;
 
 use crate::{
-    entity::usr::usr_info::ActiveModel,
-    http::api::{
-        ApiResult,
-        usr::{UsrIdent, danger_zone_auth},
-    },
-    server::ServerState,
+    entity::usr::usr_info::UsrInfo, http::api::{
+        usr::{danger_zone_auth, UsrIdent}, ApiResult
+    }, server::ServerState
 };
 
 #[debug_handler]
@@ -17,16 +14,16 @@ pub(super) async fn delete_account(
     ident: Extension<UsrIdent>,
     passwd: String,
 ) -> ApiResult {
-    let model = danger_zone_auth(state.db(), ident, passwd).await?;
-    Ok(try_delete_account(state.db(), model.into_active_model()).await?)
+    let _usr_info = danger_zone_auth(state.db(), &ident, passwd).await?;
+    Ok(try_delete_account(state.db(), ident.id).await?)
 }
 
-async fn try_delete_account(db: &DbConn, val: ActiveModel) -> ApiResult {
-    match val.delete(db).await {
+async fn try_delete_account(db: &PgPool, id: i64) -> ApiResult {
+    match UsrInfo::delete_by_id(db, id).await {
         Ok(res) => {
-            if res.rows_affected > 1 {
+            if res > 1 {
                 unreachable!()
-            } else if res.rows_affected == 1 {
+            } else if res == 1 {
                 tracing::info!("User deleted his/her account forever");
                 Ok((StatusCode::OK, "Your account has been deleted forever!").into_response())
             } else {

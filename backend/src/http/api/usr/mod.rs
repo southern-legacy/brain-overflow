@@ -7,15 +7,14 @@ mod signup;
 use std::borrow::Cow;
 use std::sync::LazyLock;
 
-use crate::entity::usr::prelude::UsrInfo;
-use crate::entity::usr::usr_info::Model;
+use crate::entity::usr::usr_info::UsrInfo;
 use crate::http::{middelware::auth::AUTH_LAYER, utils};
 use crate::server::ServerState;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::{Extension, Router, routing};
-use sea_orm::{DbConn, EntityTrait};
+use axum::{Router, routing};
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use validator::{Validate, ValidationError, ValidationErrors};
 
 const ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(|| argon2::Config::default());
@@ -44,9 +43,9 @@ pub struct UsrIdent {
 }
 
 impl UsrIdent {
-    pub async fn retreive_self_from_db(&self, db: &DbConn) -> Result<Model, Response> {
-        match UsrInfo::find_by_id(self.id).one(db).await {
-            Ok(Some(model)) => Ok(model),
+    pub async fn retreive_self_from_db(&self, db: &PgPool) -> Result<UsrInfo, Response> {
+        match UsrInfo::find_by_id(db, self.id).await {
+            Ok(Some(usr_info)) => Ok(usr_info),
             Ok(None) => Err(StatusCode::UNAUTHORIZED.into_response()),
             Err(_) => {
                 tracing::error!("Cannot find the user {}", self.id);
@@ -63,20 +62,15 @@ enum LoginMethod {
     Email(String),
 }
 
-impl LoginMethod {
-    fn get_phone(&self) -> Option<&str> {
-        use LoginMethod::*;
-        match self {
-            Phone(phone) => Some(phone),
-            Email(_email) => None,
-        }
-    }
+type Email = Option<String>;
+type Phone = Option<String>;
 
-    fn get_email(&self) -> Option<&str> {
+impl LoginMethod {
+    fn get_tup_phone_email(self) -> (Phone, Email) {
         use LoginMethod::*;
         match self {
-            Phone(_phone) => None,
-            Email(email) => Some(email),
+            Phone(p) => (Some(p), None),
+            Email(e) => (None, Some(e))
         }
     }
 
@@ -176,26 +170,23 @@ fn validate_passwd(val: &str) -> Result<(), ValidationError> {
 }
 
 async fn danger_zone_auth(
-    db: &DbConn,
-    ident: Extension<UsrIdent>,
+    db: &PgPool,
+    ident: &UsrIdent,
     passwd: String,
-) -> Result<Model, Response> {
-    let res = UsrInfo::find_by_id(ident.id).one(db).await;
+) -> Result<UsrInfo, Response> {
+    let res = UsrInfo::find_by_id(db, ident.id).await;
     match res {
         Ok(Some(val)) => {
             tracing::info!("Found the specified account!");
             match argon2::verify_encoded(&val.passwd_hash, passwd.as_bytes()) {
                 Ok(true) => Ok(val),
                 Ok(false) => {
-                    tracing::info!("User intended to delete the account with incrrect pasword");
+                    tracing::info!("User intended to delete the account with incrrect password");
                     Err(StatusCode::UNAUTHORIZED.into_response())
                 }
                 Err(e) => {
                     tracing::error!("Error checking password! {e}");
-                    Err((
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Error occurs while checking your account info! Please change your pasword!"
-                    ).into_response())
+                    Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
                 }
             }
         }

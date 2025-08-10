@@ -1,7 +1,7 @@
 use crate::{app_config, http, logger};
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
-use sea_orm::DbConn;
+use sqlx::PgPool;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
     time::Duration,
@@ -17,11 +17,11 @@ use tracing::info;
 
 #[derive(Clone, Debug)]
 pub struct ServerState {
-    db: DbConn,
+    db: PgPool,
 }
 
 impl ServerState {
-    pub fn db(&self) -> &DbConn {
+    pub fn db(&self) -> &PgPool {
         &self.db
     }
 }

@@ -1,16 +1,9 @@
 use axum::{Extension, debug_handler, extract::State, response::IntoResponse};
-use sea_orm::FromQueryResult;
-use serde::Deserialize;
 
 use crate::{
     http::api::{ApiResult, usr::UsrIdent},
     server::ServerState,
 };
-
-#[derive(Deserialize, FromQueryResult)]
-struct FullBio {
-    
-}
 
 #[debug_handler]
 #[tracing::instrument(name = "[usr/bio]", skip(state))]
