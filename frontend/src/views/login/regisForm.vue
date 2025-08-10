@@ -1,44 +1,70 @@
 <template>
   <div class="regisForm">
-    <input type="text" placeholder="请输入名称" v-model="regisId" />
+    <input
+      type="text"
+      placeholder="请输入名称"
+      v-model="regisId"
+    />
+
     <div class="codeBox">
       <input type="text" placeholder="请输入图形验证码" />
-      <img src="@/assets/code.png" alt="验证码" />
+      <img
+        src="@/assets/code.png"
+        alt="验证码"
+        @click="onCaptchaClick"
+      />
     </div>
+
     <input
       type="text"
       placeholder="请输入手机号码"
       v-if="isRegisWithPhone"
       v-model="regisPhone"
+      @blur="validatePhone"
     />
     <input
       type="text"
       placeholder="请输入邮箱"
       v-else
       v-model="regisEmail"
+      @blur="validateEmail"
     />
+
     <div class="connectCode">
       <input type="text" placeholder="请输入验证码" />
-      <button v-if="isRegisWithPhone" @click="validatePhone">
+      <button
+        v-if="isRegisWithPhone"
+        @click="onGetPhoneCode"
+      >
         点击获取手机验证码
       </button>
-      <button v-else @click="validateEmail">
+      <button
+        v-else
+        @click="onGetEmailCode"
+      >
         点击获取邮箱验证码
       </button>
     </div>
+
     <input
       type="password"
       placeholder="请输入密码"
       v-model="regisPass"
+      @blur="validatePassword"
     />
     <input
       type="password"
       placeholder="请确认您的密码"
       v-model="regisPassComfirm"
+      @blur="validatePasswordConfirm"
     />
 
-    <el-divider v-if="isRegisWithPhone"><i class="el-icon-mobile-phone"></i></el-divider>
-    <el-divider v-else><i class="el-icon-s-promotion"></i></el-divider>
+    <el-divider v-if="isRegisWithPhone">
+      <i class="el-icon-mobile-phone"></i>
+    </el-divider>
+    <el-divider v-else>
+      <i class="el-icon-s-promotion"></i>
+    </el-divider>
 
     <button
       type="button"
@@ -47,11 +73,19 @@
     >
       Sign up with Phone Number
     </button>
-    <button type="button" @click="regisWithEmail" v-else>
+    <button
+      type="button"
+      @click="regisWithEmail"
+      v-else
+    >
       Sign up with Email
     </button>
 
-    <a href="#" class="regisToLogin" @click.prevent="$emit('change-login')">
+    <a
+      href="#"
+      class="regisToLogin"
+      @click.prevent="$emit('change-login')"
+    >
       already got an account?
     </a>
   </div>
@@ -60,7 +94,7 @@
 <script>
 import { regisAccountWithEmail, regisAccountWithPhone } from '@/api/login'
 import { Message } from 'element-ui'
-import jwtDecode from 'jwt-decode'
+const { jwtDecode } = require('jwt-decode')
 
 export default {
   props: ['isRegisWithPhone'],
@@ -74,57 +108,145 @@ export default {
     }
   },
   methods: {
+    // 点击验证码图片
+    onCaptchaClick() {
+      if (this.isRegisWithPhone) {
+        this.validatePhone()
+      } else {
+        this.validateEmail()
+      }
+      // 这里可以加刷新验证码图片的逻辑
+    },
+
+    // 点击获取验证码按钮
+    onGetPhoneCode() {
+      if (this.validatePhone()) {
+        Message({
+          message: '格式正确，正在获取短信验证码',
+          type: 'success',
+          duration: 1000
+        })
+        // 调用接口获取短信验证码
+      }
+    },
+    onGetEmailCode() {
+      if (this.validateEmail()) {
+        Message({
+          message: '格式正确，正在获取邮箱验证码',
+          type: 'success',
+          duration: 1000
+        })
+        // 调用接口获取邮箱验证码
+      }
+    },
+
+    // 手机号验证（blur触发 + 按钮触发）
     validatePhone() {
       const cleanPhone = this.regisPhone.replace(/\s+/g, '')
-      const regex = /^\+\d{1,15}$/
+      const regex = /^\+[1-9]\d{1,14}$/ // E.164
       if (!regex.test(cleanPhone)) {
         Message({
           message: '电话号码格式错误（必须为 E.164 格式，如 +8613800138000)',
           type: 'warning',
           duration: 2500
         })
-        return
-      }
-      Message({
-        message: '格式正确，正在获取短信验证码',
-        type: 'success',
-        duration: 1000
-      })
-      console.log('提交的号码：', cleanPhone)
-    },
-    validateEmail() {
-      const emailReg = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/
-      if (!emailReg.test(this.regisEmail)) {
-        Message({ message: '邮箱格式有误，请检查', type: 'warning' })
-        return
-      }
-      Message({ message: '格式正确，正在获取邮箱验证码', type: 'success', duration: 1000 })
-    },
-    validatePass() {
-      if (this.regisPass === '' || this.regisPassComfirm === '') {
-        Message({ message: '请不要输入空的密码', type: 'warning', duration: 2500 })
-        return false
-      }
-      if (this.regisPass !== this.regisPassComfirm) {
-        Message({ message: '前后两次密码输入不一致', type: 'warning', duration: 2500 })
         return false
       }
       return true
     },
-    async regisWithPhone() {
-      if (!this.validatePass()) return
-      const cleanPhone = this.regisPhone.replace(/\s+/g, '')
-      const res = await regisAccountWithPhone(this.regisId, cleanPhone, this.regisPass)
-      const resDecoded = jwtDecode(res)
-      console.log(resDecoded)
-      Message({ type: 'success', message: '注册成功，欢迎使用brain overflow！ ', duration: 2000 })
+
+    // 邮箱验证（blur触发 + 按钮触发）
+    validateEmail() {
+      const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+      if (!emailReg.test(this.regisEmail)) {
+        Message({
+          message: '邮箱格式有误，请检查',
+          type: 'warning'
+        })
+        return false
+      }
+      return true
     },
-    async regisWithEmail() {
-      if (!this.validatePass()) return
-      const res = await regisAccountWithEmail(this.regisId, this.regisEmail, this.regisPass)
+
+    // 密码校验：检查密码非空且长度 >= 6
+    validatePassword() {
+      if (!this.regisPass || this.regisPass.trim() === '') {
+        Message({
+          message: '请输入密码',
+          type: 'warning',
+          duration: 2500
+        })
+        return false
+      }
+      if (this.regisPass.length < 6) {
+        Message({
+          message: '密码长度至少6位',
+          type: 'warning',
+          duration: 2500
+        })
+        return false
+      }
+      return true
+    },
+
+    // 确认密码校验：非空且和密码一致
+    validatePasswordConfirm() {
+      if (!this.regisPassComfirm || this.regisPassComfirm.trim() === '') {
+        Message({
+          message: '请确认密码',
+          type: 'warning',
+          duration: 2500
+        })
+        return false
+      }
+      if (this.regisPass !== this.regisPassComfirm) {
+        Message({
+          message: '前后两次密码输入不一致',
+          type: 'warning',
+          duration: 2500
+        })
+        return false
+      }
+      return true
+    },
+
+    async regisWithPhone() {
+      if (!this.validatePhone() || !this.validatePassword() || !this.validatePasswordConfirm()) return
+      const cleanPhone = this.regisPhone.replace(/\s+/g, '')
+      const res = await regisAccountWithPhone(
+        this.regisId,
+        cleanPhone,
+        this.regisPass
+      )
       const resDecoded = jwtDecode(res)
-      console.log(resDecoded)
-      Message({ type: 'success', message: '注册成功，欢迎使用brain overflow！ ', duration: 2000 })
+      localStorage.setItem('token', res)
+      this.$store.commit('setToken', res)
+      Message({
+        type: 'success',
+        message: `注册成功，欢迎使用brain overflow！ 您的id为：${resDecoded.id}`,
+        duration: 0,
+        showClose: true
+      })
+      this.$emit('change-login', resDecoded.id)
+    },
+
+    async regisWithEmail() {
+      if (!this.validateEmail() || !this.validatePassword() || !this.validatePasswordConfirm()) return
+      const res = await regisAccountWithEmail(
+        this.regisId,
+        this.regisEmail,
+        this.regisPass
+      )
+      const resDecoded = jwtDecode(res)
+      localStorage.setItem('token', res)
+      this.$store.commit('setToken', res)
+      Message({
+        type: 'success',
+        message: `注册成功，欢迎使用brain overflow！ 您的id为：${resDecoded.id}`,
+        duration: 0,
+        showClose: true
+      })
+      this.$emit('change-login', resDecoded.id)
     }
   }
 }
@@ -148,6 +270,7 @@ export default {
 .connectCode img {
   width: 150px;
   height: 45px;
+  cursor: pointer;
 }
 .regisForm input,
 .regisForm button {
