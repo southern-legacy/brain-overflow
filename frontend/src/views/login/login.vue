@@ -34,7 +34,8 @@ export default {
     }
   },
   methods: {
-    handleChangeLogin() {
+    handleChangeLogin(newVal) {
+      
       this.isLogin = !this.isLogin
     },
     handleChangeRegis() {
