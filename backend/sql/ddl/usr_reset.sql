@@ -7,7 +7,7 @@ CREATE TABLE "usr"."usr_info" (
     "name"          VARCHAR(32)     NOT NULL,
     "email"         VARCHAR(256)    UNIQUE CHECK ("email" ~* '^[\w._%+-]+@[\w.-]+\.\w{2,}$'),
     "phone"         VARCHAR(16)     UNIQUE CHECK ("phone" ~* '^\+\d{1,15}$'),
-    "passwd_hash"   TEXT NOT        NULL,
+    "passwd_hash"   TEXT            NOT NULL,
 
     CONSTRAINT login_method CHECK (("email" IS NOT NULL) OR ("phone" IS NOT NULL))
 );
@@ -19,5 +19,6 @@ CREATE TABLE "usr"."user_profiles" (
     "biography"     TEXT            DEFAULT '# 默认用户说明',
     "avator"        TEXT            DEFAULT '默认头像图片路径（开发中）',
     "background"    TEXT            DEFAULT '默认背景图片路径（开发中）',
+    "contact_me"    JSONB,
     "updated_at"    TIMESTAMPTZ     DEFAULT NOW()
 );
