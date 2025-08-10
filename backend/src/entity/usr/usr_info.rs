@@ -16,6 +16,8 @@ pub struct Model {
 
     #[sea_orm(unique)]
     pub phone: Option<String>,
+
+    #[serde(skip)]
     pub salt: String,
 
     #[sea_orm(column_type = "Text")]
