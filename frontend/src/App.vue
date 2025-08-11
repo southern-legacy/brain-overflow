@@ -13,6 +13,6 @@ html, body, #app {
 }
 
 body {
-  background-color: #f0f2f5; /* 可选背景色 */
+  background-color: #fcefee
 }
 </style>
