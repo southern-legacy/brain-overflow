@@ -12,7 +12,7 @@ impl From<SqlxError> for Response {
         use Violation::*;
         match value {
             Unprocessible(e) => {
-                tracing::error!("Error occurs while manipulate database! Details: {e}");
+                tracing::error!("Error occurs while manipulating database! Details: {e}");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             },
             Processible(e) => {
