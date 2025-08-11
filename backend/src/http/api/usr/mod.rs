@@ -79,7 +79,7 @@ fn validate_passwd(val: &str) -> Result<(), ValidationError> {
 
     let count = count(alphas) + count(numerics) + count(specials);
 
-    if alphas + numerics + specials <= 12 {
+    if alphas + numerics + specials < 12 {
         Err(ValidationError::new("password").with_message(Cow::Borrowed("Password is too short!")))
     } else if count < 2 {
         Err(ValidationError::new("password").with_message(Cow::Borrowed("Password is too simple!")))
