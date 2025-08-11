@@ -137,7 +137,7 @@ impl UsrInfo {
         id: i64
     ) -> Result<usize, SqlxError> {
         let statement = sqlx::query!(
-            r#"DELETE FROM "usr"."usr_info" "U" WHERE "U"."id" = $1 RETURNING "U"."id""#,
+            r#"DELETE FROM "usr"."usr_info" "U" WHERE "U"."id" = $1 RETURNING "U"."id" CASCADE"#,
             id
         );
         let res = statement.fetch_all(db).await?;
