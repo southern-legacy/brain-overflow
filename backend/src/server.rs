@@ -59,8 +59,8 @@ pub async fn start() {
         .layer(timeout_layer)
         .layer(body_limit_layer)
         .layer(tracing_layer)
-        .layer(path_normalize_layer)
-        .layer(cors_layer);
+        .layer(cors_layer)
+        .layer(path_normalize_layer);
 
     if app_config::get_server().ipv4_enabled() {
         let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, app_config::get_server().port()))

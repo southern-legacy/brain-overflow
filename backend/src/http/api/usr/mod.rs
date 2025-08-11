@@ -8,14 +8,14 @@ use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use crate::entity::usr::usr_info::UsrInfo;
-use crate::http::{middelware::auth::AUTH_LAYER, utils};
+use crate::http::middelware::auth::AUTH_LAYER;
 use crate::server::ServerState;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::{Router, routing};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use validator::{Validate, ValidationError, ValidationErrors};
+use validator::ValidationError;
 
 const ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(|| argon2::Config::default());
 
@@ -29,8 +29,7 @@ pub(super) fn build_router() -> Router<ServerState> {
         .route("/bio", routing::get(bio::bio_get))
         .route_layer(&*AUTH_LAYER)
         .route("/info/{id}", routing::get(info::info))
-        .route("/login", routing::post(login::login_by_email_or_phone))
-        .route("/login/{id}", routing::post(login::login_by_id))
+        .route("/login", routing::post(login::login))
         .route("/signup", routing::post(signup::signup))
 }
 
@@ -49,81 +48,6 @@ impl UsrIdent {
             None => Err(StatusCode::UNAUTHORIZED.into_response()),
         }
     }
-}
-
-#[derive(Deserialize, Clone)]
-#[serde(rename_all = "snake_case")]
-enum LoginMethod {
-    Phone(String),
-    Email(String),
-}
-
-type Email = Option<String>;
-type Phone = Option<String>;
-impl LoginMethod {
-    fn get_tup_phone_email(self) -> (Phone, Email) {
-        use LoginMethod::*;
-        match self {
-            Phone(p) => (Some(p), None),
-            Email(e) => (None, Some(e))
-        }
-    }
-
-    fn get_anyway(&self) -> &str {
-        use LoginMethod::*;
-        match self {
-            Phone(v) => v,
-            Email(v) => v,
-        }
-    }
-}
-
-impl Validate for LoginMethod {
-    fn validate(&self) -> Result<(), validator::ValidationErrors> {
-        use LoginMethod::*;
-        match self {
-            Phone(phone) => {
-                if !utils::meet_phone_format(phone) {
-                    let mut errors = ValidationErrors::new();
-                    errors.add(
-                        "format",
-                        ValidationError::new("1").with_message(Cow::Borrowed(
-                            "phone number didn't meet the reqiurement of format",
-                        )),
-                    );
-                    Err(errors)
-                } else {
-                    Ok(())
-                }
-            }
-
-            Email(email) => {
-                if !utils::meet_email_format(email) {
-                    let mut errors = ValidationErrors::new();
-                    errors.add(
-                        "format",
-                        ValidationError::new("1").with_message(Cow::Borrowed(
-                            "email number didn't meet the reqiurement of format",
-                        )),
-                    );
-                    Err(errors)
-                } else {
-                    Ok(())
-                }
-            }
-        }
-    }
-}
-
-#[derive(Deserialize, Validate)]
-#[serde(deny_unknown_fields)]
-struct Param {
-    #[validate(nested)]
-    #[serde(flatten)]
-    method: LoginMethod,
-
-    #[validate(custom(function = "validate_passwd"))]
-    passwd: String,
 }
 
 /// ## 验证密码复杂度
@@ -172,7 +96,10 @@ async fn check_passwd(val: &UsrInfo, passwd: &str) -> Result<(), Response> {
             Ok(())
         }
         Ok(false) => {
-            tracing::info!("Authorization of user (id: {}) failed for incorrect pasword.", val.id);
+            tracing::info!(
+                "Authorization of user (id: {}) failed for incorrect pasword.",
+                val.id
+            );
             Err(StatusCode::UNAUTHORIZED.into_response())
         }
         Err(e) => {
