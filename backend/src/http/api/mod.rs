@@ -16,27 +16,13 @@ impl From<SqlxError> for Response {
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             },
             Processible(e) => {
-                let e = match e {
-                    Unique(error) => {
-                        tracing::warn!("Unique key violation! Details: {}", error.message());
-                        Unique(error)
-                    },
-                    Foreign(error) => {
-                        tracing::warn!("Foreign key violation! Details: {}", error.message());
-                        Foreign(error)
-                    },
-                    Check(error) => {
-                        tracing::warn!("Check key violation! Details: {}", error.message());
-                        Check(error)
-                    },
-                    NotNull(error) => {
-                        tracing::warn!("Not null key violation! Details: {}", error.message());
-                        NotNull(error)
-                    },
-                    Other(error) => {
-                        tracing::warn!("Other violation! Details: {}", error.message());
-                        Other(error)
-                    },
+                use tracing::warn;
+                match &e {
+                    Unique(error) => warn!("Unique key violation! Details: {}", error.message()),
+                    Foreign(error) => warn!("Foreign key violation! Details: {}", error.message()),
+                    Check(error) => warn!("Check key violation! Details: {}", error.message()),
+                    NotNull(error) => warn!("Not null key violation! Details: {}", error.message()),
+                    Other(error) => warn!("Other violation! Details: {}", error.message())
                 };
                 (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(e)).into_response()
             },

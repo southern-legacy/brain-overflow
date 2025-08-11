@@ -1,5 +1,4 @@
 use crate::app_config;
-use serde::ser::SerializeTupleVariant;
 use serde::Serialize;
 use sqlx::error::DatabaseError;
 use sqlx::postgres::PgPoolOptions;
@@ -88,37 +87,14 @@ impl Serialize for Violation {
         S: serde::Serializer
     {
         use Violation::*;
-        match self {
-            Unique(e) => {
-                let mut s = serializer.serialize_tuple_variant("Violation", 0, "unique", 1)?;
-                s.serialize_field(e.message())?;
-                s.end()
-            },
-            Foreign(e) => {
-                tracing::warn!("Foreign key violation! Details: {e}");
-                let mut s = serializer.serialize_tuple_variant("Violation", 1, "foreign", 1)?;
-                s.serialize_field(e.message())?;
-                s.end()
-            },
-            Check(e) => {
-                tracing::warn!("Check constraint violation! Details: {e}");
-                let mut s = serializer.serialize_tuple_variant("Violation", 2, "check", 1)?;
-                s.serialize_field(e.message())?;
-                s.end()
-            },
-            NotNull(e) => {
-                tracing::warn!("Not null violation! Details: {e}");
-                let mut s = serializer.serialize_tuple_variant("Violation", 3, "notnull", 1)?;
-                s.serialize_field(e.message())?;
-                s.end()
-            },
-            Other(e) => {
-                tracing::warn!("Other error! Details: {e}");
-                let mut s = serializer.serialize_tuple_variant("Violation", 4, "other", 1)?;
-                s.serialize_field(e.message())?;
-                s.end()
-            },
-        }
+        let (idx, val) = match self {
+            Unique(_) => (0, "unique"),
+            Foreign(_) => (1, "foreign"),
+            Check(_) => (2, "check"),
+            NotNull(_) => (3, "not_null"),
+            Other(_) => (4, "other"),
+        };
+        serializer.serialize_newtype_variant("violation", idx, "code", val)
     }
 }
 
