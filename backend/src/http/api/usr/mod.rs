@@ -44,13 +44,9 @@ pub struct UsrIdent {
 
 impl UsrIdent {
     pub async fn retreive_self_from_db(&self, db: &PgPool) -> Result<UsrInfo, Response> {
-        match UsrInfo::find_by_id(db, self.id).await {
-            Ok(Some(usr_info)) => Ok(usr_info),
-            Ok(None) => Err(StatusCode::UNAUTHORIZED.into_response()),
-            Err(_) => {
-                tracing::error!("Cannot find the user {}", self.id);
-                Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-            }
+        match UsrInfo::find_by_id(db, self.id).await? {
+            Some(usr_info) => Ok(usr_info),
+            None => Err(StatusCode::UNAUTHORIZED.into_response()),
         }
     }
 }
@@ -64,7 +60,6 @@ enum LoginMethod {
 
 type Email = Option<String>;
 type Phone = Option<String>;
-
 impl LoginMethod {
     fn get_tup_phone_email(self) -> (Phone, Email) {
         use LoginMethod::*;
@@ -169,36 +164,22 @@ fn validate_passwd(val: &str) -> Result<(), ValidationError> {
     }
 }
 
-async fn danger_zone_auth(
-    db: &PgPool,
-    ident: &UsrIdent,
-    passwd: String,
-) -> Result<UsrInfo, Response> {
-    let res = UsrInfo::find_by_id(db, ident.id).await;
-    match res {
-        Ok(Some(val)) => {
-            tracing::info!("Found the specified account!");
-            match argon2::verify_encoded(&val.passwd_hash, passwd.as_bytes()) {
-                Ok(true) => Ok(val),
-                Ok(false) => {
-                    tracing::info!("User intended to delete the account with incrrect password");
-                    Err(StatusCode::UNAUTHORIZED.into_response())
-                }
-                Err(e) => {
-                    tracing::error!("Error checking password! {e}");
-                    Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-                }
-            }
+#[tracing::instrument(name = "[usr/check password]", skip_all)]
+async fn check_passwd(val: &UsrInfo, passwd: &str) -> Result<(), Response> {
+    match argon2::verify_encoded(&val.passwd_hash, passwd.as_bytes()) {
+        Ok(true) => {
+            tracing::info!("Authorization of user (id: {}) successfully.", val.id);
+            Ok(())
         }
-        Ok(None) => {
-            tracing::info!("Seems like there's no user in database.");
+        Ok(false) => {
+            tracing::info!("Authorization of user (id: {}) failed for incorrect pasword.", val.id);
             Err(StatusCode::UNAUTHORIZED.into_response())
         }
-        Err(err) => {
-            tracing::error!("Failed to find the user in the database! {}", err);
+        Err(e) => {
+            tracing::error!("Error checking password! {e}");
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Can't locate your account!",
+                "Error occurs while checking your password, which is my fault!",
             )
                 .into_response())
         }

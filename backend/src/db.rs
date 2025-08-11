@@ -1,4 +1,6 @@
 use crate::app_config;
+use serde::ser::SerializeTupleVariant;
+use serde::Serialize;
 use sqlx::error::DatabaseError;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{query, PgPool};
@@ -80,6 +82,46 @@ impl Display for Violation {
     }
 }
 
+impl Serialize for Violation {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer
+    {
+        use Violation::*;
+        match self {
+            Unique(e) => {
+                let mut s = serializer.serialize_tuple_variant("Violation", 0, "unique", 1)?;
+                s.serialize_field(e.message())?;
+                s.end()
+            },
+            Foreign(e) => {
+                tracing::warn!("Foreign key violation! Details: {e}");
+                let mut s = serializer.serialize_tuple_variant("Violation", 1, "foreign", 1)?;
+                s.serialize_field(e.message())?;
+                s.end()
+            },
+            Check(e) => {
+                tracing::warn!("Check constraint violation! Details: {e}");
+                let mut s = serializer.serialize_tuple_variant("Violation", 2, "check", 1)?;
+                s.serialize_field(e.message())?;
+                s.end()
+            },
+            NotNull(e) => {
+                tracing::warn!("Not null violation! Details: {e}");
+                let mut s = serializer.serialize_tuple_variant("Violation", 3, "notnull", 1)?;
+                s.serialize_field(e.message())?;
+                s.end()
+            },
+            Other(e) => {
+                tracing::warn!("Other error! Details: {e}");
+                let mut s = serializer.serialize_tuple_variant("Violation", 4, "other", 1)?;
+                s.serialize_field(e.message())?;
+                s.end()
+            },
+        }
+    }
+}
+
 impl Display for SqlxError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -129,8 +171,7 @@ pub fn error_handling(e: sqlx::Error) -> SqlxError {
 
         Database(e) => this_should_be_processible(e),
         _ => todo!()
-    };
-    todo!()
+    }
 }
 
 fn this_should_be_processible(e: Box<dyn DatabaseError>) -> SqlxError {

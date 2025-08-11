@@ -2,7 +2,7 @@ use axum::{
     Json, debug_handler,
     extract::State,
     http::{StatusCode, header},
-    response::{IntoResponse, Response},
+    response::IntoResponse,
 };
 use axum_valid::Valid;
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
@@ -12,7 +12,7 @@ use validator::Validate;
 use crate::{
     entity::usr::usr_info::{InsertParam, UsrInfo},
     http::{
-        api::usr::{UsrIdent, ARGON2_CONFIG, Param},
+        api::{usr::{Param, UsrIdent, ARGON2_CONFIG}, ApiResult},
         jwt::Jwt,
     }
 };
@@ -33,7 +33,7 @@ pub(super) struct SignupParam {
 pub(super) async fn signup(
     state: State<ServerState>,
     Valid(Json(param)): Valid<Json<SignupParam>>,
-) -> Response {
+) -> ApiResult {
     let salt = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::new_v4().into_bytes());
     let SignupParam { name, usr_param } = param;
     let Param { method, passwd } = usr_param;
@@ -49,29 +49,22 @@ pub(super) async fn signup(
             Ok(val) => val,
             Err(e) => {
                 tracing::error!("Error occured while hashing the password! {e}");
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
             }
         }
     };
 
-    match UsrInfo::insert_and_return_all(state.db(), new_usr).await {
-        Ok(val) => {
-            tracing::info!("Successfully insert a user into database.");
-            (
-                StatusCode::CREATED,
-                [(header::LOCATION, format!("/usr/{}", val.id))],
-                Jwt::generate(UsrIdent {
-                    id: val.id,
-                    email: val.email,
-                    phone: val.phone,
-                    name: val.name,
-                }),
-            )
-                .into_response()
-        }
-        Err(e) => {
-            tracing::error!("Failed to sign up a user! details: {:#?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    let val =  UsrInfo::insert_and_return_all(state.db(), new_usr).await?;
+    tracing::info!("Successfully insert a user into database.");
+    Ok((
+        StatusCode::CREATED,
+        [(header::LOCATION, format!("/usr/{}", val.id))],
+        Jwt::generate(UsrIdent {
+            id: val.id,
+            name: val.name,
+            email: val.email,
+            phone: val.phone,
+        }),
+    )
+        .into_response())
 }

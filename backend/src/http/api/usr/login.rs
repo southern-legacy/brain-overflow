@@ -1,7 +1,6 @@
-use crate::db::SqlxError;
 use crate::entity::usr::usr_info::UsrInfo;
 use crate::http::api::ApiResult;
-use crate::http::api::usr::{LoginMethod, Param, UsrIdent};
+use crate::http::api::usr::{check_passwd, LoginMethod, Param, UsrIdent};
 use crate::http::jwt::Jwt;
 use crate::server::ServerState;
 
@@ -20,68 +19,38 @@ pub(crate) async fn login_by_id(
     Path(id): Path<i64>,
     passwd: String,
 ) -> ApiResult {
-    let res = UsrInfo::find_by_id(state.db(), id).await;
-    Ok(check_passwd_and_respond(res, &passwd)?)
+    let res = UsrInfo::find_by_id(state.db(), id).await?;
+    Ok(check_passwd_and_respond(res, &passwd).await?)
 }
 
 #[debug_handler]
 #[tracing::instrument(name = "[usr/login] by phone/email", skip_all, fields(method = %param.method.get_anyway()))]
 pub(super) async fn login_by_email_or_phone(
     state: State<ServerState>,
-    param: Valid<Json<LoginParam>>,
+    Valid(Json(param)): Valid<Json<LoginParam>>,
 ) -> ApiResult {
     let method = &param.method;
     let res = match method {
-        LoginMethod::Phone(phone) => UsrInfo::find_by_phone(state.db(), phone).await,
-        LoginMethod::Email(email) => UsrInfo::find_by_email(state.db(), email).await,
+        LoginMethod::Phone(phone) => UsrInfo::find_by_phone(state.db(), phone).await?,
+        LoginMethod::Email(email) => UsrInfo::find_by_email(state.db(), email).await?,
     };
-    Ok(check_passwd_and_respond(res, &param.passwd)?)
+    
+    Ok(check_passwd_and_respond(res, &param.passwd).await?)
 }
 
-fn check_passwd_and_respond(query_res: Result<Option<UsrInfo>, SqlxError>, passwd: &str) -> ApiResult {
-    match query_res {
-        Ok(Some(val)) => check_passwd(val, passwd),
-        Ok(None) => {
-            tracing::info!("No account for this user");
-            Err(StatusCode::UNAUTHORIZED.into_response())
-        }
-        Err(e) => {
-            tracing::error!("Database error! details: {e}");
-            Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "You can't login now, because of database error, which is my fault.",
-            )
-                .into_response())
-        }
-    }
-}
-
-fn check_passwd(val: UsrInfo, passwd: &str) -> ApiResult {
-    match argon2::verify_encoded(&val.passwd_hash, passwd.as_bytes()) {
-        Ok(true) => {
-            tracing::info!("User {} login successfully", val.id);
-            Ok((
-                StatusCode::OK,
-                Jwt::generate(UsrIdent {
-                    id: val.id,
-                    name: val.name,
-                    email: val.email,
-                    phone: val.phone,
-                }),
-            )
-                .into_response())
-        }
-        Ok(false) => {
-            tracing::info!("User {} login with incrrect pasword", val.id);
-            Err(StatusCode::UNAUTHORIZED.into_response())
-        }
-        Err(e) => {
-            tracing::error!("Error checking password! {e}");
-            Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Error occurs while checking your password, which is my fault!",
-            )
-                .into_response())
-        }
-    }
+async fn check_passwd_and_respond(res: Option<UsrInfo>, passwd: &str) -> ApiResult {
+    let usr = match res {
+        Some(usr) => {
+            check_passwd(&usr, passwd).await?;
+            usr
+        },
+        None => return Err(StatusCode::UNAUTHORIZED.into_response())
+    };
+    
+    Ok((StatusCode::OK, Jwt::generate(UsrIdent {
+        email: usr.email,
+        phone: usr.phone,
+        id: usr.id,
+        name: usr.name
+    })).into_response())
 }
