@@ -16,8 +16,6 @@ pub struct DatabaseConfig {
 
     #[serde(rename = "min_connection")]
     min_conn: Option<u32>,
-
-    log_sql: Option<bool>,
 }
 
 impl DatabaseConfig {
@@ -49,9 +47,5 @@ impl DatabaseConfig {
     pub fn min_conn(&self) -> u32 {
         self.min_conn
             .unwrap_or(min((num_cpus::get() * 4) as u32, 10))
-    }
-
-    pub fn log_sql(&self) -> bool {
-        self.log_sql.unwrap_or(false)
     }
 }

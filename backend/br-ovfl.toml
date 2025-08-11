@@ -10,4 +10,3 @@ port = 5432
 user = "postgres"
 passwd = "123456"
 database = "br_ovfl"
-log_sql = false
