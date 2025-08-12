@@ -23,12 +23,12 @@ const ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(|| argon2::Config:
 pub(super) fn build_router() -> Router<ServerState> {
     let router = Router::new();
     router
-        /* 删除用户 */  .route("/",      routing::delete(delete::delete_account))
-        /* 用户自视 */  .route("/bio",   routing::get(bio::bio_get))
+        /* 删除用户 */  .route("/",         routing::delete(delete::delete_account))
+        /* 用户自视 */  .route("/bio",      routing::get(bio::bio_get))
         /* 必须验证 */  .route_layer(&*AUTH_LAYER)
-        /* 创建用户 */  .route("/",      routing::post(signup::signup))
-        /* 读取用户 */  .route("/{id}",  routing::get(info::info))
-        /* 创建会话 */  .route("/login", routing::post(login::login))
+        /* 读取用户 */  .route("/{id}",     routing::get(info::info))
+        /* 创建用户 */  .route("/",         routing::post(signup::signup))
+        /* 创建会话 */  .route("/login",    routing::post(login::login))
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
