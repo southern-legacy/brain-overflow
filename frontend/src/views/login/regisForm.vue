@@ -35,12 +35,14 @@
       <button
         v-if="isRegisWithPhone"
         @click="onGetPhoneCode"
+        class="connectCodeButton"
       >
         获取手机验证码
       </button>
       <button
         v-else
         @click="onGetEmailCode"
+        class="connectCodeButton"
       >
         获取邮箱验证码
       </button>
@@ -165,8 +167,11 @@ export default {
       return true
     },
 
-    // 密码校验：检查密码非空且长度 >= 6
+    // 密码校验：检查密码非空且长度 >= 12
     validatePassword() {
+      let numbers = 0
+      let letters = 0
+      let specials = 0
       if (!this.regisPass || this.regisPass.trim() === '') {
         Message({
           message: '请输入密码',
@@ -175,15 +180,51 @@ export default {
         })
         return false
       }
-      if (this.regisPass.length < 6) {
+      if (this.regisPass.length < 12) {
         Message({
-          message: '密码长度至少6位',
+          message: '密码长度至少12位',
           type: 'warning',
           duration: 2500
         })
         return false
       }
+      let passStringArray = this.regisPass.split("")
+      passStringArray.forEach((char)=>{
+          const charCode = char.charCodeAt(0);
+  
+          // 判断数字 (Unicode 48-57)
+          if (charCode >= 48 && charCode <= 57) {
+            numbers++
+            return
+          }
+          
+          // 判断字母 (Unicode 65-90 大写, 97-122 小写)
+          if ((charCode >= 65 && charCode <= 90) || 
+              (charCode >= 97 && charCode <= 122)) {
+            letters++
+            return
+          }
+          
+          // 判断汉字 (Unicode 19968-40959 常用汉字范围)
+          if (charCode >= 19968 && charCode <= 40959) {
+            specials++
+            return
+          }
+          
+          specials++
+          return
+      })
+      if([numbers, specials, letters].filter(n => n > 0).length >= 2)
       return true
+      else{
+        Message({
+          message: '密码必须包含：数字，字母，特殊字符中的两种及以上',
+          type: 'warning',
+          duration: 2500
+        })
+        return false
+      }
+
     },
 
     // 确认密码校验：非空且和密码一致
@@ -216,6 +257,7 @@ export default {
         this.regisPass
       )
       const resDecoded = jwtDecode(res)
+      console.log(resDecoded)
       localStorage.setItem('token', res)
       this.$store.commit('setToken', res)
       Message({
@@ -235,6 +277,7 @@ export default {
         this.regisPass
       )
       const resDecoded = jwtDecode(res)
+      console.log(resDecoded)
       localStorage.setItem('token', res)
       this.$store.commit('setToken', res)
       Message({
@@ -280,6 +323,12 @@ export default {
      box-shadow: 0 0 6px 3px rgba(180, 112, 127, 0.18);
      outline: none;
   }
+}
+.connectCode .connectCodeButton{
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 14px;
+  width: 150px;
 }
 .codeBox img,
 .connectCode img {
