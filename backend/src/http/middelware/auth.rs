@@ -71,14 +71,5 @@ fn strip_prefix_bearer(field: &str) -> Result<&str, Response> {
 }
 
 fn get_usr_ident(token: &str) -> Result<UsrIdent, Response> {
-    match Jwt::<UsrIdent>::decode_with(token, &DEFAULT_VALIDATION) {
-        Ok(usr_ident) => Ok(usr_ident),
-        Err(_) => {
-            return Err((
-                StatusCode::UNAUTHORIZED,
-                r#"{"code":"token_invalid"}"#,
-            )
-                .into_response());
-        }
-    }
+    Ok(Jwt::<UsrIdent>::decode_with(token, &DEFAULT_VALIDATION)?)
 }

@@ -1,5 +1,6 @@
 use std::{borrow::Cow, fmt::Display};
 
+use axum::response::{IntoResponse, Response};
 use serde::Serialize;
 use sqlx::error::DatabaseError;
 
@@ -21,9 +22,24 @@ pub enum ViolationKind {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum AuthError {
-    InvalidToken,
-    Expired,
+    TokenInvalid,
+    TokenExpired,
+}
+
+#[cfg(test)]
+mod test {
+    use crate::error::AuthError;
+
+    #[test]
+    fn test() {
+        let auth_err = AuthError::TokenExpired;
+        println!("{}", serde_json::to_string(&auth_err).unwrap());
+
+        let auth_err = AuthError::TokenInvalid;
+        println!("{}", serde_json::to_string(&auth_err).unwrap());
+    }
 }
 
 impl From<sqlx::Error> for DbError {
@@ -143,8 +159,8 @@ impl Serialize for ViolationKind {
 impl From<jsonwebtoken::errors::Error> for AuthError {
     fn from(value: jsonwebtoken::errors::Error) -> Self {
         match value.into_kind() {
-            jsonwebtoken::errors::ErrorKind::ExpiredSignature => AuthError::Expired,
-            _ => AuthError::InvalidToken,
+            jsonwebtoken::errors::ErrorKind::ExpiredSignature => AuthError::TokenExpired,
+            _ => AuthError::TokenInvalid,
         }
     }
 }
@@ -152,8 +168,17 @@ impl From<jsonwebtoken::errors::Error> for AuthError {
 impl Display for AuthError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AuthError::InvalidToken => f.write_str("jwt error: this is invalid"),
-            AuthError::Expired => f.write_str("jwt error: this token has been expired"),
+            AuthError::TokenInvalid => f.write_str("jwt error: this is invalid"),
+            AuthError::TokenExpired => f.write_str("jwt error: this token has been expired"),
+        }
+    }
+}
+
+impl From<AuthError> for Response {
+    fn from(val: AuthError) -> axum::response::Response {
+        match val {
+            AuthError::TokenInvalid => r#"{"code","token_invalid"}"#.into_response(),
+            AuthError::TokenExpired => r#"{"code","token_expired"}"#.into_response(),
         }
     }
 }
