@@ -26,7 +26,7 @@
 
 ### 开发工具
 
-- 代码编辑器 / IDE：[Visual Studio SCode](https://code.visualstudio.com/)
+- 代码编辑器 / IDE：[Visual Studio Code](https://code.visualstudio.com/)
 - 版本控制系统：[git](https://git-scm.com/)
 - 代码仓库托管平台：[github](https://github.com/)
 - API 测试工具：[Hoppscotch](https://hoppscotch.io/) 和 [apifox](https://apifox.com/)
