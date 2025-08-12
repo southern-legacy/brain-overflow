@@ -1,3 +1,4 @@
+use crate::error::AuthError;
 use crate::http::api::usr::UsrIdent;
 use crate::http::jwt::{DEFAULT_VALIDATION, Jwt};
 use axum::http::HeaderValue;
@@ -44,29 +45,17 @@ impl AsyncAuthorizeRequest<Body> for Auth {
     }
 }
 
-fn decode_header(token: &HeaderValue) -> Result<&str, Response> {
+fn decode_header(token: &HeaderValue) -> Result<&str, AuthError> {
     match token.to_str() {
         Ok(h) => Ok(h),
-        Err(_) => {
-            return Err((
-                StatusCode::UNAUTHORIZED,
-                r#"{"code":"token_invalid"}"#,
-            )
-                .into_response());
-        }
+        Err(_) => Err(AuthError::TokenInvalid)
     }
 }
 
-fn strip_prefix_bearer(field: &str) -> Result<&str, Response> {
+fn strip_prefix_bearer(field: &str) -> Result<&str, AuthError> {
     match field.strip_prefix("Bearer ") {
         Some(token) => Ok(token),
-        None => {
-            return Err((
-                StatusCode::UNAUTHORIZED,
-                r#"{"code":"token_invalid"}"#,
-            )
-                .into_response());
-        }
+        None => Err(AuthError::TokenInvalid)
     }
 }
 

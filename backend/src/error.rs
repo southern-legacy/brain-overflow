@@ -1,9 +1,12 @@
-use std::{borrow::Cow, fmt::Display};
+use std::{borrow::Cow, error::Error, fmt::Display};
 
-use axum::response::{IntoResponse, Response};
+use axum::{http::StatusCode, response::{IntoResponse, Response}};
 use serde::Serialize;
 use sqlx::error::DatabaseError;
 
+#[allow(dead_code)]
+pub trait CustomError<Origin>
+where Self: From<Origin> + Error, Response: From<Self> { }
 
 #[derive(Debug)]
 pub enum DbError {
@@ -11,6 +14,9 @@ pub enum DbError {
     NotFound,
     Unprocessable(Cow<'static, str>),
 }
+
+impl CustomError<sqlx::error::Error> for DbError { }
+impl CustomError<jsonwebtoken::errors::Error> for AuthError { }
 
 #[derive(Debug)]
 pub enum ViolationKind {
@@ -21,30 +27,59 @@ pub enum ViolationKind {
     Other(Box<dyn DatabaseError>),
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug)]
 pub enum AuthError {
     TokenInvalid,
     TokenExpired,
 }
 
-#[cfg(test)]
-mod test {
-    use crate::error::AuthError;
-
-    #[test]
-    fn test() {
-        let auth_err = AuthError::TokenExpired;
-        println!("{}", serde_json::to_string(&auth_err).unwrap());
-
-        let auth_err = AuthError::TokenInvalid;
-        println!("{}", serde_json::to_string(&auth_err).unwrap());
-    }
-}
-
+//////////////////////////////////////
 impl From<sqlx::Error> for DbError {
     fn from(value: sqlx::Error) -> Self {
-        error_handling(value)
+        use Cow::*;
+        use DbError::*;
+        use sqlx::Error::*;
+        match value {
+            Configuration(e) | Encode(e) | Decode(e) | AnyDriverError(e) | Tls(e) => {
+                Unprocessable(Owned(e.to_string()))
+            }
+            Io(e) => Unprocessable(Owned(e.to_string())),
+            InvalidArgument(e) => Unprocessable(Owned(e)),
+            TypeNotFound { type_name } => {
+                Unprocessable(Owned(format!("Type name {type_name} not found!")))
+            }
+            ColumnDecode { index, source } => {
+                Unprocessable(Owned(format!("Cloumn Decode Error{index}, {source}")))
+            }
+            Protocol(e) => Unprocessable(Owned(e)),
+            ColumnNotFound(_error) => todo!(),
+            ColumnIndexOutOfBounds { index, len } => Unprocessable(Owned(format!(
+                "Column Index Out of Bounds! index: {index}, len: {len}"
+            ))),
+            PoolTimedOut => Unprocessable(Borrowed("Pool Time Out, which should've been")),
+            PoolClosed => Unprocessable(Borrowed("Pool Closed, which should've been")),
+            WorkerCrashed => Unprocessable(Borrowed("Worker Crashed, which should've been")),
+            InvalidSavePointStatement => {
+                Unprocessable(Borrowed("Invalid Save Point Statement (Trigger)"))
+            }
+            Migrate(e) => Unprocessable(Owned(format!("{e}"))),
+            BeginFailed => Unprocessable(Borrowed("Begin Failed!")),
+
+            RowNotFound => DbError::NotFound,
+            Database(e) => {
+                use ViolationKind::*;
+                use sqlx::error::ErrorKind;
+                match e.kind() {
+                    ErrorKind::UniqueViolation => DbError::Violation(Unique(e)),
+                    ErrorKind::ForeignKeyViolation => DbError::Violation(Foreign(e)),
+                    ErrorKind::NotNullViolation => DbError::Violation(NotNull(e)),
+                    ErrorKind::CheckViolation => DbError::Violation(Check(e)),
+                    ErrorKind::Other => DbError::Violation(Other(e)),
+                    _ => unreachable!(),
+                }
+            },
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -67,63 +102,34 @@ impl Display for DbError {
     }
 }
 
-impl core::error::Error for DbError {}
-
-pub fn error_handling(e: sqlx::Error) -> DbError {
-    use Cow::*;
-    use DbError::*;
-    use sqlx::Error::*;
-    match e {
-        Configuration(e) | Encode(e) | Decode(e) | AnyDriverError(e) | Tls(e) => {
-            Unprocessable(Owned(e.to_string()))
+impl From<DbError> for Response {
+    fn from(value: DbError) -> Self {
+        use DbError::*;
+        match value {
+            Unprocessable(e) => {
+                tracing::error!("Error occurs while manipulating database! Details: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+            Violation(e) => {
+                use ViolationKind::*;
+                use tracing::warn;
+                match &e {
+                    Unique(error) => warn!("Unique key violation! Details: {}", error.message()),
+                    Foreign(error) => warn!("Foreign key violation! Details: {}", error.message()),
+                    Check(error) => warn!("Check key violation! Details: {}", error.message()),
+                    NotNull(error) => warn!("Not null key violation! Details: {}", error.message()),
+                    Other(error) =>  warn!("Other violation! Details: {}", error.message()),
+                };
+                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(e)).into_response()
+            }
+            NotFound => StatusCode::NOT_FOUND.into_response()
         }
-        Io(e) => Unprocessable(Owned(e.to_string())),
-
-        // 所有的其他类型
-        InvalidArgument(e) => Unprocessable(Owned(e)),
-        TypeNotFound { type_name } => {
-            Unprocessable(Owned(format!("Type name {type_name} not found!")))
-        }
-        ColumnDecode { index, source } => {
-            Unprocessable(Owned(format!("Cloumn Decode Error{index}, {source}")))
-        }
-        Protocol(e) => Unprocessable(Owned(e)),
-        ColumnNotFound(_error) => todo!(),
-        ColumnIndexOutOfBounds { index, len } => Unprocessable(Owned(format!(
-            "Column Index Out of Bounds! index: {index}, len: {len}"
-        ))),
-        PoolTimedOut => Unprocessable(Borrowed("Pool Time Out, which should've been")),
-        PoolClosed => Unprocessable(Borrowed("Pool Closed, which should've been")),
-        WorkerCrashed => Unprocessable(Borrowed("Worker Crashed, which should've been")),
-        InvalidSavePointStatement => {
-            Unprocessable(Borrowed("Invalid Save Point Statement (Trigger)"))
-        }
-        Migrate(e) => Unprocessable(Owned(format!("{e}"))),
-        BeginFailed => Unprocessable(Borrowed("Begin Failed!")),
-
-        RowNotFound => this_should_be_processible(None),
-        Database(e) => this_should_be_processible(Some(e)),
-        _ => todo!(),
     }
 }
 
-fn this_should_be_processible(e: Option<Box<dyn DatabaseError>>) -> DbError {
-    use ViolationKind::*;
-    use sqlx::error::ErrorKind;
-    if let Some(e) = e {
-        match e.kind() {
-            ErrorKind::UniqueViolation => DbError::Violation(Unique(e)),
-            ErrorKind::ForeignKeyViolation => DbError::Violation(Foreign(e)),
-            ErrorKind::NotNullViolation => DbError::Violation(NotNull(e)),
-            ErrorKind::CheckViolation => DbError::Violation(Check(e)),
-            ErrorKind::Other => DbError::Violation(Other(e)),
-            _ => unreachable!(),
-        }
-    } else {
-        DbError::NotFound
-    }
-}
+impl Error for DbError { }
 
+///////////////////////////////////////
 impl Display for ViolationKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use ViolationKind::*;
@@ -136,8 +142,6 @@ impl Display for ViolationKind {
         }
     }
 }
-
-impl core::error::Error for ViolationKind {}
 
 impl Serialize for ViolationKind {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -156,11 +160,21 @@ impl Serialize for ViolationKind {
     }
 }
 
+///////////////////////////////////////
 impl From<jsonwebtoken::errors::Error> for AuthError {
     fn from(value: jsonwebtoken::errors::Error) -> Self {
         match value.into_kind() {
             jsonwebtoken::errors::ErrorKind::ExpiredSignature => AuthError::TokenExpired,
             _ => AuthError::TokenInvalid,
+        }
+    }
+}
+
+impl From<AuthError> for Response {
+    fn from(val: AuthError) -> axum::response::Response {
+        match val {
+            AuthError::TokenInvalid => (StatusCode::UNAUTHORIZED, r#"{"code","token_invalid"}"#).into_response(),
+            AuthError::TokenExpired => (StatusCode::UNAUTHORIZED, r#"{"code","token_expired"}"#).into_response(),
         }
     }
 }
@@ -174,11 +188,4 @@ impl Display for AuthError {
     }
 }
 
-impl From<AuthError> for Response {
-    fn from(val: AuthError) -> axum::response::Response {
-        match val {
-            AuthError::TokenInvalid => r#"{"code","token_invalid"}"#.into_response(),
-            AuthError::TokenExpired => r#"{"code","token_expired"}"#.into_response(),
-        }
-    }
-}
+impl Error for AuthError { }

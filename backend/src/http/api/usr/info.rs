@@ -1,7 +1,5 @@
 use axum::{
-    debug_handler,
-    extract::{Path, State},
-    response::IntoResponse,
+    debug_handler, extract::{Path, State}, http::StatusCode, response::IntoResponse
 };
 
 use crate::{entity::usr::user_profiles::UsrProfile, http::api::ApiResult, server::ServerState};
@@ -11,5 +9,5 @@ use crate::{entity::usr::user_profiles::UsrProfile, http::api::ApiResult, server
 pub async fn info(State(state): State<ServerState>, Path(id): Path<i64>) -> ApiResult {
     let res = UsrProfile::fetch_all_fields_by_id(state.db(), id).await?;
 
-    Ok(axum::Json(res).into_response())
+    Ok((StatusCode::OK, axum::Json(res)).into_response())
 }
