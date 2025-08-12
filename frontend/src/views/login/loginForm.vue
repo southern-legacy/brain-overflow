@@ -52,7 +52,7 @@ export default {
     return {
       loginInput: '',
       loginPass: '',
-      loginValue: '',
+      loginValue: 'ID',
       loginOptions: [
         { value: 'ID', label: 'ID登录' },
         { value: 'Email', label: '邮箱登录' },
@@ -86,7 +86,8 @@ export default {
       }
       let res
       if (this.loginValue === 'ID') {
-        res = await loginWithId(this.loginInput, this.loginPass)
+        // 
+        res = await loginWithId(+this.loginInput, this.loginPass)
       } else if (this.loginValue === 'Phone') {
         const cleanPhone = this.loginInput.replace(/\s+/g, '')
         res = await loginWithPhone(cleanPhone, this.loginPass)
