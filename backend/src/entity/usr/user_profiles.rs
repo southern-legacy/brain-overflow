@@ -2,7 +2,7 @@ use chrono::{DateTime, Local};
 use serde::Serialize;
 use sqlx::{query_as, PgPool};
 
-use crate::db::SqlxError;
+use crate::error::DbError;
 
 #[allow(dead_code)]
 #[derive(Serialize)]
@@ -16,7 +16,7 @@ pub struct UsrProfile {
 }
 
 impl UsrProfile {
-    pub async fn fetch_all_fields_by_id(db: &PgPool, id: i64) -> Result<Self, SqlxError> {
+    pub async fn fetch_all_fields_by_id(db: &PgPool, id: i64) -> Result<Self, DbError> {
         let statement = query_as!(
             UsrProfile,
             r#"SELECT * FROM "usr"."usr_profile" "UP" WHERE "UP"."usr_id" = $1;"#,

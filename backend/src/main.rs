@@ -1,6 +1,7 @@
 mod app_config;
 mod db;
 mod entity;
+mod error;
 mod http;
 mod logger;
 mod server;

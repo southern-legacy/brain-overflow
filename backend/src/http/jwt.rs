@@ -7,7 +7,7 @@ use base64::{Engine, prelude::BASE64_STANDARD};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
-use crate::app_config;
+use crate::{app_config, error::AuthError};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct JwtClaims {
@@ -76,11 +76,11 @@ impl<T: Serialize + for<'de> Deserialize<'de>> Jwt<T> {
 
     /// 通过 token 解码出 load，val 参数为校验配置，见 [`jsonwebtoken::Validation`]
     /// 默认的 val 参数可以传递 [`crate::route::jwt`] 模块中的 常量 [`crate::route::jwt::DEFAULT_VALIDATION`]
-    pub fn decode_with(token: &str, val: &Validation) -> Result<T, jsonwebtoken::errors::Error> {
+    pub fn decode_with(token: &str, val: &Validation) -> Result<T, AuthError> {
         let res = jsonwebtoken::decode::<Self>(token, &DECODING_KEY, val);
         match res {
             Ok(res) => Ok(res.claims.load),
-            Err(err) => Err(err),
+            Err(err) => Err(AuthError::from(err)),
         }
     }
 }

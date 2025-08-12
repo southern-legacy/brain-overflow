@@ -7,15 +7,14 @@ use axum::{
 };
 
 use crate::{
-    db::{SqlxError, ViolationKind},
-    server::ServerState,
+    error::{DbError, ViolationKind}, server::ServerState
 };
 
 type ApiResult = Result<Response, Response>;
 
-impl From<SqlxError> for Response {
-    fn from(value: SqlxError) -> Self {
-        use SqlxError::*;
+impl From<DbError> for Response {
+    fn from(value: DbError) -> Self {
+        use DbError::*;
         match value {
             Unprocessable(e) => {
                 tracing::error!("Error occurs while manipulating database! Details: {e}");
@@ -41,5 +40,6 @@ impl From<SqlxError> for Response {
 pub fn build_router() -> Router<ServerState> {
     Router::new()
         .nest("/usr", usr::build_router())
-        .fallback(|| async { (StatusCode::NOT_FOUND, "No api found!") })
+        .fallback(|| async { StatusCode::NOT_FOUND })
+        .method_not_allowed_fallback(|| async { StatusCode::METHOD_NOT_ALLOWED })
 }

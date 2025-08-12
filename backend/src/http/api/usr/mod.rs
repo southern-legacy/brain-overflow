@@ -7,8 +7,8 @@ mod signup;
 use std::borrow::Cow;
 use std::sync::LazyLock;
 
-use crate::db::SqlxError;
 use crate::entity::usr::usr_info::UsrInfo;
+use crate::error::DbError;
 use crate::http::middelware::auth::AUTH_LAYER;
 use crate::server::ServerState;
 use axum::http::StatusCode;
@@ -23,12 +23,18 @@ const ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(|| argon2::Config:
 pub(super) fn build_router() -> Router<ServerState> {
     let router = Router::new();
     router
-        /* 删除用户 */  .route("/",         routing::delete(delete::delete_account))
-        /* 用户自视 */  .route("/bio",      routing::get(bio::bio_get))
-        /* 必须验证 */  .route_layer(&*AUTH_LAYER)
-        /* 读取用户 */  .route("/{id}",     routing::get(info::info))
-        /* 创建用户 */  .route("/",         routing::post(signup::signup))
-        /* 创建会话 */  .route("/login",    routing::post(login::login))
+        /* 删除用户 */
+        .route("/", routing::delete(delete::delete_account))
+        /* 用户自视 */
+        .route("/bio", routing::get(bio::bio_get))
+        /* 必须验证 */
+        .route_layer(&*AUTH_LAYER)
+        /* 读取用户 */
+        .route("/{id}", routing::get(info::info))
+        /* 创建用户 */
+        .route("/", routing::post(signup::signup))
+        /* 创建会话 */
+        .route("/login", routing::post(login::login))
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -43,10 +49,12 @@ impl UsrIdent {
     pub async fn retreive_self_from_db(&self, db: &PgPool) -> Result<UsrInfo, Response> {
         match UsrInfo::fetch_all_fields_by_id(db, self.id).await {
             Ok(usr_info) => Ok(usr_info),
-            Err(e) => if let SqlxError::NotFound = e {
-                Err(StatusCode::UNAUTHORIZED.into_response())
-            } else {
-                Err(Response::from(e))
+            Err(e) => {
+                if let DbError::NotFound = e {
+                    Err(StatusCode::UNAUTHORIZED.into_response())
+                } else {
+                    Err(Response::from(e))
+                }
             }
         }
     }

@@ -22,21 +22,16 @@ impl AsyncAuthorizeRequest<Body> for Auth {
     type ResponseBody = Body;
     type Future = Pin<
         Box<
-            dyn Future<Output = Result<Request<Self::RequestBody>, Response<Self::ResponseBody>>>
-                + Send,
+            dyn Future<Output = Result<Request, Response>> + Send,
         >,
     >;
 
-    fn authorize(&mut self, mut request: Request<Body>) -> Self::Future {
+    fn authorize(&mut self, mut request: Request) -> Self::Future {
         Box::pin(async move {
             let auth_header = request.headers().get(header::AUTHORIZATION);
 
             if auth_header.is_none() {
-                Err((
-                    StatusCode::UNAUTHORIZED,
-                    "你还未登录!".to_string().into_response(),
-                )
-                    .into_response())
+                Err(StatusCode::UNAUTHORIZED.into_response())
             } else {
                 let auth_header = decode_header(auth_header.unwrap())?;
                 let token = strip_prefix_bearer(auth_header)?;
@@ -52,10 +47,10 @@ impl AsyncAuthorizeRequest<Body> for Auth {
 fn decode_header(token: &HeaderValue) -> Result<&str, Response> {
     match token.to_str() {
         Ok(h) => Ok(h),
-        Err(e) => {
+        Err(_) => {
             return Err((
                 StatusCode::UNAUTHORIZED,
-                format!("Found a character can't be decoded! details:{e}"),
+                r#"{"code":"token_invalid"}"#,
             )
                 .into_response());
         }
@@ -68,7 +63,7 @@ fn strip_prefix_bearer(field: &str) -> Result<&str, Response> {
         None => {
             return Err((
                 StatusCode::UNAUTHORIZED,
-                "The value of field Authorization should starts with Bearer!",
+                r#"{"code":"token_invalid"}"#,
             )
                 .into_response());
         }
@@ -78,10 +73,10 @@ fn strip_prefix_bearer(field: &str) -> Result<&str, Response> {
 fn get_usr_ident(token: &str) -> Result<UsrIdent, Response> {
     match Jwt::<UsrIdent>::decode_with(token, &DEFAULT_VALIDATION) {
         Ok(usr_ident) => Ok(usr_ident),
-        Err(e) => {
+        Err(_) => {
             return Err((
                 StatusCode::UNAUTHORIZED,
-                format!("Failed to validate token! details:{e}!"),
+                r#"{"code":"token_invalid"}"#,
             )
                 .into_response());
         }

@@ -25,11 +25,11 @@ async fn try_delete_account(db: &PgPool, id: i64) -> ApiResult {
     let res = UsrInfo::delete_by_id(db, id).await?;
     match res {
         Some(id) => {
-            tracing::info!("User {id} deleted his/her account forever");
-            Ok((StatusCode::OK, "Your account has been deleted forever!").into_response())
+            tracing::info!("User (id: {id}) deleted his/her account forever");
+            Ok(StatusCode::NO_CONTENT.into_response())
         }
         None => {
-            tracing::info!("Someone wants to delete user {id}, which doesn't exists.");
+            tracing::info!("Someone wants to delete user (id: {id}), which doesn't exists.");
             Err(StatusCode::UNAUTHORIZED.into_response())
         }
     }

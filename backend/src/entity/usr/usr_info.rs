@@ -1,7 +1,7 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::db::SqlxError;
+use crate::error::DbError;
 
 #[derive(Serialize)]
 pub struct UsrInfo {
@@ -22,7 +22,7 @@ pub struct InsertParam {
 }
 
 impl UsrInfo {
-    pub async fn fetch_all_fields_by_id(db: &PgPool, id: i64) -> Result<Self, SqlxError> {
+    pub async fn fetch_all_fields_by_id(db: &PgPool, id: i64) -> Result<Self, DbError> {
         let statement = sqlx::query_as!(
             Self,
             r#"SELECT * FROM "usr"."usr_info" "U" WHERE "U"."id" = $1"#,
@@ -31,7 +31,7 @@ impl UsrInfo {
         Ok(statement.fetch_one(db).await?)
     }
 
-    pub async fn fetch_all_fields_by_email(db: &PgPool, email: &str) -> Result<Self, SqlxError> {
+    pub async fn fetch_all_fields_by_email(db: &PgPool, email: &str) -> Result<Self, DbError> {
         let statement = sqlx::query_as!(
             Self,
             r#"SELECT * FROM "usr"."usr_info" "U" WHERE "U"."email" = $1"#,
@@ -40,7 +40,7 @@ impl UsrInfo {
         Ok(statement.fetch_one(db).await?)
     }
 
-    pub async fn fetch_all_fields_by_phone(db: &PgPool, phone: &str) -> Result<Self, SqlxError> {
+    pub async fn fetch_all_fields_by_phone(db: &PgPool, phone: &str) -> Result<Self, DbError> {
         let statement = sqlx::query_as!(
             Self,
             r#"SELECT * FROM "usr"."usr_info" "U" WHERE "U"."phone" = $1"#,
@@ -91,7 +91,7 @@ impl UsrInfo {
             phone,
             passwd,
         }: InsertParam,
-    ) -> Result<i64, SqlxError> {
+    ) -> Result<i64, DbError> {
         let statement = sqlx::query!(
             r#"
                 INSERT INTO "usr"."usr_info" (name, email, phone, passwd_hash)
@@ -120,7 +120,7 @@ impl UsrInfo {
     /// 按照提供的 id 删除一个用户的信息，这也会删除用户的 profile
     ///
     /// 返回值：`Ok(i64)` 标识删除的用户的 id
-    pub async fn delete_by_id(db: &PgPool, id: i64) -> Result<Option<i64>, SqlxError> {
+    pub async fn delete_by_id(db: &PgPool, id: i64) -> Result<Option<i64>, DbError> {
         let statement = sqlx::query!(
             r#"DELETE FROM "usr"."usr_info" "U" WHERE "U"."id" = $1 RETURNING "U"."id""#,
             id
