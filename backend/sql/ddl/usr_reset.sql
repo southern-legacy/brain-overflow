@@ -14,11 +14,11 @@ CREATE TABLE "usr"."usr_info" (
 
 CREATE INDEX btree_idx_name ON "usr"."usr_info" USING btree (LOWER(name));
 
-CREATE TABLE "usr"."user_profiles" (
-    "usr_id"        BIGINT          PRIMARY KEY REFERENCES "usr"."usr_info"(id),
-    "biography"     TEXT            DEFAULT '# 默认用户说明',
-    "avator"        TEXT            DEFAULT '默认头像图片路径（开发中）',
-    "background"    TEXT            DEFAULT '默认背景图片路径（开发中）',
-    "contact_me"    JSONB,
-    "updated_at"    TIMESTAMPTZ     DEFAULT NOW()
+CREATE TABLE "usr"."usr_profile" (
+    "usr_id"        BIGINT          PRIMARY KEY REFERENCES "usr"."usr_info"(id) ON DELETE CASCADE,
+    "biography"     TEXT            NOT NULL DEFAULT '# 默认用户说明（开发中）',
+    "avatar"        TEXT            NOT NULL DEFAULT '默认头像图片路径（开发中）',
+    "background"    TEXT            NOT NULL DEFAULT '默认背景图片路径（开发中）',
+    "contact_me"    JSONB           NOT NULL DEFAULT '[]'::JSONB,
+    "updated_at"    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );

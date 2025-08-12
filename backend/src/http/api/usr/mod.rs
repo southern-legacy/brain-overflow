@@ -1,5 +1,5 @@
 mod bio;
-mod delete_account;
+mod delete;
 mod info;
 mod login;
 mod signup;
@@ -7,6 +7,7 @@ mod signup;
 use std::borrow::Cow;
 use std::sync::LazyLock;
 
+use crate::db::SqlxError;
 use crate::entity::usr::usr_info::UsrInfo;
 use crate::http::middelware::auth::AUTH_LAYER;
 use crate::server::ServerState;
@@ -22,15 +23,12 @@ const ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(|| argon2::Config:
 pub(super) fn build_router() -> Router<ServerState> {
     let router = Router::new();
     router
-        .route(
-            "/delete_account",
-            routing::post(delete_account::delete_account),
-        )
-        .route("/bio", routing::get(bio::bio_get))
-        .route_layer(&*AUTH_LAYER)
-        .route("/info/{id}", routing::get(info::info))
-        .route("/login", routing::post(login::login))
-        .route("/signup", routing::post(signup::signup))
+        /* 删除用户 */  .route("/",      routing::delete(delete::delete_account))
+        /* 用户自视 */  .route("/bio",   routing::get(bio::bio_get))
+        /* 必须验证 */  .route_layer(&*AUTH_LAYER)
+        /* 创建用户 */  .route("/",      routing::post(signup::signup))
+        /* 读取用户 */  .route("/{id}",  routing::get(info::info))
+        /* 创建会话 */  .route("/login", routing::post(login::login))
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -43,9 +41,13 @@ pub struct UsrIdent {
 
 impl UsrIdent {
     pub async fn retreive_self_from_db(&self, db: &PgPool) -> Result<UsrInfo, Response> {
-        match UsrInfo::find_by_id(db, self.id).await? {
-            Some(usr_info) => Ok(usr_info),
-            None => Err(StatusCode::UNAUTHORIZED.into_response()),
+        match UsrInfo::fetch_all_fields_by_id(db, self.id).await {
+            Ok(usr_info) => Ok(usr_info),
+            Err(e) => if let SqlxError::NotFound = e {
+                Err(StatusCode::UNAUTHORIZED.into_response())
+            } else {
+                Err(Response::from(e))
+            }
         }
     }
 }
@@ -56,7 +58,12 @@ impl UsrIdent {
 ///
 /// 每种字符如果总数大于2，将被统计进字符种类数，如密码 "01234567891a" 就只算**一种字符**，因为只有**一个字母 'a'**
 ///
-/// 这三种字符中必须有**两种以上**，如不满足，则无法通过校验
+/// 通过校验需要满足两个条件：
+///
+/// - 这三种字符中必须有**两种以上**
+/// - 密码整体长度大于等于 12
+///
+/// 同时注意：密码使用 Unicode 字符集，所以基本所有的字符都能作为密码的一部分
 ///
 fn validate_passwd(val: &str) -> Result<(), ValidationError> {
     let mut alphas = 0;
@@ -104,11 +111,7 @@ async fn check_passwd(val: &UsrInfo, passwd: &str) -> Result<(), Response> {
         }
         Err(e) => {
             tracing::error!("Error checking password! {e}");
-            Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Error occurs while checking your password, which is my fault!",
-            )
-                .into_response())
+            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
         }
     }
 }

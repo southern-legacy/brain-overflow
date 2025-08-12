@@ -7,13 +7,15 @@ edition = "2024"
 axum = { version = "0.8", features = ["macros"] }
 axum-valid = { version = "0.24", features = ["full_validator"] }
 base64 = "0.22"
+chrono = { version = "0.4", features = ["serde"] }
 config = "0.15"
 jsonwebtoken = "9.3"
 num_cpus = "1.17"
 regex = "1.11.1"
 rust-argon2 = "3.0"
 serde = { version = "1.0", features = ["derive"] }
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "derive", "macros", "time", "rust_decimal", "json"] }
+serde_json = { version = "1.0.142", features = ["raw_value"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "derive", "macros", "chrono", "rust_decimal", "json"] }
 tokio = { version = "1.47.1", features = ["full"] }
 tower-http = { version = "0.6", features = ["trace", "timeout", "cors", "limit", "normalize-path", "auth", "fs"] }
 tracing = "0.1"

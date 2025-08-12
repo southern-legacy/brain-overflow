@@ -1,9 +1,9 @@
 use serde::Serialize;
-use sqlx::{PgPool, prelude::FromRow};
+use sqlx::PgPool;
 
 use crate::db::SqlxError;
 
-#[derive(FromRow, Serialize)]
+#[derive(Serialize)]
 pub struct UsrInfo {
     pub id: i64,
     pub name: String,
@@ -22,66 +22,67 @@ pub struct InsertParam {
 }
 
 impl UsrInfo {
-    pub async fn find_by_id(db: &PgPool, id: i64) -> Result<Option<Self>, SqlxError> {
+    pub async fn fetch_all_fields_by_id(db: &PgPool, id: i64) -> Result<Self, SqlxError> {
         let statement = sqlx::query_as!(
             Self,
             r#"SELECT * FROM "usr"."usr_info" "U" WHERE "U"."id" = $1"#,
             id
         );
-        Ok(statement
-            .fetch_optional(db)
-            .await?)
+        Ok(statement.fetch_one(db).await?)
     }
 
-    pub async fn find_by_email(db: &PgPool, email: &str) -> Result<Option<Self>, SqlxError> {
+    pub async fn fetch_all_fields_by_email(db: &PgPool, email: &str) -> Result<Self, SqlxError> {
         let statement = sqlx::query_as!(
             Self,
             r#"SELECT * FROM "usr"."usr_info" "U" WHERE "U"."email" = $1"#,
             email
         );
-        Ok(statement
-            .fetch_optional(db)
-            .await?)
+        Ok(statement.fetch_one(db).await?)
     }
 
-    pub async fn find_by_phone(db: &PgPool, phone: &str) -> Result<Option<Self>, SqlxError> {
+    pub async fn fetch_all_fields_by_phone(db: &PgPool, phone: &str) -> Result<Self, SqlxError> {
         let statement = sqlx::query_as!(
             Self,
             r#"SELECT * FROM "usr"."usr_info" "U" WHERE "U"."phone" = $1"#,
             phone
         );
-        Ok(statement
-            .fetch_optional(db)
-            .await?)
+        Ok(statement.fetch_one(db).await?)
     }
 
-    pub async fn insert_and_return_all(
-        db: &PgPool,
-        InsertParam {
-            name,
-            email,
-            phone,
-            passwd,
-        }: InsertParam,
-    ) -> Result<UsrInfo, SqlxError> {
-        let statement = sqlx::query_as!(
-            UsrInfo,
-            r#"
-                INSERT INTO "usr"."usr_info" (name, email, phone, passwd_hash)
-                VALUES ($1, $2, $3, $4)
-                RETURNING *;
-            "#,
-            name,
-            email,
-            phone,
-            passwd
-        );
-        let res = statement.fetch_one(db).await?;
+    // pub async fn insert_and_return_all(
+    //     db: &PgPool,
+    //     InsertParam {
+    //         name,
+    //         email,
+    //         phone,
+    //         passwd,
+    //     }: InsertParam,
+    // ) -> Result<UsrInfo, SqlxError> {
+    //     let statement = sqlx::query_as!(
+    //         UsrInfo,
+    //         r#"
+    //             INSERT INTO "usr"."usr_info" (name, email, phone, passwd_hash)
+    //             VALUES ($1, $2, $3, $4)
+    //             RETURNING *;
+    //         "#,
+    //         name,
+    //         email,
+    //         phone,
+    //         passwd
+    //     );
+    //     let res = statement.fetch_one(db).await?;
+    //     let _profile = sqlx::query!(
+    //         r#"
+    //             INSERT INTO "usr"."usr_profile" (usr_id)
+    //             VALUES ($1);
+    //         "#,
+    //         res.id
+    //     ).fetch_one(db).await?;
 
-        Ok(res)
-    }
+    //     Ok(res)
+    // }
 
-    #[allow(dead_code)]
+    /// 创建用户然后返回新建用户的 id
     pub async fn insert_and_return_id(
         db: &PgPool,
         InsertParam {
@@ -103,44 +104,30 @@ impl UsrInfo {
             passwd
         );
         let res = statement.fetch_one(db).await?;
+        let _profile = sqlx::query!(
+            r#"
+                INSERT INTO "usr"."usr_profile" ("usr_id")
+                VALUES ($1) RETURNING "usr_id";
+            "#,
+            res.id
+        )
+        .fetch_one(db)
+        .await?;
 
         Ok(res.id)
     }
 
-    #[allow(dead_code)]
-    pub async fn insert_and_no_return(
-        db: &PgPool,
-        InsertParam {
-            name,
-            email,
-            phone,
-            passwd,
-        }: InsertParam,
-    ) -> Result<(), SqlxError> {
+    /// 按照提供的 id 删除一个用户的信息，这也会删除用户的 profile
+    ///
+    /// 返回值：`Ok(i64)` 标识删除的用户的 id
+    pub async fn delete_by_id(db: &PgPool, id: i64) -> Result<Option<i64>, SqlxError> {
         let statement = sqlx::query!(
-            r#"
-                INSERT INTO "usr"."usr_info" (name, email, phone, passwd_hash)
-                VALUES ($1, $2, $3, $4);
-            "#,
-            name,
-            email,
-            phone,
-            passwd
-        );
-        let _res = statement.fetch_one(db).await?;
-
-        Ok(())
-    }
-
-    pub async fn delete_by_id(
-        db: &PgPool,
-        id: i64
-    ) -> Result<usize, SqlxError> {
-        let statement = sqlx::query!(
-            r#"DELETE FROM "usr"."usr_info" "U" WHERE "U"."id" = $1 RETURNING "U"."id" CASCADE"#,
+            r#"DELETE FROM "usr"."usr_info" "U" WHERE "U"."id" = $1 RETURNING "U"."id""#,
             id
         );
-        let res = statement.fetch_all(db).await?;
-        Ok(res.len())
+        match statement.fetch_optional(db).await? {
+            Some(rec) => Ok(Some(rec.id)),
+            None => Ok(None),
+        }
     }
 }

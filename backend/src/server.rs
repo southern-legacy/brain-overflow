@@ -11,7 +11,7 @@ use tower_http::{
     cors::{self, CorsLayer},
     normalize_path::NormalizePathLayer,
     timeout::TimeoutLayer,
-    trace::{DefaultOnResponse, TraceLayer},
+    trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
 use tracing::info;
 
@@ -38,7 +38,7 @@ pub async fn start() {
             tracing::info_span!("", request_id, uri, method)
         })
         .on_failure(())
-        .on_request(())
+        .on_request(DefaultOnRequest::new().level(tracing::Level::INFO))
         .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
 
     let timeout_layer = TimeoutLayer::new(Duration::from_secs(120));

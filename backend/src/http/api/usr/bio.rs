@@ -1,8 +1,7 @@
-use axum::{Extension, debug_handler, extract::State, response::IntoResponse};
+use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse, Extension};
 
 use crate::{
-    http::api::{ApiResult, usr::UsrIdent},
-    server::ServerState,
+    entity::usr::user_profiles::UsrProfile, http::api::{usr::UsrIdent, ApiResult}, server::ServerState
 };
 
 #[debug_handler]
@@ -11,5 +10,6 @@ pub(super) async fn bio_get(
     state: State<ServerState>,
     Extension(ident): Extension<UsrIdent>,
 ) -> ApiResult {
-    Ok(axum::Json(ident.retreive_self_from_db(state.db()).await?).into_response())
+    let profile = UsrProfile::fetch_all_fields_by_id(state.db(), ident.id).await?;
+    Ok((StatusCode::OK, axum::Json(profile)).into_response())
 }

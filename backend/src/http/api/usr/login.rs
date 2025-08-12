@@ -41,22 +41,16 @@ pub(super) async fn login(
 ) -> ApiResult {
     let method = &param.method;
     let res = match method {
-        LoginMethod::Phone(phone) => UsrInfo::find_by_phone(state.db(), phone).await?,
-        LoginMethod::Email(email) => UsrInfo::find_by_email(state.db(), email).await?,
-        LoginMethod::Id(id) => UsrInfo::find_by_id(state.db(), *id).await?,
+        LoginMethod::Phone(phone) => UsrInfo::fetch_all_fields_by_phone(state.db(), phone).await?,
+        LoginMethod::Email(email) => UsrInfo::fetch_all_fields_by_email(state.db(), email).await?,
+        LoginMethod::Id(id) => UsrInfo::fetch_all_fields_by_id(state.db(), *id).await?,
     };
 
     Ok(check_passwd_and_respond(res, &param.passwd).await?)
 }
 
-async fn check_passwd_and_respond(res: Option<UsrInfo>, passwd: &str) -> ApiResult {
-    let usr = match res {
-        Some(usr) => {
-            check_passwd(&usr, passwd).await?;
-            usr
-        }
-        None => return Err(StatusCode::UNAUTHORIZED.into_response()),
-    };
+async fn check_passwd_and_respond(usr: UsrInfo, passwd: &str) -> ApiResult {
+    check_passwd(&usr, passwd).await?;
 
     Ok((
         StatusCode::OK,
@@ -84,12 +78,12 @@ impl Validate for LoginMethod {
         match self {
             LoginMethod::Id(_) => Ok(()),
             LoginMethod::Email(email) => {
-                if !utils::meet_phone_format(email) {
+                if !utils::meet_email_format(email) {
                     let mut errors = ValidationErrors::new();
                     errors.add(
                         "format",
                         ValidationError::new("1").with_message(Cow::Borrowed(
-                            "email number didn't meet the reqiurement of format",
+                            "email address didn't meet the reqiurement of format",
                         )),
                     );
                     Err(errors)

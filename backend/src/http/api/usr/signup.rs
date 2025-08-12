@@ -76,28 +76,25 @@ pub(super) async fn signup(
     let (phone, email) = method.get_tup_phone_email();
 
     let new_usr = InsertParam {
-        email: email,
-        phone: phone,
-        name: name,
+        email: email.clone(),
+        phone: phone.clone(),
+        name: name.clone(),
         passwd: match argon2::hash_encoded(passwd.as_bytes(), salt.as_bytes(), &ARGON2_CONFIG) {
             Ok(val) => val,
             Err(e) => {
-                tracing::error!("Error occured while hashing the password! {e}");
+                tracing::error!("Error occurred while hashing the password! {e}");
                 return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
             }
         },
     };
 
-    let val = UsrInfo::insert_and_return_all(state.db(), new_usr).await?;
+    let id = UsrInfo::insert_and_return_id(state.db(), new_usr).await?;
     tracing::info!("Successfully inserted a user into database.");
     Ok((
         StatusCode::CREATED,
-        [(header::LOCATION, format!("/usr/{}", val.id))],
+        [(header::LOCATION, format!("/usr/{}", id))],
         Jwt::generate(UsrIdent {
-            id: val.id,
-            name: val.name,
-            email: val.email,
-            phone: val.phone,
+            id, name, email, phone
         }),
     )
         .into_response())
@@ -113,7 +110,7 @@ impl Validate for SignUpMethod {
                     errors.add(
                         "format",
                         ValidationError::new("1").with_message(Cow::Borrowed(
-                            "phone number didn't meet the reqiurement of format",
+                            "phone number didn't meet the requirement of format",
                         )),
                     );
                     Err(errors)
@@ -128,7 +125,7 @@ impl Validate for SignUpMethod {
                     errors.add(
                         "format",
                         ValidationError::new("1").with_message(Cow::Borrowed(
-                            "email number didn't meet the reqiurement of format",
+                            "email number didn't meet the requirement of format",
                         )),
                     );
                     Err(errors)

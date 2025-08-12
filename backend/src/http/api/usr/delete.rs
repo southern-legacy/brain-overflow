@@ -23,17 +23,14 @@ pub(super) async fn delete_account(
 
 async fn try_delete_account(db: &PgPool, id: i64) -> ApiResult {
     let res = UsrInfo::delete_by_id(db, id).await?;
-    if res > 1 {
-        unreachable!()
-    } else if res == 1 {
-        tracing::info!("User deleted his/her account forever");
-        Ok((StatusCode::OK, "Your account has been deleted forever!").into_response())
-    } else {
-        tracing::info!("Seems like the deletion is not successful.");
-        Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Your account can't be removed by now.",
-        )
-            .into_response())
+    match res {
+        Some(id) => {
+            tracing::info!("User {id} deleted his/her account forever");
+            Ok((StatusCode::OK, "Your account has been deleted forever!").into_response())
+        }
+        None => {
+            tracing::info!("Someone wants to delete user {id}, which doesn't exists.");
+            Err(StatusCode::UNAUTHORIZED.into_response())
+        }
     }
 }
