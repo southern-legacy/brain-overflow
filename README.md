@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-为了练习学习到的互联网和数据库知识二编写的学习项目。以 [StackOverflow](https://stackoverflow.com/questions) 和 [知乎](https://www.zhihu.com/) 
+为了练习学习到的互联网和数据库知识而编写的学习项目。以 [StackOverflow](https://stackoverflow.com/questions) 和 [知乎](https://www.zhihu.com/) 
 等问答网站为**灵感**，**完全自主编写**的一个问答网站项目。此项目非商用，仅供[自己](https://github.com/southern-legacy)学习使用
 
 ## 技术栈
@@ -14,6 +14,13 @@
 - 编程语言选择：[Rust](https://www.rust-lang.org/zh-CN/)
 - Web 框架选择：[axum](https://github.com/tokio-rs/axum)
 - api 设计：[RESTful API](https://restful.p2hp.com/)
+
+### 前端
+
+- 框架：[Vue2](https://v2.cn.vuejs.org/v2/guide/)
+- 状态管理： [Vuex](https://vuex.vuejs.org/zh/guide/)
+- UI框架： [element-ui]((https://element.eleme.cn/#/zh-CN)
+- 前后端交互： [axios]((https://www.axios-http.cn/)
 
 ### 数据访问
 
