@@ -26,7 +26,7 @@
       @blur="validatePassword"
     />
     <el-divider><i class="el-icon-mobile-phone"></i></el-divider>
-    <button type="button" @click="handleLogin" class="submitBtn">Sign in</button>
+    <button type="button" @click="handleLogin" class="submitBtn" :disabled="isDisabled">{{isDisabled? 'Loading...' : 'Sign in'}}</button>
 
     <div class="loginToRegis">
       <span>not sign up yet?</span>
@@ -57,7 +57,8 @@ export default {
         { value: 'ID', label: 'ID登录' },
         { value: 'Email', label: '邮箱登录' },
         { value: 'Phone', label: '手机登录' }
-      ]
+      ],
+      isDisabled: false
     }
   },
   methods: {
@@ -85,19 +86,27 @@ export default {
         return
       }
       let res
-      if (this.loginValue === 'ID') {
-        // 
-        res = await loginWithId(+this.loginInput, this.loginPass)
-      } else if (this.loginValue === 'Phone') {
-        const cleanPhone = this.loginInput.replace(/\s+/g, '')
-        res = await loginWithPhone(cleanPhone, this.loginPass)
-      } else if (this.loginValue === 'Email') {
-        res = await loginWithEmail(this.loginInput, this.loginPass)
+      this.isDisabled = true
+      try {
+        if (this.loginValue === 'ID') {
+          // 
+          res = await loginWithId(+this.loginInput, this.loginPass)
+        } else if (this.loginValue === 'Phone') {
+          const cleanPhone = this.loginInput.replace(/\s+/g, '')
+          res = await loginWithPhone(cleanPhone, this.loginPass)
+        } else if (this.loginValue === 'Email') {
+          res = await loginWithEmail(this.loginInput, this.loginPass)
+        }
+        // 如果后端返回的是对象，要确认token怎么拿，比如 res.token 或 res.data.token
+        this.isDisabled = false
+        localStorage.setItem('token', res)
+        this.$store.commit('setToken', res)
+        Message({ type: 'success', duration: 2000, message: '恭喜你登陆成功' })
+      
+      } catch (error) {
+        this.isDisabled = false
       }
-      // 如果后端返回的是对象，要确认token怎么拿，比如 res.token 或 res.data.token
-      localStorage.setItem('token', res)
-      this.$store.commit('setToken', res)
-      Message({ type: 'success', duration: 2000, message: '恭喜你登陆成功' })
+      
     },
     loginToRegis() {
       this.loginInput = ''

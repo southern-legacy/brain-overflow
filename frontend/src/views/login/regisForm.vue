@@ -36,6 +36,7 @@
         v-if="isRegisWithPhone"
         @click="onGetPhoneCode"
         class="connectCodeButton"
+        :disabled="isGettingPhoneCode"
       >
         获取手机验证码
       </button>
@@ -43,6 +44,7 @@
         v-else
         @click="onGetEmailCode"
         class="connectCodeButton"
+        :disabled="isGettingEmailCode"
       >
         获取邮箱验证码
       </button>
@@ -65,6 +67,7 @@
     <button
       type="button"
       @click="regisWithPhone"
+      :disabled="isRegistering"
       v-if="isRegisWithPhone"
     >
       Sign up with Phone Number
@@ -72,6 +75,7 @@
     <button
       type="button"
       @click="regisWithEmail"
+      :disabled="isRegistering"
       v-else
     >
       Sign up with Email
@@ -103,7 +107,11 @@ export default {
       regisEmail: '',
       regisId: '',
       regisPass: '',
-      regisPassComfirm: ''
+      regisPassComfirm: '',
+      isGettingCaptcha: false,
+      isGettingPhoneCode: false,
+      isGettingEmailCode: false,
+      isRegistering: false
     }
   },
   methods: {
@@ -251,42 +259,79 @@ export default {
     async regisWithPhone() {
       if (!this.validatePhone() || !this.validatePassword() || !this.validatePasswordConfirm()) return
       const cleanPhone = this.regisPhone.replace(/\s+/g, '')
-      const res = await regisAccountWithPhone(
+      this.isRegistering = true
+      
+      try {
+        const res = await regisAccountWithPhone(
         this.regisId,
         cleanPhone,
         this.regisPass
       )
-      const resDecoded = jwtDecode(res)
-      console.log(resDecoded)
-      localStorage.setItem('token', res)
-      this.$store.commit('setToken', res)
-      Message({
-        type: 'success',
-        message: `注册成功，欢迎使用brain overflow！ 您的id为：${resDecoded.id}`,
-        duration: 0,
-        showClose: true
+        this.isRegistering = false
+        const resDecoded = jwtDecode(res)
+        console.log(resDecoded)
+        localStorage.setItem('token', res)
+        this.$store.commit('setToken', res)
+        Message({
+          type: 'success',
+          message: `注册成功，欢迎使用brain overflow！ 您的id为：${resDecoded.id}`,
+          duration: 0,
+          showClose: true
       })
-      this.$emit('change-login', resDecoded.id)
+        this.$emit('change-login', resDecoded.id)
+      } catch (error) {
+        
+        switch(error.code){
+          case "unique":
+            Message.error('该用户名或者密码已经被注册')
+            break
+          case "not_null":
+            Message.error('出现空值，请检查输入')
+            break
+          default:
+            Message.error(error.message)
+        }
+        
+      }
+      
+     
     },
 
     async regisWithEmail() {
       if (!this.validateEmail() || !this.validatePassword() || !this.validatePasswordConfirm()) return
-      const res = await regisAccountWithEmail(
-        this.regisId,
-        this.regisEmail,
-        this.regisPass
-      )
-      const resDecoded = jwtDecode(res)
-      console.log(resDecoded)
-      localStorage.setItem('token', res)
-      this.$store.commit('setToken', res)
-      Message({
-        type: 'success',
-        message: `注册成功，欢迎使用brain overflow！ 您的id为：${resDecoded.id}`,
-        duration: 0,
-        showClose: true
-      })
-      this.$emit('change-login', resDecoded.id)
+      this.isRegistering = true
+      try {
+        const res = await regisAccountWithEmail(
+          this.regisId,
+          this.regisEmail,
+          this.regisPass
+        )
+        this.isRegistering = false
+        const resDecoded = jwtDecode(res)
+        console.log(resDecoded)
+        localStorage.setItem('token', res)
+        this.$store.commit('setToken', res)
+        Message({
+          type: 'success',
+          message: `注册成功，欢迎使用brain overflow！ 您的id为：${resDecoded.id}`,
+          duration: 0,
+          showClose: true
+        })
+        this.$emit('change-login', resDecoded.id)
+      } catch (error) {
+        this.isRegistering = false
+        switch(error.code){
+          case "unique":
+            Message.error('该用户名或者密码已经被注册')
+            break
+          case "not_null":
+            Message.error('出现空值，请检查输入')
+            break
+          default:
+            Message.error(error.message)
+        }
+      }
+      
     }
   }
 }
