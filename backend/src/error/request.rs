@@ -159,6 +159,7 @@ mod test {
         helper(RequestErrorKind::QueryParamDeserializeFailed);
         helper(RequestErrorKind::ContentTypeMissing);
         helper(RequestErrorKind::FailedBufferBody);
+        helper(RequestErrorKind::InvalidParam);
     }
 
     fn helper(err: RequestErrorKind) {

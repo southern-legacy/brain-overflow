@@ -43,9 +43,20 @@ pub(super) async fn login(
 ) -> ApiResult {
     let method = &param.method;
     let res = match method {
-        LoginMethod::Phone(phone) => UsrInfo::fetch_all_fields_by_phone(state.db(), phone).await?,
-        LoginMethod::Email(email) => UsrInfo::fetch_all_fields_by_email(state.db(), email).await?,
-        LoginMethod::Id(id) => UsrInfo::fetch_all_fields_by_id(state.db(), *id).await?,
+        LoginMethod::Phone(phone) => UsrInfo::fetch_all_fields_by_phone(state.db(), phone).await,
+        LoginMethod::Email(email) => UsrInfo::fetch_all_fields_by_email(state.db(), email).await,
+        LoginMethod::Id(id) => UsrInfo::fetch_all_fields_by_id(state.db(), *id).await,
+    };
+
+    let res = match res {
+        Ok(val) => val,
+        Err(e) => {
+            if e.is_not_found() {
+                return Err(StatusCode::UNAUTHORIZED.into_response())
+            } else {
+                return Err(e.into_response())
+            }
+        }
     };
 
     Ok(check_passwd_and_respond(res, &param.passwd).await?)
