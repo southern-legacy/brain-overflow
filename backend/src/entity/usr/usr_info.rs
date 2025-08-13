@@ -1,7 +1,7 @@
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::error::DbError;
+use crate::error::db::DbError;
 
 #[derive(Serialize)]
 pub struct UsrInfo {

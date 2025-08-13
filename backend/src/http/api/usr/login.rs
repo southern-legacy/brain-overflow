@@ -1,17 +1,19 @@
 use std::borrow::Cow;
 
-use crate::entity::usr::usr_info::UsrInfo;
-use crate::http::api::ApiResult;
-use crate::http::api::usr::{UsrIdent, check_passwd, validate_passwd};
-use crate::http::jwt::Jwt;
-use crate::http::utils;
-use crate::server::ServerState;
+use crate::{
+    entity::usr::usr_info::UsrInfo,
+    http::{
+        api::{
+            usr::{check_passwd, validate_passwd, UsrIdent}, ApiResult
+        },
+        extractor::ValidJson,
+        jwt::Jwt,
+        utils,
+    },
+    server::ServerState,
+};
 
-use axum::extract::State;
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum::{Json, debug_handler};
-use axum_valid::Valid;
+use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
 use validator::{Validate, ValidationError, ValidationErrors};
 
@@ -37,7 +39,7 @@ pub(super) struct LoginParam {
 #[tracing::instrument(name = "[usr/login]", skip_all, fields(login_method = %param.method.get_anyway()))]
 pub(super) async fn login(
     state: State<ServerState>,
-    Valid(Json(param)): Valid<Json<LoginParam>>,
+    ValidJson(param): ValidJson<LoginParam>,
 ) -> ApiResult {
     let method = &param.method;
     let res = match method {

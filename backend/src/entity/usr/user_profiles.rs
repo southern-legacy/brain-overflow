@@ -2,7 +2,7 @@ use chrono::{DateTime, Local};
 use serde::Serialize;
 use sqlx::{query_as, PgPool};
 
-use crate::error::DbError;
+use crate::error::db::DbError;
 
 #[allow(dead_code)]
 #[derive(Serialize)]

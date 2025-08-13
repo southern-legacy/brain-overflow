@@ -7,7 +7,7 @@ use base64::{Engine, prelude::BASE64_STANDARD};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
-use crate::{app_config, error::AuthError};
+use crate::{app_config, error::auth::AuthError};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct JwtClaims {

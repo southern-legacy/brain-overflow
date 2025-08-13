@@ -8,7 +8,6 @@ use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use crate::entity::usr::usr_info::UsrInfo;
-use crate::error::DbError;
 use crate::http::middelware::auth::AUTH_LAYER;
 use crate::server::ServerState;
 use axum::http::StatusCode;
@@ -50,7 +49,7 @@ impl UsrIdent {
         match UsrInfo::fetch_all_fields_by_id(db, self.id).await {
             Ok(usr_info) => Ok(usr_info),
             Err(e) => {
-                if let DbError::NotFound = e {
+                if e.is_not_found() {
                     Err(StatusCode::UNAUTHORIZED.into_response())
                 } else {
                     Err(Response::from(e))

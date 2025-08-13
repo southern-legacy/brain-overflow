@@ -1,8 +1,18 @@
 use axum::{
-    debug_handler, extract::{Path, State}, http::StatusCode, response::IntoResponse
+    debug_handler,
+    extract::State,
+    http::StatusCode,
+    response::IntoResponse,
 };
 
-use crate::{entity::usr::user_profiles::UsrProfile, http::api::ApiResult, server::ServerState};
+use crate::{
+    entity::usr::user_profiles::UsrProfile,
+    http::{
+        api::ApiResult,
+        extractor::Path
+    },
+    server::ServerState,
+};
 
 #[debug_handler]
 #[tracing::instrument(name = "[usr/info]", skip(state))]

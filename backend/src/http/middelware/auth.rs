@@ -1,4 +1,5 @@
-use crate::error::AuthError;
+use crate::error::auth::{AuthError, AuthErrorKind};
+use crate::error::CustomError;
 use crate::http::api::usr::UsrIdent;
 use crate::http::jwt::{DEFAULT_VALIDATION, Jwt};
 use axum::http::HeaderValue;
@@ -48,14 +49,14 @@ impl AsyncAuthorizeRequest<Body> for Auth {
 fn decode_header(token: &HeaderValue) -> Result<&str, AuthError> {
     match token.to_str() {
         Ok(h) => Ok(h),
-        Err(_) => Err(AuthError::TokenInvalid)
+        Err(_) => Err(AuthError::new(AuthErrorKind::TokenInvalid))
     }
 }
 
 fn strip_prefix_bearer(field: &str) -> Result<&str, AuthError> {
     match field.strip_prefix("Bearer ") {
         Some(token) => Ok(token),
-        None => Err(AuthError::TokenInvalid)
+        None => Err(AuthError::new(AuthErrorKind::TokenInvalid))
     }
 }
 
