@@ -13,7 +13,7 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(Clone, Debug)]
 pub struct ServerState {
@@ -27,6 +27,7 @@ impl ServerState {
 }
 
 pub async fn start() {
+    let logo = tokio::fs::read_to_string("logo");
     logger::init();
     let conn = crate::db::init();
 
@@ -62,21 +63,25 @@ pub async fn start() {
         .layer(cors_layer)
         .layer(path_normalize_layer);
 
-    if app_config::get_server().ipv4_enabled() {
-        let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, app_config::get_server().port()))
-            .await
-            .unwrap();
-        info!("Listening on {}", listener.local_addr().unwrap());
-        axum::serve(listener, router.with_state(ServerState { db: conn.await }))
+    let listener = if app_config::get_server().ipv4_enabled() {
+        TcpListener::bind((Ipv4Addr::UNSPECIFIED, app_config::get_server().port()))
             .await
             .unwrap()
     } else if app_config::get_server().ipv6_enabled() {
-        let listener = TcpListener::bind((Ipv6Addr::UNSPECIFIED, app_config::get_server().port()))
-            .await
-            .unwrap();
-        info!("Listening on {}", listener.local_addr().unwrap());
-        axum::serve(listener, router.with_state(ServerState { db: conn.await }))
+        TcpListener::bind((Ipv6Addr::UNSPECIFIED, app_config::get_server().port()))
             .await
             .unwrap()
+    } else {
+        panic!()
+    };
+
+    match logo.await {
+        Ok(val) => println!("{val}"),
+        Err(e) => error!("cannot load logo file because {e}")
     }
+    
+    info!("Listening on {}", listener.local_addr().unwrap());
+    axum::serve(listener, router.with_state(ServerState { db: conn.await }))
+        .await
+        .unwrap()
 }

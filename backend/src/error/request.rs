@@ -22,8 +22,8 @@ impl CustomError for RequestError {
     #[cfg(feature = "default")]
     #[cfg(not(feature = "more-message"))]
     type Kind = default::RequestErrorKind;
-    #[cfg(feature = "more-message")]
 
+    #[cfg(feature = "more-message")]
     type Kind = more_message::RequestErrorKind;
 
     #[inline(always)]
@@ -43,12 +43,12 @@ impl Display for RequestError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use default::RequestErrorKind::*;
         match self.kind() {
-            JsonDataError => f.write_str("there's no syntax error, but this json can't be parsed into target type"),
+            JsonDataError => f.write_str("no syntax error, but can't be parsed into target type"),
             JsonSyntaxError => f.write_str("json syntax error"),
             ContentTypeMissing => f.write_str("expected content type: application/json"),
             FailedBufferBody => f.write_str("server failed to buffer the request body"),
             PathFormatError => f.write_str("path format error"),
-            PathMissingFields => f.write_str("path missin fields"),
+            PathMissingFields => f.write_str("path missing fields"),
             QueryParamDeserializeFailed => f.write_str("query param can't be deserialized into target type"),
             InvalidParam => f.write_str("invalid params passed in")
         }
@@ -60,12 +60,12 @@ impl Display for RequestError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use more_message::RequestErrorKind::*;
         match self.kind() {
-            JsonDataError { msg } => f.write_fmt(format_args!("there's no syntax error, but this json can't be parsed into target type, details: {msg}")),
+            JsonDataError { msg } => f.write_fmt(format_args!("no syntax error, but can't be parsed into target type, details: {msg}")),
             JsonSyntaxError { msg } => f.write_fmt(format_args!("json syntax error, details: {msg}")),
             ContentTypeMissing { msg } => f.write_fmt(format_args!("expected content type: application/json, details: {msg}")),
             FailedBufferBody { msg } => f.write_fmt(format_args!("server failed to buffer the request body, details: {msg}")),
             PathFormatError { msg } => f.write_fmt(format_args!("path format error, details: {msg}")),
-            PathMissingFields { msg } => f.write_fmt(format_args!("path missin fields, details: {msg}")),
+            PathMissingFields { msg } => f.write_fmt(format_args!("path missing fields, details: {msg}")),
             QueryParamDeserializeFailed { msg } => f.write_fmt(format_args!("query param can't be deserialized into target type, details: {msg}")),
             InvalidParam { msg } => f.write_fmt(format_args!("invalid params passed in, details: {msg}"))
         }
