@@ -3,10 +3,13 @@ port = 10086
 ipv4_enabled = false
 ipv6_enabled = true
 log_level = "info"
+secret_key = "SGVsbG8gd29ybGQ="
 
 [database]
 host = "localhost"
 port = 5432
 user = "postgres"
-passwd = "123456"
+password = "123456"
 database = "br_ovfl"
+max_connection = 80
+min_connection = 4

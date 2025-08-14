@@ -3,6 +3,7 @@ mod server;
 
 use self::db::DatabaseConfig;
 use self::server::ServerConfig;
+use clap::Parser;
 use config::Config;
 use serde::Deserialize;
 use std::sync::LazyLock;
@@ -10,16 +11,27 @@ use std::sync::LazyLock;
 static CONFIG: LazyLock<AppConfig> = LazyLock::new(|| AppConfig::load());
 
 #[derive(Deserialize)]
-pub struct AppConfig {
+struct AppConfig {
     server: ServerConfig, // server 配置字段
 
     #[serde(rename = "database")]
     db: DatabaseConfig, // db 配置字段
 }
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+#[command(name = "Brain Overflow Server")]
+#[command(author = "Sylvan Lyon")]
+struct CliConfig {
+    /// Port of server, will override the port specified in config file
+    #[arg(short = 'p', long = "port")]
+    port: Option<u16>,
+}
+
 impl AppConfig {
-    pub fn load() -> Self {
-        let configuration: AppConfig = Config::builder()
+    fn load() -> Self {
+        let cli_conf  = CliConfig::parse();
+        let mut file_conf: AppConfig = Config::builder()
             .add_source(
                 // 从配置文件读取信息
                 config::File::with_name("br-ovfl.toml")
@@ -37,11 +49,15 @@ impl AppConfig {
             })
             .unwrap();
 
-        let server_config = &configuration.server;
+        if cli_conf.port.is_some() {
+            file_conf.server.port = Some(cli_conf.port.unwrap())
+        }
+
+        let server_config = &file_conf.server;
         if !server_config.ipv6_enabled() ^ server_config.ipv4_enabled() {
             panic!("无法同时支持 IPv4 和 IPv6 监听.")
         }
-        configuration
+        file_conf
     }
 }
 

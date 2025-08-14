@@ -1,12 +1,13 @@
 use serde::Deserialize;
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ServerConfig {
-    port: Option<u16>,
-    log_level: Option<String>,
-    ipv4_enabled: Option<bool>,
-    ipv6_enabled: Option<bool>,
-    secret_key: Option<String>,
+    pub(super) port: Option<u16>,
+    pub(super) log_level: Option<String>,
+    pub(super) ipv4_enabled: Option<bool>,
+    pub(super) ipv6_enabled: Option<bool>,
+    pub(super) secret_key: Option<String>,
 }
 
 impl ServerConfig {

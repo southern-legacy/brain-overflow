@@ -2,20 +2,20 @@ use serde::Deserialize;
 use std::cmp::{max, min};
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DatabaseConfig {
-    host: Option<String>,
-    port: Option<u16>,
-    usr: Option<String>,
-    passwd: Option<String>,
-
+    pub(super) host: Option<String>,
+    pub(super) port: Option<u16>,
+    #[serde(rename = "user")]
+    pub(super) usr: Option<String>,
+    #[serde(rename = "password")]
+    pub(super) passwd: Option<String>,
     #[serde(rename = "database")]
-    db: Option<String>,
-
+    pub(super) db: Option<String>,
     #[serde(rename = "max_connection")]
-    max_conn: Option<u32>,
-
+    pub(super) max_conn: Option<u32>,
     #[serde(rename = "min_connection")]
-    min_conn: Option<u32>,
+    pub(super) min_conn: Option<u32>,
 }
 
 impl DatabaseConfig {
