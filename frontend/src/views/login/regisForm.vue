@@ -95,7 +95,7 @@
 </template>
 
 <script>
-import { regisAccountWithEmail, regisAccountWithPhone } from '@/api/login'
+import { regisAccount } from '@/api/login'
 import { Message } from 'element-ui'
 const { jwtDecode } = require('jwt-decode')
 
@@ -262,11 +262,7 @@ export default {
       this.isRegistering = true
       
       try {
-        const res = await regisAccountWithPhone(
-        this.regisId,
-        cleanPhone,
-        this.regisPass
-      )
+        const res = await regisAccount({name:this.regisId,phone:cleanPhone,passwd:this.regisPass})
         this.isRegistering = false
         const resDecoded = jwtDecode(res)
         console.log(resDecoded)
@@ -301,11 +297,7 @@ export default {
       if (!this.validateEmail() || !this.validatePassword() || !this.validatePasswordConfirm()) return
       this.isRegistering = true
       try {
-        const res = await regisAccountWithEmail(
-          this.regisId,
-          this.regisEmail,
-          this.regisPass
-        )
+        const res = await regisAccount({name:this.regisId,email:this.regisEmail,passwd:this.regisPass})
         this.isRegistering = false
         const resDecoded = jwtDecode(res)
         console.log(resDecoded)
