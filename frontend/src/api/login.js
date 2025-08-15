@@ -1,58 +1,21 @@
 import request from '@/utils/request'
 
-export const regisAccountWithEmail = (name, email, passwd) => {
+export const regisAccount = (obj) => {
   return request({
     url: '/usr',
     method: 'post',
     data: {
-      name,
-      email,
-      passwd
+      ...obj
     }
-  })
+ })
 }
 
-export const regisAccountWithPhone = (name, phone, passwd) => {
-  return request({
-    url: '/usr',
-    method: 'post',
-    data: {
-      name,
-      phone,
-      passwd
-    }
-  })
-}
-
-export const loginWithPhone = (phone, passwd) => {
+export const loginAccount = (obj) => {
   return request({
     url: '/usr/login',
     method: 'post',
     data: {
-      phone,
-      passwd
-    }
-  })
-}
-
-export const loginWithId = (id, passwd) => {
-  return request({
-    url: `/usr/login`,
-    method: 'post',
-    data: {
-      id,
-      passwd
-    }
-  })
-}
-
-export const loginWithEmail = (email, passwd) => {
-  return request({
-    url: '/usr/login',
-    method: 'post',
-    data: {
-      email,
-      passwd
+      ...obj
     }
   })
 }

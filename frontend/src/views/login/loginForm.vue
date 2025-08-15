@@ -40,7 +40,7 @@
 
 <script>
 import Vue from 'vue'
-import { loginWithEmail, loginWithId, loginWithPhone } from '@/api/login'
+import { loginAccount } from '@/api/login'
 import { Message } from 'element-ui'
 import { Select, Option } from 'element-ui'
 Vue.use(Select)
@@ -89,13 +89,13 @@ export default {
       this.isDisabled = true
       try {
         if (this.loginValue === 'ID') {
-          // 
-          res = await loginWithId(+this.loginInput, this.loginPass)
+          //
+          res = await loginAccount({id:+this.loginInput,passwd:this.loginPass})
         } else if (this.loginValue === 'Phone') {
           const cleanPhone = this.loginInput.replace(/\s+/g, '')
-          res = await loginWithPhone(cleanPhone, this.loginPass)
+          res = await loginAccount({phone:cleanPhone.loginInput,passwd:this.loginPass})
         } else if (this.loginValue === 'Email') {
-          res = await loginWithEmail(this.loginInput, this.loginPass)
+          res = await loginAccount({email:this.loginInput,passwd:this.loginPass})
         }
         // 如果后端返回的是对象，要确认token怎么拿，比如 res.token 或 res.data.token
         this.isDisabled = false

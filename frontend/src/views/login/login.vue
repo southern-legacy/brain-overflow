@@ -46,8 +46,6 @@ export default {
       this.isRegisWithPhone = !this.isRegisWithPhone
     },
     jumpToGitHub () {
-      
-      
       window.open("https://github.com/southern-legacy/brain-overflow")
     }
   }
