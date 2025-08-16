@@ -14,11 +14,11 @@ pub struct UsrInfo {
     pub passwd_hash: String,
 }
 
-pub struct InsertParam {
-    pub name: String,
-    pub email: Option<String>,
-    pub phone: Option<String>,
-    pub passwd: String,
+pub struct InsertParam<'a> {
+    pub name: &'a str,
+    pub email: Option<&'a String>,
+    pub phone: Option<&'a String>,
+    pub passwd: &'a str,
 }
 
 impl UsrInfo {
@@ -83,20 +83,20 @@ impl UsrInfo {
     // }
 
     /// 创建用户然后返回新建用户的 id
-    pub async fn insert_and_return_id(
+    pub async fn insert_and_return_id<'a>(
         db: &PgPool,
         InsertParam {
             name,
             email,
             phone,
             passwd,
-        }: InsertParam,
+        }: InsertParam<'a>,
     ) -> Result<i64, DbError> {
         let statement = sqlx::query!(
             r#"
-                INSERT INTO "usr"."usr_info" (name, email, phone, passwd_hash)
-                VALUES ($1, $2, $3, $4)
-                RETURNING "id";
+INSERT INTO "usr"."usr_info" (name, email, phone, passwd_hash)
+VALUES ($1, $2, $3, $4)
+RETURNING "id";
             "#,
             name,
             email,
@@ -106,8 +106,9 @@ impl UsrInfo {
         let res = statement.fetch_one(db).await?;
         let _profile = sqlx::query!(
             r#"
-                INSERT INTO "usr"."usr_profile" ("usr_id")
-                VALUES ($1) RETURNING "usr_id";
+INSERT INTO "usr"."usr_profile" ("usr_id")
+VALUES ($1)
+RETURNING "usr_id";
             "#,
             res.id
         )
@@ -119,15 +120,62 @@ impl UsrInfo {
 
     /// 按照提供的 id 删除一个用户的信息，这也会删除用户的 profile
     ///
-    /// 返回值：`Ok(i64)` 标识删除的用户的 id
-    pub async fn delete_by_id(db: &PgPool, id: i64) -> Result<Option<i64>, DbError> {
+    /// 返回值：`i64` 标识删除的用户的 id
+    pub async fn delete_by_id(db: &PgPool, id: i64) -> Result<i64, DbError> {
         let statement = sqlx::query!(
-            r#"DELETE FROM "usr"."usr_info" "U" WHERE "U"."id" = $1 RETURNING "U"."id""#,
+            r#"
+DELETE FROM "usr"."usr_info"
+WHERE "id" = $1
+RETURNING "id";
+        "#,
             id
         );
-        match statement.fetch_optional(db).await? {
-            Some(rec) => Ok(Some(rec.id)),
-            None => Ok(None),
-        }
+        Ok(statement.fetch_one(db).await?.id)
+    }
+
+    pub async fn update_email(db: &PgPool, id: i64, new_email: &str) -> Result<UsrInfo, DbError> {
+        let statement = sqlx::query_as!(UsrInfo,
+            r#"
+UPDATE "usr"."usr_info"
+SET "email" = $1
+WHERE "id" = $2
+RETURNING *;
+            "#,
+            new_email,
+            id
+        );
+        Ok(statement.fetch_one(db).await?)
+    }
+
+    pub async fn update_phone(db: &PgPool, id: i64, new_phone: &str) -> Result<UsrInfo, DbError> {
+        let statement = sqlx::query_as!(UsrInfo,
+            r#"
+UPDATE "usr"."usr_info"
+SET "phone" = $1
+WHERE "id" = $2
+RETURNING *;
+            "#,
+            new_phone,
+            id
+        );
+        Ok(statement.fetch_one(db).await?)
+    }
+
+    pub async fn update_passwd_hash(
+        db: &PgPool,
+        id: i64,
+        new_passwd_hash: &str,
+    ) -> Result<UsrInfo, DbError> {
+        let statement = sqlx::query_as!(UsrInfo,
+            r#"
+UPDATE "usr"."usr_info"
+SET "passwd_hash" = $1
+WHERE "id" = $2
+RETURNING *;
+            "#,
+            new_passwd_hash,
+            id,
+        );
+        Ok(statement.fetch_one(db).await?)
     }
 }

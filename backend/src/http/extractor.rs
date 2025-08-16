@@ -1,47 +1,78 @@
+use std::ops::Deref;
+
 use crate::error::request::RequestError;
-use axum::{extract::{FromRequest, FromRequestParts, Request}, http::request::Parts};
+use axum::{
+    extract::{FromRequest, FromRequestParts, Request},
+    http::request::Parts,
+};
 use axum_valid::HasValidate;
-
-macro_rules! impl_extract {
-    ($name: ident, $wrapper: ident, $rejection: ident, FromRequestParts) => {
-        impl<S, T> FromRequestParts<S> for $name<T>
-        where
-            S: Send + Sync,
-            Valid<$wrapper<T>>: FromRequestParts<S, Rejection = $rejection>,
-        {
-            type Rejection = $rejection;
-
-            async fn from_request_parts(
-                parts: &mut Parts,
-                state: &S,
-            ) -> Result<Self, Self::Rejection> {
-                Ok($name(Valid::from_request_parts(parts, state).await?.0.0))
-            }
-        }
-    };
-    ($name: ident, $wrapper: ident, $rejection: ident, FromRequest) => {
-        impl<S, T> FromRequest<S> for $name<T>
-        where
-            S: Send + Sync,
-            Valid<$wrapper<T>>: FromRequest<S, Rejection = $rejection>,
-        {
-            type Rejection = $rejection;
-
-            async fn from_request(parts: Request, state: &S) -> Result<Self, Self::Rejection> {
-                Ok($name(Valid::from_request(parts, state).await?.0.0))
-            }
-        }
-    };
-}
+use serde::Deserialize;
+use validator::Validate;
 
 #[allow(dead_code)]
 pub struct ValidQuery<T>(pub T);
+impl<S, T> FromRequestParts<S> for ValidQuery<T>
+where
+    S: Send + Sync,
+    Valid<Query<T>>: FromRequestParts<S, Rejection = RequestError>,
+{
+    type Rejection = RequestError;
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        Ok(ValidQuery(
+            Valid::from_request_parts(parts, state).await?.0.0,
+        ))
+    }
+}
+
 #[allow(dead_code)]
 pub struct ValidPath<T>(pub T);
-pub struct ValidJson<T>(pub T);
-impl_extract!(ValidQuery, Query, RequestError, FromRequestParts);
-impl_extract!(ValidPath, Path, RequestError, FromRequestParts);
-impl_extract!(ValidJson, Json, RequestError, FromRequest);
+impl<S, T> FromRequestParts<S> for ValidPath<T>
+where
+    S: Send + Sync,
+    Valid<Path<T>>: FromRequestParts<S, Rejection = RequestError>,
+{
+    type Rejection = RequestError;
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        Ok(ValidPath(
+            Valid::from_request_parts(parts, state).await?.0.0,
+        ))
+    }
+}
+
+pub struct ValidJson<T>(pub T)
+where T: Validate + for<'de> Deserialize<'de>;
+
+impl<T> ValidJson<T>
+where
+    T: Validate + for<'de> Deserialize<'de>
+{
+    pub fn unwrap(self) -> T {
+        self.0
+    }
+}
+
+impl<S, T> FromRequest<S> for ValidJson<T>
+where
+    S: Send + Sync,
+    T: Validate + for<'de> Deserialize<'de>,
+    Valid<Json<T>>: FromRequest<S, Rejection = RequestError>,
+{
+    type Rejection = RequestError;
+    async fn from_request(parts: Request, state: &S) -> Result<Self, Self::Rejection> {
+        Ok(ValidJson(Valid::from_request(parts, state).await?.0.0))
+    }
+}
+
+impl<T> Deref for ValidJson<T>
+where
+    T: Validate + for<'de> Deserialize<'de>,
+{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 #[derive(FromRequest, FromRequestParts)]
 #[from_request(via(axum_valid::Valid), rejection(RequestError))]

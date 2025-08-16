@@ -1,39 +1,35 @@
 mod bio;
-mod delete;
+mod danger_zone;
 mod info;
 mod login;
 mod signup;
 
-use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use crate::entity::usr::usr_info::UsrInfo;
+use crate::http::jwt::Jwt;
 use crate::http::middelware::auth::AUTH_LAYER;
 use crate::server::ServerState;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::{Router, routing};
+use base64::Engine;
+use base64::prelude::BASE64_STANDARD_NO_PAD;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use validator::ValidationError;
 
 const ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(|| argon2::Config::default());
 
 pub(super) fn build_router() -> Router<ServerState> {
     let router = Router::new();
     router
-        /* 删除用户 */
-        .route("/", routing::delete(delete::delete_account))
-        /* 用户自视 */
-        .route("/bio", routing::get(bio::bio_get))
-        /* 必须验证 */
-        .route_layer(&*AUTH_LAYER)
-        /* 读取用户 */
-        .route("/{id}", routing::get(info::info))
-        /* 创建用户 */
-        .route("/", routing::post(signup::signup))
-        /* 创建会话 */
-        .route("/login", routing::post(login::login))
+        /* 删除用户 */ .route("/", routing::delete(danger_zone::delete_account))
+        /* 修改用户 */ .route("/", routing::put(danger_zone::change_auth_info))
+        /* 用户自视 */ .route("/bio", routing::get(bio::bio_get))
+        /* 必须验证 */ .route_layer(&*AUTH_LAYER)
+        /* 读取用户 */ .route("/{id}", routing::get(info::info))
+        /* 创建用户 */ .route("/", routing::post(signup::signup))
+        /* 创建会话 */ .route("/login", routing::post(login::login))
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -57,48 +53,20 @@ impl UsrIdent {
             }
         }
     }
+
+    pub fn into_jwt_response(self) -> Response {
+        (StatusCode::OK, Jwt::generate(self)).into_response()
+    }
 }
 
-/// ## 验证密码复杂度
-///
-/// 三种字符，字母、数字、特殊字符，此函数将统计字母数、数字数、特殊字符数
-///
-/// 每种字符如果总数大于2，将被统计进字符种类数，如密码 "01234567891a" 就只算**一种字符**，因为只有**一个字母 'a'**
-///
-/// 通过校验需要满足两个条件：
-///
-/// - 这三种字符中必须有**两种以上**
-/// - 密码整体长度大于等于 12
-///
-/// 同时注意：密码使用 Unicode 字符集，所以基本所有的字符都能作为密码的一部分
-///
-fn validate_passwd(val: &str) -> Result<(), ValidationError> {
-    let mut alphas = 0;
-    let mut numerics = 0;
-    let mut specials = 0;
-    for c in val.chars() {
-        if c.is_alphabetic() {
-            alphas += 1;
-        } else if c.is_numeric() {
-            numerics += 1;
-        } else {
-            specials += 1;
+impl From<UsrInfo> for UsrIdent {
+    fn from(usr: UsrInfo) -> Self {
+        Self {
+            email: usr.email,
+            phone: usr.phone,
+            id: usr.id,
+            name: usr.name,
         }
-    }
-
-    let count = |val| match val {
-        2.. => 1,
-        _ => 0,
-    };
-
-    let count = count(alphas) + count(numerics) + count(specials);
-
-    if alphas + numerics + specials < 12 {
-        Err(ValidationError::new("password").with_message(Cow::Borrowed("Password is too short!")))
-    } else if count < 2 {
-        Err(ValidationError::new("password").with_message(Cow::Borrowed("Password is too simple!")))
-    } else {
-        Ok(())
     }
 }
 
@@ -118,6 +86,18 @@ async fn check_passwd(val: &UsrInfo, passwd: &str) -> Result<(), Response> {
         }
         Err(e) => {
             tracing::error!("Error checking password! {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+        }
+    }
+}
+
+#[tracing::instrument(name = "[usr/generate password]", skip_all)]
+async fn generate_passwd_hash(passwd: &str) -> Result<String, Response> {
+    let salt = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::new_v4().into_bytes());
+    match argon2::hash_encoded(passwd.as_bytes(), salt.as_bytes(), &ARGON2_CONFIG) {
+        Ok(val) => Ok(val),
+        Err(e) => {
+            tracing::error!("Error occurred while hashing the password! Details: {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
         }
     }

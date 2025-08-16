@@ -1,26 +1,22 @@
-use std::borrow::Cow;
-
 use axum::{
     debug_handler,
     extract::State,
     http::{StatusCode, header},
     response::IntoResponse,
 };
-// use axum_valid::Valid;
-use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
 use serde::Deserialize;
-use validator::{Validate, ValidationError, ValidationErrors};
+use validator::{Validate, ValidationErrors};
 
 use crate::{
     entity::usr::usr_info::{InsertParam, UsrInfo},
     http::{
         api::{
             ApiResult,
-            usr::{ARGON2_CONFIG, UsrIdent, validate_passwd},
+            usr::{UsrIdent, generate_passwd_hash},
         },
         extractor::ValidJson,
         jwt::Jwt,
-        utils,
+        utils::{validate_email, validate_passwd, validate_phone},
     },
     server::ServerState,
 };
@@ -71,7 +67,6 @@ pub(super) async fn signup(
     state: State<ServerState>,
     ValidJson(param): ValidJson<SignUpParam>,
 ) -> ApiResult {
-    let salt = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::new_v4().into_bytes());
     let SignUpParam {
         name,
         method,
@@ -80,17 +75,13 @@ pub(super) async fn signup(
 
     let (phone, email) = method.get_tup_phone_email();
 
+    let passwd_hash = generate_passwd_hash(&passwd).await?;
+
     let new_usr = InsertParam {
-        email: email.clone(),
-        phone: phone.clone(),
-        name: name.clone(),
-        passwd: match argon2::hash_encoded(passwd.as_bytes(), salt.as_bytes(), &ARGON2_CONFIG) {
-            Ok(val) => val,
-            Err(e) => {
-                tracing::error!("Error occurred while hashing the password! {e}");
-                return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
-            }
-        },
+        email: email.as_ref(),
+        phone: phone.as_ref(),
+        name: &name,
+        passwd: &passwd_hash,
     };
 
     let id = UsrInfo::insert_and_return_id(state.db(), new_usr).await?;
@@ -111,36 +102,22 @@ pub(super) async fn signup(
 impl Validate for SignUpMethod {
     fn validate(&self) -> Result<(), validator::ValidationErrors> {
         use SignUpMethod::*;
+        let mut errors = ValidationErrors::new();
         match self {
-            Phone(phone) => {
-                if !utils::meet_phone_format(phone) {
-                    let mut errors = ValidationErrors::new();
-                    errors.add(
-                        "format",
-                        ValidationError::new("1").with_message(Cow::Borrowed(
-                            "phone number didn't meet the requirement of format",
-                        )),
-                    );
+            Email(email) => match validate_email(email) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    errors.add("email", e);
                     Err(errors)
-                } else {
-                    Ok(())
                 }
-            }
-
-            Email(email) => {
-                if !utils::meet_email_format(email) {
-                    let mut errors = ValidationErrors::new();
-                    errors.add(
-                        "format",
-                        ValidationError::new("1").with_message(Cow::Borrowed(
-                            "email number didn't meet the requirement of format",
-                        )),
-                    );
+            },
+            Phone(phone) => match validate_phone(phone) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    errors.add("phone", e);
                     Err(errors)
-                } else {
-                    Ok(())
                 }
-            }
+            },
         }
     }
 }

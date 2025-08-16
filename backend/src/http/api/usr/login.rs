@@ -4,18 +4,18 @@ use crate::{
     entity::usr::usr_info::UsrInfo,
     http::{
         api::{
-            usr::{check_passwd, validate_passwd, UsrIdent}, ApiResult
+            ApiResult,
+            usr::{UsrIdent, check_passwd},
         },
         extractor::ValidJson,
-        jwt::Jwt,
-        utils,
+        utils::{validate_email, validate_passwd, validate_phone},
     },
     server::ServerState,
 };
 
 use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
-use validator::{Validate, ValidationError, ValidationErrors};
+use validator::{Validate, ValidationErrors};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -52,9 +52,9 @@ pub(super) async fn login(
         Ok(val) => val,
         Err(e) => {
             if e.is_not_found() {
-                return Err(StatusCode::UNAUTHORIZED.into_response())
+                return Err(StatusCode::UNAUTHORIZED.into_response());
             } else {
-                return Err(e.into_response())
+                return Err(e.into_response());
             }
         }
     };
@@ -65,16 +65,7 @@ pub(super) async fn login(
 async fn check_passwd_and_respond(usr: UsrInfo, passwd: &str) -> ApiResult {
     check_passwd(&usr, passwd).await?;
 
-    Ok((
-        StatusCode::OK,
-        Jwt::generate(UsrIdent {
-            email: usr.email,
-            phone: usr.phone,
-            id: usr.id,
-            name: usr.name,
-        }),
-    )
-        .into_response())
+    Ok(UsrIdent::from(usr).into_jwt_response())
 }
 
 impl LoginMethod {
@@ -88,36 +79,27 @@ impl LoginMethod {
 
 impl Validate for LoginMethod {
     fn validate(&self) -> Result<(), validator::ValidationErrors> {
+        use LoginMethod::*;
+        if let Id(_) = self {
+            return Ok(());
+        }
+        let mut errors = ValidationErrors::new();
         match self {
-            LoginMethod::Id(_) => Ok(()),
-            LoginMethod::Email(email) => {
-                if !utils::meet_email_format(email) {
-                    let mut errors = ValidationErrors::new();
-                    errors.add(
-                        "format",
-                        ValidationError::new("1").with_message(Cow::Borrowed(
-                            "email address didn't meet the reqiurement of format",
-                        )),
-                    );
+            Email(email) => match validate_email(email) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    errors.add("email", e);
                     Err(errors)
-                } else {
-                    Ok(())
                 }
-            }
-            LoginMethod::Phone(phone) => {
-                if !utils::meet_phone_format(phone) {
-                    let mut errors = ValidationErrors::new();
-                    errors.add(
-                        "format",
-                        ValidationError::new("1").with_message(Cow::Borrowed(
-                            "email number didn't meet the reqiurement of format",
-                        )),
-                    );
+            },
+            Phone(phone) => match validate_phone(phone) {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    errors.add("phone", e);
                     Err(errors)
-                } else {
-                    Ok(())
                 }
-            }
+            },
+            Id(_) => unreachable!(),
         }
     }
 }
