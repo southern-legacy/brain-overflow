@@ -59,7 +59,7 @@ pub(super) async fn login(
         }
     };
 
-    Ok(check_passwd_and_respond(res, &param.passwd).await?)
+    check_passwd_and_respond(res, &param.passwd).await
 }
 
 async fn check_passwd_and_respond(usr: UsrInfo, passwd: &str) -> ApiResult {

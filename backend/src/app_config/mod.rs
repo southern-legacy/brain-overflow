@@ -8,7 +8,7 @@ use config::Config;
 use serde::Deserialize;
 use std::sync::LazyLock;
 
-static CONFIG: LazyLock<AppConfig> = LazyLock::new(|| AppConfig::load());
+static CONFIG: LazyLock<AppConfig> = LazyLock::new(AppConfig::load);
 
 #[derive(Deserialize)]
 struct AppConfig {

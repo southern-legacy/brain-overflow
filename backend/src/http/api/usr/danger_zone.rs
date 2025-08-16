@@ -30,7 +30,7 @@ pub(super) async fn delete_account(
 ) -> ApiResult {
     let usr_info = ident.retreive_self_from_db(state.db()).await?;
     check_passwd(&usr_info, &passwd).await?;
-    Ok(try_delete_account(state.db(), ident.id).await?)
+    try_delete_account(state.db(), ident.id).await
 }
 
 async fn try_delete_account(db: &PgPool, id: i64) -> ApiResult {
@@ -105,10 +105,7 @@ pub(super) async fn change_auth_info(
         passwd,
     } = param.unwrap();
 
-    let new_passwd_hash = match &new_passwd {
-        Some(passwd) => Some(generate_passwd_hash(passwd)),
-        None => None,
-    };
+    let new_passwd_hash = new_passwd.as_ref().map(|passwd| generate_passwd_hash(passwd));
 
     check_passwd(&usr_info, &passwd).await?;
 
@@ -117,14 +114,14 @@ pub(super) async fn change_auth_info(
         _ => None,
     };
 
-    Ok(try_change_auth_info(
+    try_change_auth_info(
         state.db(),
         ident.id,
         new_email.as_ref(),
         new_phone.as_ref(),
         new_passwd_hash.as_ref(),
     )
-    .await?)
+    .await
 }
 
 async fn try_change_auth_info(

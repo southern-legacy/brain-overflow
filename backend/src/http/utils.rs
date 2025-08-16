@@ -2,9 +2,9 @@ use regex::Regex;
 use validator::ValidationError;
 use std::{borrow::Cow, sync::LazyLock};
 
-pub const EMAIL_REGEX: LazyLock<Regex> =
+pub static EMAIL_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[\w._%+-]+@[\w.-]+\.\w{2,}$").unwrap());
-pub const PHONE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+\d{1,15}$").unwrap());
+pub static PHONE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+\d{1,15}$").unwrap());
 
 
 fn meet_email_format(email: &str) -> bool {

@@ -31,10 +31,7 @@ impl CustomError for DbError {
 
 impl DbError {
     pub fn is_not_found(&self) -> bool {
-        match self.kind() {
-            DbErrorKind::NotFound => true,
-            _ => false,
-        }
+        matches!(self.kind(), DbErrorKind::NotFound)
     }
 }
 

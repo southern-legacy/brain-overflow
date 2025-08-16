@@ -60,6 +60,6 @@ fn strip_prefix_bearer(field: &str) -> Result<&str, AuthError> {
     }
 }
 
-fn get_usr_ident(token: &str) -> Result<UsrIdent, Response> {
-    Ok(Jwt::<UsrIdent>::decode_with(token, &DEFAULT_VALIDATION)?)
+fn get_usr_ident(token: &str) -> Result<UsrIdent, AuthError> {
+    Jwt::<UsrIdent>::decode_with(token, &DEFAULT_VALIDATION)
 }

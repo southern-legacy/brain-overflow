@@ -18,7 +18,7 @@ use base64::prelude::BASE64_STANDARD_NO_PAD;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-const ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(|| argon2::Config::default());
+static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::default);
 
 pub(super) fn build_router() -> Router<ServerState> {
     let router = Router::new();

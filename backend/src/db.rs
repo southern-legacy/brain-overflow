@@ -40,5 +40,5 @@ pub async fn init() -> PgPool {
         Err(e) => panic!("{}", e),
     }
 
-    return conn;
+    conn
 }
