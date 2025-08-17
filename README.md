@@ -22,8 +22,8 @@
 
 - 框架：[Vue2](https://v2.cn.vuejs.org/v2/guide/)
 - 状态管理： [Vuex](https://vuex.vuejs.org/zh/guide/)
-- UI框架： [element-ui]((https://element.eleme.cn/#/zh-CN)
-- 前后端交互： [axios]((https://www.axios-http.cn/)
+- UI框架： [element-ui](https://element.eleme.cn/#/zh-CN)
+- 前后端交互： [axios](https://www.axios-http.cn/)
 
 ### 数据访问
 
