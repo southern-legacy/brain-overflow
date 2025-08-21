@@ -3,7 +3,7 @@ name = "br-ovfl-svr"
 version = "0.1.0"
 edition = "2024"
 description = "The server of project Brain Overflow"
-authors = ["Sylvan Lyon"]
+authors = ["Sylvan Lyon <sylvanlyon@gamil.com>"]
 
 [features]
 default = []

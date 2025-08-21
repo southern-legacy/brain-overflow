@@ -5,6 +5,7 @@ mod error;
 mod http;
 mod logger;
 mod server;
+mod util;
 
 #[tokio::main]
 async fn main() {

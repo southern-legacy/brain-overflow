@@ -7,16 +7,16 @@ use crate::{
 #[debug_handler]
 #[tracing::instrument(name = "[usr/bio]", skip(state))]
 pub(super) async fn bio_get(
-    state: State<ServerState>,
+    State(state): State<ServerState>,
     Extension(ident): Extension<UsrIdent>,
 ) -> Response {
     let res = UsrProfile::fetch_all_fields_by_id(state.db(), ident.id).await;
     match res {
         Ok(profile) => (StatusCode::OK, axum::Json(profile)).into_response(),
         Err(e) => if e.is_not_found() {
-            return StatusCode::UNAUTHORIZED.into_response()
+            StatusCode::UNAUTHORIZED.into_response()
         } else {
-            return Response::from(e)
+            Response::from(e)
         },
     }
 }

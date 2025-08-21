@@ -38,7 +38,7 @@ pub(super) struct LoginParam {
 #[debug_handler]
 #[tracing::instrument(name = "[usr/login]", skip_all, fields(login_method = %param.method.get_anyway()))]
 pub(super) async fn login(
-    state: State<ServerState>,
+    State(state): State<ServerState>,
     ValidJson(param): ValidJson<LoginParam>,
 ) -> ApiResult {
     let method = &param.method;

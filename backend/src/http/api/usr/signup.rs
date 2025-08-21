@@ -62,9 +62,9 @@ pub(super) struct SignUpParam {
 }
 
 #[debug_handler]
-#[tracing::instrument(name = "[usr/signup]", skip_all, fields(verification = %param.method.get_anyway()))]
+#[tracing::instrument(name = "[usr/signup]", skip_all, fields(verify = %param.method.get_anyway()))]
 pub(super) async fn signup(
-    state: State<ServerState>,
+    State(state): State<ServerState>,
     ValidJson(param): ValidJson<SignUpParam>,
 ) -> ApiResult {
     let SignUpParam {

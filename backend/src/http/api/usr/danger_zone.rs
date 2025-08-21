@@ -105,13 +105,11 @@ pub(super) async fn change_auth_info(
         passwd,
     } = param.unwrap();
 
-    let new_passwd_hash = new_passwd.as_ref().map(|passwd| generate_passwd_hash(passwd));
-
     check_passwd(&usr_info, &passwd).await?;
 
-    let new_passwd_hash = match new_passwd_hash {
-        Some(fut) => Some(fut.await?),
-        _ => None,
+    let new_passwd_hash = match &new_passwd {
+        Some(val) => Some(generate_passwd_hash(val).await?),
+        None => None,
     };
 
     try_change_auth_info(

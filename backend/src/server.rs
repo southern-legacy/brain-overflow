@@ -35,8 +35,8 @@ pub async fn start() {
         .make_span_with(|req: &Request| {
             let method = req.method().to_string();
             let uri = req.uri().to_string();
-            let request_id = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::new_v4()); // 使用 base64 编码的 uuid 作为请求 req_id
-            tracing::info_span!("", request_id, uri, method)
+            let req_id = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::new_v4()); // 使用 base64 编码的 uuid 作为请求 req_id
+            tracing::info_span!("", req_id, method, uri)
         })
         .on_failure(())
         .on_request(DefaultOnRequest::new().level(tracing::Level::INFO))
