@@ -2,3 +2,6 @@
 /.idea
 /.vscode
 Cargo.lock
+
+# 日志输出文件
+/log

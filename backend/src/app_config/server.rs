@@ -4,10 +4,22 @@ use serde::Deserialize;
 #[serde(deny_unknown_fields)]
 pub struct ServerConfig {
     pub(super) port: Option<u16>,
-    pub(super) log_level: Option<String>,
+    #[serde(default = "LoggerConfig::default")]
+    pub(super) log: LoggerConfig,
     pub(super) ipv4_enabled: Option<bool>,
     pub(super) ipv6_enabled: Option<bool>,
     pub(super) secret_key: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LoggerConfig {
+    pub(super) log_level: Option<String>,
+    pub(super) dump_path: Option<String>,
+    pub(super) with_ansi: Option<bool>,
+    pub(super) with_file: Option<bool>,
+    pub(super) with_target: Option<bool>,
+    pub(super) with_thread: Option<bool>,
 }
 
 impl ServerConfig {
@@ -15,8 +27,8 @@ impl ServerConfig {
         self.port.unwrap_or(80)
     }
 
-    pub fn log_level(&self) -> &str {
-        self.log_level.as_deref().unwrap_or("info")
+    pub fn log(&self) -> &LoggerConfig {
+        &self.log
     }
 
     pub fn ipv4_enabled(&self) -> bool {
@@ -32,5 +44,47 @@ impl ServerConfig {
         self.secret_key
             .as_deref()
             .unwrap_or("QnJhaW4gT3ZlcmZsb3csIGRlc2lnbmVkIG5laXRoZXIgZm9yIG1lcmNoYW50LCBub3IgZm9yIGZvcnR1bmUsIGJ1dCBmb3IgY3VsdGl2YXRpbmcgc2tpbGxzLCBieSBTb3V0aGVybiBMYWdlY3ksIHVuZGVyIE1JVCBsaXNlbmNlLg==")
+    }
+}
+
+impl Default for LoggerConfig {
+    fn default() -> Self {
+        Self {
+            log_level: Some("trace".to_string()),
+            dump_path: None,
+            with_ansi: Some(true),
+            with_file: Some(true),
+            with_target: Some(true),
+            with_thread: Some(true),
+        }
+    }
+}
+
+impl LoggerConfig {
+    pub fn level(&self) -> &str {
+        self.log_level.as_deref().unwrap_or("trace")
+    }
+
+    pub fn dump_path(&self) -> Option<&str> {
+        match &self.dump_path {
+            Some(val) => Some(val),
+            None => None,
+        }
+    }
+
+    pub fn with_ansi(&self) -> bool {
+        self.with_ansi.unwrap_or(true)
+    }
+
+    pub fn with_file(&self) -> bool {
+        self.with_file.unwrap_or(true)
+    }
+
+    pub fn with_target(&self) -> bool {
+        self.with_target.unwrap_or(true)
+    }
+
+    pub fn with_thread(&self) -> bool {
+        self.with_thread.unwrap_or(true)
     }
 }

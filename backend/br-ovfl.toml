@@ -2,8 +2,15 @@
 port = 10086
 ipv4_enabled = false
 ipv6_enabled = true
-log_level = "info"
 secret_key = "SGVsbG8gd29ybGQ="
+
+[server.log]
+with_ansi = true
+with_file = false
+with_thread = true
+with_target = true
+log_level = "trace"
+dump_path = "log"
 
 [database]
 host = "localhost"

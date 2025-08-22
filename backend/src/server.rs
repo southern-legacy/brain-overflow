@@ -28,7 +28,6 @@ impl ServerState {
 
 pub async fn start() {
     let logo = tokio::fs::read_to_string("logo");
-    logger::init();
     let conn = crate::db::init();
 
     let tracing_layer = TraceLayer::new_for_http()
@@ -75,11 +74,17 @@ pub async fn start() {
         panic!()
     };
 
-    match logo.await {
-        Ok(val) => println!("{val}"),
-        Err(e) => error!("cannot load logo file because {e}")
+    let error = match logo.await {
+        Ok(val) => Ok(println!("{val}")),
+        Err(e) => Err(e)
+    };
+
+    logger::init();
+
+    if let Err(e) = error {
+        error!("cannot load logo file because {e}");
     }
-    
+
     info!("Listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, router.with_state(ServerState { db: conn.await }))
         .await
