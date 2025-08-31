@@ -1,16 +1,11 @@
-import Vue from 'vue'
+import { createApp } from 'vue'
+
 import App from './App.vue'
-import router from './router'
-import store from './store'
+import router from '@/router/index.js'
+import pinia from '@/stores/index.js'
 import '@/styles/common.css'
-import { Divider, Button} from 'element-ui'
 
-Vue.config.productionTip = false
-Vue.component(Divider.name,Divider)
-Vue.component(Button.name, Button);
-
-new Vue({
-  router,
-  store,
-  render: h => h(App)
-}).$mount('#app')
+const app = createApp(App)
+app.use(router)
+app.use(pinia)
+app.mount('#app')

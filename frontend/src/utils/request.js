@@ -1,15 +1,17 @@
 import axios from 'axios'
-import { Message } from 'element-ui'
+import { useUserStore } from '@/stores'
 // 创建统一实例
+
 const instance = axios.create({
   baseURL: 'http://localhost:10086',
-  timeout: 5000
+  timeout: 10000
 })
 
 // 请求拦截器
 instance.interceptors.request.use(config => {
   // 自动附加 Bearer token（如果存在）
-  const token = localStorage.getItem('token')
+  const userStore = useUserStore()
+  const token = userStore.token
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -61,16 +63,15 @@ instance.interceptors.response.use(
         });
 
         // 给用户的简短提示
-        Message.error("请求参数错误");
+        ElMessage.error("请求参数错误");
         break;
 
       case 401:
         if (errCode === "token_expired" || errCode === "token_invalid") {
-          Message.error("登录状态已过期，请重新登录");
-          localStorage.removeItem("token");
+          ElMessage.error("登录状态已过期，请重新登录");
           // window.location.href = "/login";
         } else {
-          Message.error("登录验证失败，请检查账户和密码");
+          ElMessage.error("登录验证失败，请检查账户和密码并重新登陆");
         }
         break;
 
@@ -81,7 +82,7 @@ instance.interceptors.response.use(
           rawMessage: errMessage,
           response: error.response
         });
-        Message.error("请求方法错误，请联系开发者");
+        ElMessage.error("请求方法错误，请联系开发者");
         break;
 
       case 422:
@@ -95,11 +96,11 @@ instance.interceptors.response.use(
         break;
 
       case 500:
-        Message.error("服务器错误，请稍后再试");
+        ElMessage.error("服务器错误，请稍后再试");
         break;
 
       default:
-        Message.error(errMessage || "请求失败");
+        ElMessage.error(errMessage || "请求失败");
     }
 
     return Promise.reject({

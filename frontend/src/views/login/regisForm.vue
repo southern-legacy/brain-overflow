@@ -1,421 +1,292 @@
-<template>
-  <div class="regisForm">
-    <input
-      type="text"
-      placeholder="请输入名称"
-      v-model="regisId"
-    />
+<script setup>
+import { ref } from 'vue'
+import { userRegisService } from '@/api/userLogin'
+import { jwtDecode } from 'jwt-decode'
+const form = ref(null)
+const formModel = ref({
+  regisType:'email',
+  name:'',
+  email:'',
+  phone:'',
+  imgCode:'',
+  verifyCode:'',
+  password:'',
+  rePassword:''
+})
+const defaultForm = {
+  regisType:'email',
+  email:'',
+  phone:'',
+  imgCode:'',
+  verifyCode:'',
+  password:'',
+  rePassword:''
+}
+const emit = defineEmits(['changingAuth'])
+const changeAuth = () => {
+  formModel.value = defaultForm
+  emit('changingAuth')
+}
+const rules = ref({
+  name:[
+    {required: true, message: '请输入用户名', trigger: 'blur'},
+  ],
+  email:[
+    {required: true, message: '请输入邮箱', trigger: 'blur'},
+    {pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, message: '邮箱格式不符合规范, 请输入正确的邮箱' , trigger: 'blur' }
+  ],
+  phone:[
+    {required: true, message: '请输入手机号码', trigger: 'blur'},
+    {pattern: /^\+[1-9]\d{0,2}\s\d{4,14}$/, message: '手机格式不符合规范, 请输入正确的手机号码(E164格式)' , trigger: 'blur' }
+  ],
+  password:[
+    {required: true, message: '请输入密码', trigger: 'blur'},
+    {
+    validator: (rule, value, callback) => {
+      if (!value) {
+        return callback(new Error('请输入密码'))
+      }
+      if (value.length < 8) {
+        return callback(new Error('密码长度必须大于8位'))
+      }
 
-    <div class="codeBox">
-      <input type="text" placeholder="请输入图形验证码" />
-      <img
-        src="@/assets/code.png"
-        alt="验证码"
-        @click="onCaptchaClick"
-      />
-    </div>
+      let hasNumber = /\d/.test(value)                  // 数字
+      let hasAlpha = /[a-zA-Z]/.test(value)             // 字母
+      let hasSpecial = /[^a-zA-Z0-9]/.test(value)       // 特殊字符（包括中文）
 
-    <input
-      type="text"
-      placeholder="请输入手机号码"
-      v-if="isRegisWithPhone"
-      v-model="regisPhone"
-      @blur="validatePhone"
-    />
-    <input
-      type="text"
-      placeholder="请输入邮箱"
-      v-else
-      v-model="regisEmail"
-      @blur="validateEmail"
-    />
+      let typeCount = [hasNumber, hasAlpha, hasSpecial].filter(Boolean).length
 
-    <div class="connectCode">
-      <input type="text" placeholder="请输入验证码" />
-      <button
-        v-if="isRegisWithPhone"
-        @click="onGetPhoneCode"
-        class="connectCodeButton"
-        :disabled="isGettingPhoneCode"
-      >
-        获取手机验证码
-      </button>
-      <button
-        v-else
-        @click="onGetEmailCode"
-        class="connectCodeButton"
-        :disabled="isGettingEmailCode"
-      >
-        获取邮箱验证码
-      </button>
-    </div>
+      if (typeCount < 2) {
+        return callback(new Error('密码必须包含数字、字母、特殊字符中的至少两种'))
+      }
 
-    <input
-      type="password"
-      placeholder="请输入密码"
-      v-model="regisPass"
-      @blur="validatePassword"
-    />
-    <input
-      type="password"
-      placeholder="请确认您的密码"
-      v-model="regisPassComfirm"
-      @blur="validatePasswordConfirm"
-    />
-
-
-    <button
-      type="button"
-      @click="regisWithPhone"
-      :disabled="isRegistering"
-      v-if="isRegisWithPhone"
-    >
-      Sign up with Phone Number
-    </button>
-    <button
-      type="button"
-      @click="regisWithEmail"
-      :disabled="isRegistering"
-      v-else
-    >
-      Sign up with Email
-    </button>
-    <div class="regisToLogin">
-       <span> already got an account?</span>
-       <a
-         href="#"
-      
-         @click.prevent="$emit('change-login')"
-        >
-        Log in here
-      </a>
-    </div>
-   
-  </div>
-</template>
-
-<script>
-import { regisAccount } from '@/api/login'
-import { Message } from 'element-ui'
-const { jwtDecode } = require('jwt-decode')
-
-export default {
-  props: ['isRegisWithPhone'],
-  data() {
-    return {
-      regisPhone: '',
-      regisEmail: '',
-      regisId: '',
-      regisPass: '',
-      regisPassComfirm: '',
-      isGettingCaptcha: false,
-      isGettingPhoneCode: false,
-      isGettingEmailCode: false,
-      isRegistering: false
+      return callback() // 验证通过
+    },
+    trigger: 'blur'
+  }
+  ],
+  rePassword:[
+    {required: true, message: '请再次输入密码', trigger: 'blur'},
+    {validator: (rule, value, callback)=>{
+      if (!value) {
+        return callback(new Error('请再次输入密码'))
+      }
+      if(value !==formModel.value.password)
+        return callback(new Error('前后两次密码输入不一致'))
+      return callback()
+    }, trigger:'blur'}
+  ]
+})
+const handleRegis = async () => {
+  await form.value.validate()
+  let decodedToken = ''
+  try{
+    if(formModel.value.regisType === 'phone'){
+      const res = await userRegisService(formModel.value.name,'',formModel.value.phone.replace(/\s/g, ''),formModel.value.password)
+      decodedToken = jwtDecode(res)
     }
-  },
-  methods: {
-    // 点击验证码图片
-    onCaptchaClick() {
-      if (this.isRegisWithPhone) {
-        this.validatePhone()
-      } else {
-        this.validateEmail()
-      }
-      // 这里可以加刷新验证码图片的逻辑
-    },
-
-    // 点击获取验证码按钮
-    onGetPhoneCode() {
-      if (this.validatePhone()) {
-        Message({
-          message: '格式正确，正在获取短信验证码',
-          type: 'success',
-          duration: 1000
-        })
-        // 调用接口获取短信验证码
-      }
-    },
-    onGetEmailCode() {
-      if (this.validateEmail()) {
-        Message({
-          message: '格式正确，正在获取邮箱验证码',
-          type: 'success',
-          duration: 1000
-        })
-        // 调用接口获取邮箱验证码
-      }
-    },
-
-    // 手机号验证（blur触发 + 按钮触发）
-    validatePhone() {
-      const cleanPhone = this.regisPhone.replace(/\s+/g, '')
-      const regex = /^\+[1-9]\d{1,14}$/ // E.164
-      if (!regex.test(cleanPhone)) {
-        Message({
-          message: '电话号码格式错误（必须为 E.164 格式，如 +8613800138000)',
-          type: 'warning',
-          duration: 2500
-        })
-        return false
-      }
-      return true
-    },
-
-    // 邮箱验证（blur触发 + 按钮触发）
-    validateEmail() {
-      const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
-      if (!emailReg.test(this.regisEmail)) {
-        Message({
-          message: '邮箱格式有误，请检查',
-          type: 'warning'
-        })
-        return false
-      }
-      return true
-    },
-
-    // 密码校验：检查密码非空且长度 >= 12
-    validatePassword() {
-      let numbers = 0
-      let letters = 0
-      let specials = 0
-      if (!this.regisPass || this.regisPass.trim() === '') {
-        Message({
-          message: '请输入密码',
-          type: 'warning',
-          duration: 2500
-        })
-        return false
-      }
-      if (this.regisPass.length < 12) {
-        Message({
-          message: '密码长度至少12位',
-          type: 'warning',
-          duration: 2500
-        })
-        return false
-      }
-      let passStringArray = this.regisPass.split("")
-      passStringArray.forEach((char)=>{
-          const charCode = char.charCodeAt(0);
-  
-          // 判断数字 (Unicode 48-57)
-          if (charCode >= 48 && charCode <= 57) {
-            numbers++
-            return
-          }
-          
-          // 判断字母 (Unicode 65-90 大写, 97-122 小写)
-          if ((charCode >= 65 && charCode <= 90) || 
-              (charCode >= 97 && charCode <= 122)) {
-            letters++
-            return
-          }
-          
-          // 判断汉字 (Unicode 19968-40959 常用汉字范围)
-          if (charCode >= 19968 && charCode <= 40959) {
-            specials++
-            return
-          }
-          
-          specials++
-          return
-      })
-      if([numbers, specials, letters].filter(n => n > 0).length >= 2)
-      return true
-      else{
-        Message({
-          message: '密码必须包含：数字，字母，特殊字符中的两种及以上',
-          type: 'warning',
-          duration: 2500
-        })
-        return false
-      }
-
-    },
-
-    // 确认密码校验：非空且和密码一致
-    validatePasswordConfirm() {
-      if (!this.regisPassComfirm || this.regisPassComfirm.trim() === '') {
-        Message({
-          message: '请确认密码',
-          type: 'warning',
-          duration: 2500
-        })
-        return false
-      }
-      if (this.regisPass !== this.regisPassComfirm) {
-        Message({
-          message: '前后两次密码输入不一致',
-          type: 'warning',
-          duration: 2500
-        })
-        return false
-      }
-      return true
-    },
-
-    async regisWithPhone() {
-      if (!this.validatePhone() || !this.validatePassword() || !this.validatePasswordConfirm()) return
-      const cleanPhone = this.regisPhone.replace(/\s+/g, '')
-      this.isRegistering = true
-      
-      try {
-        const res = await regisAccount({name:this.regisId,phone:cleanPhone,passwd:this.regisPass})
-        this.isRegistering = false
-        const resDecoded = jwtDecode(res)
-        console.log(resDecoded)
-        localStorage.setItem('token', res)
-        this.$store.commit('setToken', res)
-        Message({
-          type: 'success',
-          message: `注册成功，欢迎使用brain overflow！ 您的id为：${resDecoded.id}`,
-          duration: 0,
-          showClose: true
-      })
-        this.$emit('change-login', resDecoded.id)
-      } catch (error) {
-        
-        switch(error.code){
-          case "unique":
-            Message.error('该用户名或者密码已经被注册')
-            break
-          case "not_null":
-            Message.error('出现空值，请检查输入')
-            break
-          default:
-            Message.error(error.message)
-        }
-        
-      }
-      
-     
-    },
-
-    async regisWithEmail() {
-      if (!this.validateEmail() || !this.validatePassword() || !this.validatePasswordConfirm()) return
-      this.isRegistering = true
-      try {
-        const res = await regisAccount({name:this.regisId,email:this.regisEmail,passwd:this.regisPass})
-        this.isRegistering = false
-        const resDecoded = jwtDecode(res)
-        console.log(resDecoded)
-        localStorage.setItem('token', res)
-        this.$store.commit('setToken', res)
-        Message({
-          type: 'success',
-          message: `注册成功，欢迎使用brain overflow！ 您的id为：${resDecoded.id}`,
-          duration: 0,
-          showClose: true
-        })
-        this.$emit('change-login', resDecoded.id)
-      } catch (error) {
-        this.isRegistering = false
-        switch(error.code){
-          case "unique":
-            Message.error('该用户名或者密码已经被注册')
-            break
-          case "not_null":
-            Message.error('出现空值，请检查输入')
-            break
-          default:
-            Message.error(error.message)
-        }
-      }
-      
+    else{
+      const res = await userRegisService(formModel.value.name,formModel.value.email,'',formModel.value.password)
+      decodedToken = jwtDecode(res)
     }
   }
+  catch(err){
+    if(err.status === 422 && err.code ==='unique'){
+      return ElMessage({
+        type:'error',
+        message:'当前账号已被人注册，请修改你的用户名或注册方式'
+      })
+    }
+  }
+  console.log(decodedToken);
+  
+  ElMessage({
+    type:'success',
+    duration:0,
+    message:`注册成功, 您的id为: ${decodedToken.id}`,
+    showClose:true
+  })
+  
+  emit('changingAuth')
 }
 </script>
 
-<style scoped lang="less">
+<template>
+  <div class="regisForm" >
+    <el-form :model="formModel" ref="form" :rules="rules">
+      <!-- 注册方式选择 -->
+      <el-form-item label="请选择注册方式" class="selectBox" prop="regisType">
+        <el-select
+          placeholder="请选择"
+          class="loginSelect"
+          popper-class="loginSelectDropdown"
+          v-model="formModel.regisType"
+        >
+          <el-option label="邮箱注册" value="email"></el-option>
+          <el-option label="手机注册" value="phone"></el-option>
+        </el-select>
+      </el-form-item>
+      <el-form-item prop="name">
+        <el-input placeholder="请输入用户名" v-model="formModel.name"></el-input>
+      </el-form-item>
+      <!-- 邮箱/手机号 -->
+      <el-form-item v-if="formModel.regisType === 'email'" prop="email">
+        <el-input placeholder="请输入您的邮箱" class="username" v-model="formModel.email"></el-input>
+      </el-form-item>
+      <el-form-item v-else prop="phone">
+        <el-input placeholder="请输入您的手机号码" class="username" v-model="formModel.phone"></el-input>
+      </el-form-item>
+
+      <!-- 图形验证码 -->
+      <el-form-item prop="imgCode">
+        <el-input placeholder="请输入验证码" style="width: 60%;" class="verifyInput" v-model="formModel.imgCode"></el-input>
+        <img src="@/assets/code.png" alt="#" class="imgCode" loading="lazy"/>
+      </el-form-item>
+
+      <!-- 短信/邮箱验证码 -->
+      <el-form-item prop="verifyCode">
+        <el-input placeholder="请输入验证码" class="verifyInput" style="width: 60%;" v-model="formModel.verifyCode"></el-input>
+        <el-button class="codeBtn">点击获取验证码</el-button>
+      </el-form-item>
+
+      <!-- 密码 -->
+      <el-form-item prop="password">
+        <el-input type="password" placeholder="请输入密码" class="password" v-model="formModel.password"></el-input>
+      </el-form-item>
+
+      <!-- 确认密码 -->
+      <el-form-item prop="rePassword">
+        <el-input type="password" placeholder="请再次输入密码" class="password" v-model="formModel.rePassword"></el-input>
+      </el-form-item>
+
+      <!-- 注册按钮 -->
+      <el-form-item>
+        <el-button class="submitBtn" @click="handleRegis">注册</el-button>
+      </el-form-item>
+    </el-form>
+
+    <!-- 登录提示 -->
+    <div class="regisToLogin">
+      <span>already got an account?</span>
+      <a href="#" @click.prevent="changeAuth">Log in here</a>
+    </div>
+  </div>
+</template>
+
+<style scoped lang="scss">
 .regisForm {
   display: flex;
   flex-direction: column;
-  background-color: transparent; /* 容器背景已是 #D5DFE6 */
+  background-color: transparent;
   padding: 6px 0;
   width: 100%;
 }
-.codeBox,
-.connectCode {
-  display: flex;
-  justify-content: space-between;
+
+:deep(.el-form-item) {
+  margin-bottom: 16px
 }
-.codeBox input,
-.connectCode input {
-  width: 200px;
+
+:deep(.el-form-item__label){
+  line-height: 42px;
+}
+
+/* 输入框基础样式 */
+:deep(.el-input__wrapper) {
   height: 42px;
   background-color: #fff;
   border: 1.5px solid #d9aeb8;
-  color: #5f4959;
   border-radius: 10px;
   font-size: 15px;
   box-shadow: 0 2px 6px rgba(215, 175, 185, 0.1);
-  transition: all 0.2s ease;
-  margin-bottom: 12px;
-  padding: 0 14px;
-  &:focus{
-     border-color: #b4707f;
-     box-shadow: 0 0 6px 3px rgba(180, 112, 127, 0.18);
-     outline: none;
-  }
+  transition: all 0.3s ease;
 }
-.connectCode .connectCodeButton{
-  margin-top: 0;
-  margin-bottom: 12px;
-  font-size: 14px;
-  width: 150px;
+
+:deep(.el-input__wrapper:hover) {
+  border-color: #c97c92;
+  box-shadow: 0 4px 10px rgba(215, 175, 185, 0.2);
 }
-.codeBox img,
-.connectCode img {
-  width: 150px;
-  height: 45px;
-  cursor: pointer;
+
+:deep(.el-input__wrapper.is-focus) {
+  border-color: #a73758;
+  box-shadow: 0 4px 12px rgba(215, 175, 185, 0.3);
 }
-.regisForm input {
-  
+
+/* select 输入框样式 */
+:deep(.el-select__wrapper) {
   height: 42px;
-  background-color: #fff;
+  background: #fff;
   border: 1.5px solid #d9aeb8;
-  color: #5f4959;
   border-radius: 10px;
-  font-size: 15px;
-  box-shadow: 0 2px 6px rgba(215, 175, 185, 0.1);
   transition: all 0.2s ease;
-  margin-bottom: 12px;
   padding: 0 14px;
-  &:focus{
-     border-color: #b4707f;
-     box-shadow: 0 0 6px 3px rgba(180, 112, 127, 0.18);
-     outline: none;
-  }
+  color: #5f4959;
+  box-shadow: 0 2px 6px rgba(215, 175, 185, 0.1);
 }
-.regisForm button {
+:deep(.el-select__wrapper.is-focused) {
+  border-color: #b4707f;
+  background-color: #fff8fa;
+  box-shadow: 0 0 6px 3px rgba(180, 112, 127, 0.18);
+}
+:deep(.el-select__placeholder) {
+  color: #5f4959;
+  font-size: 15px;
+}
+:deep(.el-select__input) {
+  color: #5f4959;
+  font-size: 15px;
+}
+
+/* 验证码图片 */
+.imgCode {
+  width: auto;
+  height: 42px;
+  margin-left: 9px;
+  border-radius: 8px;
+  border: 1px solid #d9aeb8;
+  box-shadow: 0 2px 6px rgba(215, 175, 185, 0.15);
+}
+
+/* 获取验证码按钮 */
+.codeBtn {
+  margin-left: 9px;
+  height: 42px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #f7c8d1, #d797a3);
+  border: none;
+  color: #520d27;
+  font-weight: 600;
+  padding: 0 14px;
+  transition: all 0.3s ease;
+}
+.codeBtn:hover {
+  background: linear-gradient(135deg, #f5b6c0, #c78391);
+}
+
+/* 注册按钮 */
+.submitBtn {
   height: 46px;
   border-radius: 24px;
-  background: linear-gradient(135deg, #f2d6d9, #c9a5aa); /* 颜色更柔和，饱和度降低 */
+  background: linear-gradient(135deg, #f7c8d1, #d797a3);
   border: none;
-  color: #6e4a56; /* 文字颜色变柔和暗红 */
+  color: #520d27;
   font-weight: 700;
   font-size: 16px;
   letter-spacing: 0.5px;
-  box-shadow: 0 4px 10px rgba(201, 165, 170, 0.25); /* 阴影透明度更低 */
+  box-shadow: 0 6px 14px rgba(215, 175, 185, 0.3);
   transition: all 0.3s ease;
-  cursor: pointer;
-  margin-top: 8px;
+  width: 100%;
+}
+.submitBtn:hover {
+  background: linear-gradient(135deg, #f5b6c0, #c78391);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(215, 175, 185, 0.4);
+}
 
-}
-.regisForm button:hover {
-  background: linear-gradient(135deg, #e8c7cc, #b89095); /* 悬停色调稍微加深 */
-  box-shadow: 0 8px 18px rgba(184, 144, 149, 0.3);
-  transform: translateY(-2px);
-}
-.regisForm button:active {
-  transform: translateY(1px);
-}
-.el-divider i {
-  font-size: 20px;
+/* 登录提示 */
+.regisToLogin {
+  font-size: 14px;
+  text-align: center;
+  color: #4c3a4c;
 }
 .regisToLogin span {
   margin-right: 6px;
@@ -428,12 +299,5 @@ export default {
 }
 .regisToLogin a:hover {
   text-decoration: underline;
-}
-
-.regisToLogin {
-  margin-top: 14px;
-  font-size: 14px;
-  text-align: center;
-  color: #4c3a4c;
 }
 </style>

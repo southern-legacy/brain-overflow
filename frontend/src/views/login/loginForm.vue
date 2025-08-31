@@ -1,193 +1,268 @@
-<template>
-  <div class="loginForm">
-    <div class="selectBox">
-      <p>请选择登录方式</p>
-      <el-select v-model="loginValue" placeholder="请选择" class="loginSelect">
-        <el-option
-          v-for="item in loginOptions"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        >
-        </el-option>
-      </el-select>
-    </div>
-
-    <input 
-      type="text" 
-      placeholder="请输入账户" 
-      v-model="loginInput" 
-      @blur="validateAccount"
-    />
-    <input 
-      type="password" 
-      placeholder="请输入密码" 
-      v-model="loginPass" 
-      @blur="validatePassword"
-    />
-    <el-divider><i class="el-icon-mobile-phone"></i></el-divider>
-    <button type="button" @click="handleLogin" class="submitBtn" :disabled="isDisabled">{{isDisabled? 'Loading...' : 'Sign in'}}</button>
-
-    <div class="loginToRegis">
-      <span>not sign up yet?</span>
-      <a href="#"  @click.prevent="loginToRegis">
-        Sign up here
-      </a>
-    </div>
-    
-  </div>
-</template>
-
-<script>
-import Vue from 'vue'
-import { loginAccount } from '@/api/login'
-import { Message } from 'element-ui'
-import { Select, Option } from 'element-ui'
-Vue.use(Select)
-Vue.use(Option)
-const { jwtDecode } = require('jwt-decode')
-
-export default {
-  data() {
-    return {
-      loginInput: '',
-      loginPass: '',
-      loginValue: 'ID',
-      loginOptions: [
-        { value: 'ID', label: 'ID登录' },
-        { value: 'Email', label: '邮箱登录' },
-        { value: 'Phone', label: '手机登录' }
-      ],
-      isDisabled: false
-    }
-  },
-  methods: {
-    validateAccount() {
-      if (!this.loginInput.trim()) {
-        Message({ type: 'warning', duration: 2000, message: '请输入账户' })
-        return false
+<script setup>
+import { ref } from 'vue'
+import { userLoginService } from '@/api/userLogin'
+import { useUserStore } from '@/stores'
+const formModel = ref({
+  id:'',
+  phone:'',
+  email:'',
+  password: ''
+})
+const form = ref(null)
+const selectLogin = ref('id')
+const selectOptions = [
+  { value: 'id', label: 'ID登录' },
+  { value: 'phone', label: '手机号登录' },
+  { value: 'email', label: '邮箱登录' }
+]
+const rules = {
+  id:[
+    {required: true, message:'请输入id',trigger:'blur'},
+    {pattern:/^\d+$/, message:'请输入正确格式的id',trigger:'blur'}
+  ],
+  email:[
+    {required: true, message: '请输入邮箱', trigger: 'blur'},
+    {pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, message: '邮箱格式不符合规范, 请输入正确的邮箱' , trigger: 'blur' }
+  ],
+  phone:[
+    {required: true, message: '请输入手机号码', trigger: 'blur'},
+    {pattern: /^\+[1-9]\d{0,2}\s\d{4,14}$/, message: '手机格式不符合规范, 请输入正确的手机号码(E164格式)' , trigger: 'blur' }
+  ],
+  password:[
+    {required: true, message: '请输入密码', trigger: 'blur'},
+    {
+    validator: (rule, value, callback) => {
+      if (!value) {
+        return callback(new Error('请输入密码'))
       }
-      return true
-    },
-    validatePassword() {
-      if (!this.loginPass.trim()) {
-        Message({ type: 'warning', duration: 2000, message: '请输入密码' })
-        return false
+      if (value.length < 8) {
+        return callback(new Error('密码长度必须大于8位'))
       }
-      return true
-    },
-    validateLogin() {
-      return this.validateAccount() && this.validatePassword()
-    },
-    async handleLogin() {
-      if (!this.validateLogin()) return
-      if (!this.loginValue) {
-        Message({ type: 'warning', duration: 2000, message: '请选择登陆方式' })
-        return
+
+      let hasNumber = /\d/.test(value)                  // 数字
+      let hasAlpha = /[a-zA-Z]/.test(value)             // 字母
+      let hasSpecial = /[^a-zA-Z0-9]/.test(value)       // 特殊字符（包括中文）
+
+      let typeCount = [hasNumber, hasAlpha, hasSpecial].filter(Boolean).length
+
+      if (typeCount < 2) {
+        return callback(new Error('密码必须包含数字、字母、特殊字符中的至少两种'))
       }
-      let res
-      this.isDisabled = true
-      try {
-        if (this.loginValue === 'ID') {
-          //
-          res = await loginAccount({id:+this.loginInput,passwd:this.loginPass})
-        } else if (this.loginValue === 'Phone') {
-          const cleanPhone = this.loginInput.replace(/\s+/g, '')
-          res = await loginAccount({phone:cleanPhone.loginInput,passwd:this.loginPass})
-        } else if (this.loginValue === 'Email') {
-          res = await loginAccount({email:this.loginInput,passwd:this.loginPass})
-        }
-        // 如果后端返回的是对象，要确认token怎么拿，比如 res.token 或 res.data.token
-        this.isDisabled = false
-        localStorage.setItem('token', res)
-        this.$store.commit('setToken', res)
-        Message({ type: 'success', duration: 2000, message: '恭喜你登陆成功' })
-      
-      } catch (error) {
-        this.isDisabled = false
-      }
-      
+
+      return callback() // 验证通过
     },
-    loginToRegis() {
-      this.loginInput = ''
-      this.loginPass = ''
-      this.$emit('change-login')
-    }
+    trigger: 'blur'
   }
+ ]
+}
+
+const handleLogin = async () => {
+  await form.value.validate()
+  let token = ''
+  try{
+    if(selectLogin.value ==='id'){
+      token = await userLoginService(+formModel.value.id,'','',formModel.value.password)
+    }
+    else if(selectLogin.value === 'email'){
+      token = await userLoginService('',formModel.value.email,'',formModel.value.password)
+    }
+    else if(selectLogin.value === 'phone'){
+      token = await userLoginService('','',formModel.value.phone.replace(/\s/g, ''),formModel.value.password)
+    }
+  }catch(err){
+    return err
+  }
+  ElMessage({
+    type:'success',
+    message:'恭喜您，登录成功'
+  })
+  const userStore = useUserStore()
+  userStore.setToken(token)
+
+}
+
+const emit = defineEmits(['changingAuth'])
+const changeAuth = () => {
+  emit('changingAuth')
 }
 </script>
 
-<style scoped lang="less">
-.loginForm { 
+<template>
+  <div class="loginForm">
+    <el-form :model="formModel" :rules="rules" ref="form">
+      <!-- 选择器 -->
+      <el-form-item label="请选择登陆方式" class="selectBox">
+        <el-select
+          v-model="selectLogin"
+          placeholder="请选择"
+          class="loginSelect"
+          popper-class="loginSelectDropdown"
+        >
+          <el-option
+            v-for="item in selectOptions"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
+      </el-form-item>
+
+      <!-- 用户名 -->
+      <el-form-item v-if="selectLogin === 'id'" prop="id">
+        <el-input
+          v-model="formModel.id"
+          placeholder="请输入账户"
+          class="username"
+        />
+      </el-form-item>
+
+      <el-form-item v-else-if = "selectLogin === 'phone'" prop="phone">
+        <el-input
+          v-model="formModel.phone"
+          placeholder="请输入手机号码"
+          class="username"
+        />
+      </el-form-item>
+
+      <el-form-item v-else-if="selectLogin === 'email'" prop="email">
+        <el-input
+          v-model="formModel.email"
+          placeholder="请输入邮箱"
+          class="username"
+        />
+      </el-form-item>
+
+      <!-- 密码 -->
+      <el-form-item prop="password">
+        <el-input
+          v-model="formModel.password"
+          type="password"
+          placeholder="请输入密码"
+          class="password"
+        />
+      </el-form-item>
+
+      <!-- 登录按钮 -->
+      <el-form-item>
+        <el-button class="submitBtn" @click="handleLogin">登录</el-button>
+      </el-form-item>
+    </el-form>
+
+    <!-- 注册提示 -->
+    <div class="loginToRegis">
+      <span>not sign up yet?</span>
+      <a href="#" @click.prevent="changeAuth">Sign up here</a>
+    </div>
+  </div>
+</template>
+
+<style scoped lang="scss">
+// 整体loginForm的样式
+.loginForm {
   display: flex;
   flex-direction: column;
-  background-color: transparent; /* 容器背景已是 #D5DFE6 */
+  background-color: transparent;
   padding: 6px 0;
   width: 100%;
 }
 
-/* 输入框风格 */
-.loginForm input {
+/* 输入框基础样式 */
+// 使用 :deep 深度选择
+:deep(.el-input__wrapper) {
   height: 42px;
   background-color: #fff;
   border: 1.5px solid #d9aeb8;
-  color: #5f4959;
   border-radius: 10px;
   font-size: 15px;
   box-shadow: 0 2px 6px rgba(215, 175, 185, 0.1);
   transition: all 0.2s ease;
-  margin-bottom: 12px;
   padding: 0 14px;
 }
-
-/* focus 样式 */
-.loginForm input:focus {
+:deep(.el-input__wrapper.is-focus) {
   border-color: #b4707f;
   box-shadow: 0 0 6px 3px rgba(180, 112, 127, 0.18);
-  outline: none;
 }
 
-/* 选择器容器 */
+/* 输入文字样式 */
+:deep(.el-input__inner) {
+  color: #5f4959;
+  font-size: 15px;
+}
+
+/* select 输入框样式 */
+:deep(.el-select__wrapper) {
+  height: 42px;
+  background: #fff;
+  border: 1.5px solid #d9aeb8;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  padding: 0 14px;
+  color: #5f4959;
+  box-shadow: 0 2px 6px rgba(215, 175, 185, 0.1);
+}
+:deep(.el-select__wrapper.is-focused) {
+  border-color: #b4707f;
+  background-color: #fff8fa;
+  box-shadow: 0 0 6px 3px rgba(180, 112, 127, 0.18);
+}
+:deep(.el-select__placeholder) {
+  color: #5f4959;
+  font-size: 15px;
+}
+:deep(.el-select__input) {
+  color: #5f4959;
+  font-size: 15px;
+}
+
+/* dropdown 样式（通过 popper-class 生效） */
+:deep(.loginSelectDropdown) {
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(180, 112, 127, 0.15);
+  overflow: hidden;
+}
+:deep(.loginSelectDropdown .el-select-dropdown__item) {
+  font-size: 15px;
+  color: #5f4959;
+  padding: 8px 14px;
+}
+
+/* 选择器整体 */
 .selectBox {
   display: flex;
   align-items: center;
   margin-bottom: 12px;
 }
-.selectBox p {
+.selectBox .el-form-item__label {
   color: #4c3a4c;
   font-size: 15px;
   margin-right: 12px;
   min-width: max-content;
 }
-
-/* 覆盖 Element UI 的输入样式 */
-::v-deep .el-select .el-input__inner {
-  background: #fff;
-  border: 1.5px solid #d9aeb8;
-  color: #5f4959;
-  border-radius: 10px;
+:deep(.el-select .el-input__wrapper) {
   height: 44px;
 }
-::v-deep .el-select .el-input__inner:hover {
+:deep(.el-select:hover .el-input__wrapper) {
   border-color: #b4707f;
 }
 
+/* 登录按钮 */
 .submitBtn {
   height: 46px;
+  width: 100%;
   border-radius: 24px;
-  background: linear-gradient(135deg, #f2d6d9, #c9a5aa); /* 颜色更柔和，饱和度降低 */
+  background: linear-gradient(135deg, #f2d6d9, #c9a5aa);
   border: none;
-  color: #6e4a56; /* 文字颜色变柔和暗红 */
+  color: #6e4a56;
   font-weight: 700;
   font-size: 16px;
   letter-spacing: 0.5px;
-  box-shadow: 0 4px 10px rgba(201, 165, 170, 0.25); /* 阴影透明度更低 */
+  box-shadow: 0 4px 10px rgba(201, 165, 170, 0.25);
   transition: all 0.3s ease;
   cursor: pointer;
   margin-top: 8px;
 }
 .submitBtn:hover {
-  background: linear-gradient(135deg, #e8c7cc, #b89095); /* 悬停色调稍微加深 */
+  background: linear-gradient(135deg, #f8dce0, #b88090);
   box-shadow: 0 8px 18px rgba(184, 144, 149, 0.3);
   transform: translateY(-2px);
 }
