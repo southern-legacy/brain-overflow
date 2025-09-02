@@ -1,6 +1,9 @@
 use std::fmt::Display;
 
-use axum::{http::StatusCode, response::{IntoResponse, Response}};
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use serde::Serialize;
 
 use crate::error::CustomError;
@@ -18,7 +21,7 @@ impl CustomError for AuthError {
     fn kind(&self) -> &AuthErrorKind {
         &self.kind
     }
-    
+
     #[inline(always)]
     fn new(kind: Self::Kind) -> Self {
         Self { kind }
@@ -34,8 +37,8 @@ pub enum AuthErrorKind {
 
 impl From<jsonwebtoken::errors::Error> for AuthError {
     fn from(value: jsonwebtoken::errors::Error) -> Self {
-        use jsonwebtoken::errors::ErrorKind::*;
         use AuthErrorKind::*;
+        use jsonwebtoken::errors::ErrorKind::*;
         match value.into_kind() {
             ExpiredSignature => AuthError::new(TokenExpired),
             _ => AuthError::new(TokenInvalid),
@@ -65,4 +68,4 @@ impl Display for AuthError {
     }
 }
 
-impl std::error::Error for AuthError { }
+impl std::error::Error for AuthError {}

@@ -1,6 +1,7 @@
 pub mod auth;
+pub mod cli;
 pub mod db;
-pub mod request;
+pub mod api;
 
 use std::error::Error;
 

@@ -1,11 +1,11 @@
 mod app_config;
+mod cli;
 mod db;
 mod entity;
 mod error;
 mod http;
 mod logger;
 mod server;
-mod util;
 
 #[tokio::main]
 async fn main() {

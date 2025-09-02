@@ -16,6 +16,9 @@ base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 config = "0.15"
+crab-vault = "0.2.6"
+crab-vault-auth = "0.2.6"
+glob = "0.3.3"
 jsonwebtoken = "9.3"
 num_cpus = "1.17"
 regex = "1.11.1"
@@ -23,7 +26,9 @@ rust-argon2 = "3.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.142", features = ["raw_value"] }
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "derive", "macros", "chrono", "rust_decimal", "json"] }
+thiserror = "2.0.16"
 tokio = { version = "1.47.1", features = ["full"] }
+tower = "0.5.2"
 tower-http = { version = "0.6", features = ["trace", "timeout", "cors", "limit", "normalize-path", "auth", "fs"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }

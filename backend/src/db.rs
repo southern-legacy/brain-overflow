@@ -1,4 +1,5 @@
 use crate::app_config;
+use crate::error::cli::CliError;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, query};
 use std::time::Duration;
@@ -8,7 +9,7 @@ pub async fn init() -> PgPool {
     let span = info_span!("Setting up database connection...");
     let _ = span.enter();
 
-    let db_config = app_config::get_database();
+    let db_config = app_config::database();
     let url = format!(
         "postgres://{}:{}@{}:{}/{}",
         db_config.usr(),
@@ -26,7 +27,11 @@ pub async fn init() -> PgPool {
         .acquire_timeout(Duration::from_secs(20));
 
     tracing::info!("Connecting to database: {url}");
-    let conn = conn_opts.connect(&url).await.unwrap();
+    let conn = conn_opts
+        .connect(&url)
+        .await
+        .map_err(|e| CliError::from(e).add_source("while setting up database connection".into()).exit_now())
+        .unwrap();
     tracing::info!("Connection set up successfully!");
 
     let version = query!(r#"SELECT version()"#)

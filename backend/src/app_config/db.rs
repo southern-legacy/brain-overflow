@@ -6,14 +6,19 @@ use std::cmp::{max, min};
 pub struct DatabaseConfig {
     pub(super) host: Option<String>,
     pub(super) port: Option<u16>,
+
     #[serde(rename = "user")]
     pub(super) usr: Option<String>,
+
     #[serde(rename = "password")]
     pub(super) passwd: Option<String>,
+
     #[serde(rename = "database")]
     pub(super) db: Option<String>,
+
     #[serde(rename = "max_connection")]
     pub(super) max_conn: Option<u32>,
+
     #[serde(rename = "min_connection")]
     pub(super) min_conn: Option<u32>,
 }

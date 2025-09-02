@@ -1,9 +1,12 @@
+use std::i64;
+
 use axum::{
     debug_handler,
     extract::State,
     http::{StatusCode, header},
     response::IntoResponse,
 };
+use crab_vault_auth::Jwt;
 use serde::Deserialize;
 use validator::{Validate, ValidationErrors};
 
@@ -15,7 +18,6 @@ use crate::{
             usr::{UsrIdent, generate_passwd_hash},
         },
         extractor::ValidJson,
-        jwt::Jwt,
         utils::{validate_email, validate_passwd, validate_phone},
     },
     server::ServerState,
@@ -89,12 +91,23 @@ pub(super) async fn signup(
     Ok((
         StatusCode::CREATED,
         [(header::LOCATION, format!("/usr/{}", id))],
-        Jwt::generate(UsrIdent {
-            id,
-            name,
-            email,
-            phone,
-        }),
+        Jwt::encode(
+            &Jwt::<UsrIdent> {
+                iss: Some("".into()),
+                aud: vec![],
+                exp: i64::MAX,
+                nbf: 0,
+                iat: chrono::Utc::now().timestamp(),
+                jti: uuid::Uuid::new_v4(),
+                payload: UsrIdent {
+                    id,
+                    name,
+                    email,
+                    phone,
+                },
+            },
+            state.jwt_config(),
+        ),
     )
         .into_response())
 }

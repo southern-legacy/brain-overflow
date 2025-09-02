@@ -1,9 +1,11 @@
 use crate::{app_config, http, logger};
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
+use crab_vault_auth::JwtConfig;
 use sqlx::PgPool;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
+    sync::Arc,
     time::Duration,
 };
 use tokio::net::TcpListener;
@@ -15,20 +17,25 @@ use tower_http::{
 };
 use tracing::{error, info};
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ServerState {
-    db: PgPool,
+    db: Arc<PgPool>,
+    auth: Arc<JwtConfig>,
 }
 
 impl ServerState {
     pub fn db(&self) -> &PgPool {
         &self.db
     }
+
+    pub fn jwt_config(&self) -> &JwtConfig {
+        &self.auth
+    }
 }
 
 pub async fn start() {
-    let logo = tokio::fs::read_to_string("logo");
-    let conn = crate::db::init();
+    let logo = tokio::fs::read_to_string("logo").await;
+    let conn = crate::db::init().await;
 
     let tracing_layer = TraceLayer::new_for_http()
         .make_span_with(|req: &Request| {
@@ -62,21 +69,21 @@ pub async fn start() {
         .layer(cors_layer)
         .layer(path_normalize_layer);
 
-    let listener = if app_config::get_server().ipv4_enabled() {
-        TcpListener::bind((Ipv4Addr::UNSPECIFIED, app_config::get_server().port()))
+    let listener = if app_config::server().ipv4_enabled() {
+        TcpListener::bind((Ipv4Addr::UNSPECIFIED, app_config::server().port()))
             .await
             .unwrap()
-    } else if app_config::get_server().ipv6_enabled() {
-        TcpListener::bind((Ipv6Addr::UNSPECIFIED, app_config::get_server().port()))
+    } else if app_config::server().ipv6_enabled() {
+        TcpListener::bind((Ipv6Addr::UNSPECIFIED, app_config::server().port()))
             .await
             .unwrap()
     } else {
         panic!()
     };
 
-    let error = match logo.await {
+    let error = match logo {
         Ok(val) => Ok(println!("{val}")),
-        Err(e) => Err(e)
+        Err(e) => Err(e),
     };
 
     logger::init();
@@ -86,7 +93,21 @@ pub async fn start() {
     }
 
     info!("Listening on {}", listener.local_addr().unwrap());
-    axum::serve(listener, router.with_state(ServerState { db: conn.await }))
-        .await
-        .unwrap()
+    axum::serve(
+        listener,
+        router.with_state(ServerState {
+            db: Arc::new(conn),
+            auth: Arc::new(
+                app_config::server()
+                    .auth()
+                    .jwt_config_builder()
+                    .clone()
+                    .build()
+                    .map_err(|e| e.exit_now())
+                    .unwrap(),
+            ),
+        }),
+    )
+    .await
+    .unwrap()
 }

@@ -19,7 +19,7 @@ impl UsrProfile {
     pub async fn fetch_all_fields_by_id(db: &PgPool, id: i64) -> Result<Self, DbError> {
         let statement = query_as!(
             UsrProfile,
-            r#"SELECT * FROM "usr"."usr_profile" "UP" WHERE "UP"."usr_id" = $1;"#,
+            r#"SELECT * FROM "usr"."usr_profile" WHERE "usr"."usr_profile"."usr_id" = $1;"#,
             id
         );
         Ok(statement.fetch_one(db).await?)

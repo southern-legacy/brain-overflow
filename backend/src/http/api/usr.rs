@@ -4,11 +4,11 @@ mod info;
 mod login;
 mod signup;
 
+use crab_vault_auth::{Jwt, JwtConfig};
 use std::sync::LazyLock;
 
+use crate::app_config;
 use crate::entity::usr::usr_info::UsrInfo;
-use crate::http::jwt::Jwt;
-use crate::http::middleware::auth::AUTH_LAYER;
 use crate::server::ServerState;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -23,19 +23,11 @@ static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::d
 pub(super) fn build_router() -> Router<ServerState> {
     let router = Router::new();
     router
-        /* 删除用户 */
         .route("/", routing::delete(danger_zone::delete_account))
-        /* 修改用户 */
         .route("/", routing::put(danger_zone::change_auth_info))
-        /* 用户自视 */
         .route("/bio", routing::get(bio::bio_get))
-        /* 必须验证 */
-        .route_layer(&*AUTH_LAYER)
-        /* 读取用户 */
         .route("/{id}", routing::get(info::info))
-        /* 创建用户 */
         .route("/", routing::post(signup::signup))
-        /* 创建会话 */
         .route("/login", routing::post(login::login))
 }
 
@@ -61,8 +53,20 @@ impl UsrIdent {
         }
     }
 
-    pub fn into_jwt_response(self) -> Response {
-        (StatusCode::OK, Jwt::generate(self)).into_response()
+    pub fn issue_as_jwt(self, config: &JwtConfig) -> Response {
+        let iss_config = app_config::server().auth().jwt_config_builder();
+
+        (
+            StatusCode::OK,
+            Jwt::encode(
+                &Jwt::new(self)
+                    .issue_as_option(iss_config.issue_as())
+                    .audiences(app_config::server().auth().jwt_config_builder().issue_to().unwrap_or(&vec![]))
+                    .expires_in(chrono::Duration::seconds(3600)),
+                config,
+            ),
+        )
+            .into_response()
     }
 }
 

@@ -1,5 +1,10 @@
-mod db;
-mod server;
+pub mod db;
+pub mod logger;
+pub mod server;
+
+use crate::app_config::logger::LoggerConfig;
+use crate::cli::Cli;
+use crate::error::cli::CliError;
 
 use self::db::DatabaseConfig;
 use self::server::ServerConfig;
@@ -12,45 +17,43 @@ static CONFIG: LazyLock<AppConfig> = LazyLock::new(AppConfig::load);
 
 #[derive(Deserialize)]
 struct AppConfig {
+    #[serde(default)]
     server: ServerConfig, // server 配置字段
 
-    #[serde(rename = "database")]
-    db: DatabaseConfig, // db 配置字段
-}
+    database: DatabaseConfig, // db 配置字段
 
-#[derive(Parser)]
-#[command(version, about, long_about = None)]
-#[command(name = "Brain Overflow Server")]
-#[command(author = "Sylvan Lyon")]
-struct CliConfig {
-    /// Port of server, will override the port specified in config file
-    #[arg(short = 'p', long = "port")]
-    port: Option<u16>,
+    #[serde(default)]
+    logger: LoggerConfig, // logger 字段
 }
 
 impl AppConfig {
     fn load() -> Self {
-        let cli_conf  = CliConfig::parse();
+        let cli_conf = Cli::parse();
         let mut file_conf: AppConfig = Config::builder()
             .add_source(
-                // 从配置文件读取信息
                 config::File::with_name("br-ovfl.toml")
                     .required(true)
                     .format(config::FileFormat::Toml),
             )
-            .build() // 启动 I/O 读取配置文件（可能出错）
+            .build()
             .map_err(|e| {
-                println!("读取配置时出错: {e}");
+                CliError::from(e)
+                    .add_source("while reading the configuration file or deserializing it".into())
+                    .exit_now()
             })
             .unwrap()
-            .try_deserialize() // 解析配置文件（可能出错）
+            .try_deserialize()
             .map_err(|e| {
-                println!("无法反序列化配置文件: {e}");
+                CliError::from(e)
+                    .add_source(
+                        "while converting the configuration file into expected structure".into()
+                    )
+                    .exit_now()
             })
             .unwrap();
 
-        if cli_conf.port.is_some() {
-            file_conf.server.port = Some(cli_conf.port.unwrap())
+        if let Some(port) = cli_conf.port {
+            file_conf.server.port = port
         }
 
         let server_config = &file_conf.server;
@@ -61,10 +64,14 @@ impl AppConfig {
     }
 }
 
-pub fn get_server() -> &'static ServerConfig {
+pub fn server() -> &'static ServerConfig {
     &CONFIG.server
 }
 
-pub fn get_database() -> &'static DatabaseConfig {
-    &CONFIG.db
+pub fn database() -> &'static DatabaseConfig {
+    &CONFIG.database
+}
+
+pub fn logger() -> &'static LoggerConfig {
+    &CONFIG.logger
 }

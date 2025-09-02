@@ -1,6 +1,6 @@
 mod api;
 mod extractor;
-mod jwt;
+pub mod auth;
 mod middleware;
 mod utils;
 

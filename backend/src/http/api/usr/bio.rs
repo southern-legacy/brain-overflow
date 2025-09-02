@@ -1,7 +1,12 @@
-use axum::{debug_handler, extract::State, http::StatusCode, response::{IntoResponse, Response}, Extension};
+use axum::{
+    Extension, debug_handler,
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 
 use crate::{
-    entity::usr::user_profiles::UsrProfile, http::api::usr::UsrIdent, server::ServerState
+    entity::usr::user_profiles::UsrProfile, http::api::usr::UsrIdent, server::ServerState,
 };
 
 #[debug_handler]
@@ -13,10 +18,12 @@ pub(super) async fn bio_get(
     let res = UsrProfile::fetch_all_fields_by_id(state.db(), ident.id).await;
     match res {
         Ok(profile) => (StatusCode::OK, axum::Json(profile)).into_response(),
-        Err(e) => if e.is_not_found() {
-            StatusCode::UNAUTHORIZED.into_response()
-        } else {
-            Response::from(e)
-        },
+        Err(e) => {
+            if e.is_not_found() {
+                StatusCode::UNAUTHORIZED.into_response()
+            } else {
+                Response::from(e)
+            }
+        }
     }
 }

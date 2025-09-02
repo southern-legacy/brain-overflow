@@ -1,90 +1,74 @@
-use serde::Deserialize;
+use std::collections::HashSet;
 
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
+use crab_vault_auth::HttpMethod;
+use glob::Pattern;
+use serde::{Deserialize, Serialize};
+
+use crate::http::auth::{JwtConfigBuilder, PathRule};
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields, default)]
 pub struct ServerConfig {
-    pub(super) port: Option<u16>,
-    #[serde(default = "LoggerConfig::default")]
-    pub(super) log: LoggerConfig,
-    pub(super) ipv4_enabled: Option<bool>,
-    pub(super) ipv6_enabled: Option<bool>,
-    pub(super) secret_key: Option<String>,
+    pub(super) port: u16,
+    pub(super) ipv4_enabled: bool,
+    pub(super) ipv6_enabled: bool,
+    pub(super) auth: AuthConfig,
 }
 
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct LoggerConfig {
-    pub(super) log_level: Option<String>,
-    pub(super) dump_path: Option<String>,
-    pub(super) with_ansi: Option<bool>,
-    pub(super) with_file: Option<bool>,
-    pub(super) with_target: Option<bool>,
-    pub(super) with_thread: Option<bool>,
+#[derive(Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields, default)]
+pub struct AuthConfig {
+    /// 这里使用 Vec
+    ///
+    /// 在编译规则时保证如果同一个路径下有多种公开方式时，采取最后指定的公开请求方法而非并集
+    #[serde(default)]
+    pub(super) path_rules: Vec<PathRule>,
+
+    /// jwt 鉴权相关设置
+    #[serde(default)]
+    pub(super) jwt_config: JwtConfigBuilder,
 }
 
 impl ServerConfig {
     pub fn port(&self) -> u16 {
-        self.port.unwrap_or(80)
-    }
-
-    pub fn log(&self) -> &LoggerConfig {
-        &self.log
+        self.port
     }
 
     pub fn ipv4_enabled(&self) -> bool {
-        self.ipv4_enabled.unwrap_or(true)
+        self.ipv4_enabled
     }
 
     pub fn ipv6_enabled(&self) -> bool {
-        self.ipv6_enabled.unwrap_or(false)
+        self.ipv6_enabled
     }
 
-    pub fn secret_key(&self) -> &str {
-        // 默认值为 "Brain Overflow, designed neither for merchant, nor for fortune, but for cultivating skills, by Southern Lagecy, under MIT lisence."
-        self.secret_key
-            .as_deref()
-            .unwrap_or("QnJhaW4gT3ZlcmZsb3csIGRlc2lnbmVkIG5laXRoZXIgZm9yIG1lcmNoYW50LCBub3IgZm9yIGZvcnR1bmUsIGJ1dCBmb3IgY3VsdGl2YXRpbmcgc2tpbGxzLCBieSBTb3V0aGVybiBMYWdlY3ksIHVuZGVyIE1JVCBsaXNlbmNlLg==")
+    pub fn auth(&self) -> &AuthConfig {
+        &self.auth
     }
 }
 
-impl Default for LoggerConfig {
+impl AuthConfig {
+    pub fn jwt_config_builder(&self) -> &JwtConfigBuilder {
+        &self.jwt_config
+    }
+
+    /// 这个操作相当昂贵，应当尽少使用
+    pub fn get_compiled_path_rules(&self) -> Vec<(Pattern, HashSet<HttpMethod>)> {
+        self.path_rules
+            .iter()
+            .cloned()
+            .filter_map(|rule| rule.compile())
+            .collect()
+    }
+}
+
+impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            log_level: Some("trace".to_string()),
-            dump_path: None,
-            with_ansi: Some(true),
-            with_file: Some(true),
-            with_target: Some(true),
-            with_thread: Some(true),
+            port: 32767,
+            ipv4_enabled: true,
+            ipv6_enabled: false,
+            auth: AuthConfig::default(),
         }
-    }
-}
-
-impl LoggerConfig {
-    pub fn level(&self) -> &str {
-        self.log_level.as_deref().unwrap_or("trace")
-    }
-
-    pub fn dump_path(&self) -> Option<&str> {
-        match &self.dump_path {
-            Some(val) => Some(val),
-            None => None,
-        }
-    }
-
-    pub fn with_ansi(&self) -> bool {
-        self.with_ansi.unwrap_or(true)
-    }
-
-    pub fn with_file(&self) -> bool {
-        self.with_file.unwrap_or(true)
-    }
-
-    pub fn with_target(&self) -> bool {
-        self.with_target.unwrap_or(true)
-    }
-
-    pub fn with_thread(&self) -> bool {
-        self.with_thread.unwrap_or(true)
     }
 }

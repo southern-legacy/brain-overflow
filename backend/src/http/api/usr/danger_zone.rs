@@ -46,7 +46,7 @@ async fn try_delete_account(db: &PgPool, id: i64) -> ApiResult {
                 Err(StatusCode::UNAUTHORIZED.into_response())
             } else {
                 tracing::error!(
-                    "Error occurs while handling the unregister attemptation of user (id: {id}), thus this should be a fatal error, details {e}."
+                    "Error occurs while handling the unregister attempt of user (id: {id}), thus this should be a fatal error, details {e}."
                 );
                 Err(StatusCode::UNAUTHORIZED.into_response())
             }
@@ -113,7 +113,7 @@ pub(super) async fn change_auth_info(
     };
 
     try_change_auth_info(
-        state.db(),
+        &state,
         ident.id,
         new_email.as_ref(),
         new_phone.as_ref(),
@@ -123,7 +123,7 @@ pub(super) async fn change_auth_info(
 }
 
 async fn try_change_auth_info(
-    db: &PgPool,
+    state: &ServerState,
     id: i64,
     new_email: Option<&String>,
     new_phone: Option<&String>,
@@ -131,11 +131,11 @@ async fn try_change_auth_info(
 ) -> ApiResult {
     let res;
     if let Some(new_email) = new_email {
-        res = UsrInfo::update_email(db, id, new_email).await;
+        res = UsrInfo::update_email(state.db(), id, new_email).await;
     } else if let Some(new_phone) = new_phone {
-        res = UsrInfo::update_phone(db, id, new_phone).await;
+        res = UsrInfo::update_phone(state.db(), id, new_phone).await;
     } else if let Some(new_passwd_hash) = new_passwd_hash {
-        res = UsrInfo::update_passwd_hash(db, id, new_passwd_hash).await;
+        res = UsrInfo::update_passwd_hash(state.db(), id, new_passwd_hash).await;
     } else {
         // 这里应该是 unreachable 的
         // return Err(StatusCode::UNPROCESSABLE_ENTITY.into_response())
@@ -145,7 +145,7 @@ async fn try_change_auth_info(
     match res {
         Ok(res) => {
             if res.id == id {
-                Ok(UsrIdent::from(res).into_jwt_response())
+                Ok(UsrIdent::from(res).issue_as_jwt(state.jwt_config()))
             } else {
                 unreachable!()
             }
