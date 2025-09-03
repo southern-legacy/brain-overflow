@@ -60,7 +60,7 @@ pub(super) async fn login(
         }
     };
 
-    check_passwd_and_respond(res, &param.passwd, state.jwt_config()).await
+    check_passwd_and_respond(res, &param.passwd, state.auth_config().jwt_config().await).await
 }
 
 async fn check_passwd_and_respond(usr: UsrInfo, passwd: &str, config: &JwtConfig) -> ApiResult {

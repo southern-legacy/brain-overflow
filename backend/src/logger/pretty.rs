@@ -159,19 +159,36 @@ impl PrettyLogger {
                             "[N/A]"
                         })
                 );
-                println!(
-                    "{prefix}{inner_prefix}{:>8}: {}",
-                    self.get_style(Some(Cyan), None, Some(FontStyle::new().bold(true)))
-                        .decorate("target"),
-                    span.metadata().target()
-                );
-                println!(
-                    "{prefix}{inner_prefix}{:>8}: {}",
-                    self.get_style(Some(Cyan), None, Some(FontStyle::new().bold(true)))
-                        .decorate("file"),
-                    span.metadata().file().unwrap_or("N/A")
-                );
-                println!("{prefix}{inner_splitter}");
+
+                // span 的 target
+                let mut printed = false;
+                if self.with_target {
+                    println!(
+                        "{prefix}{inner_prefix}{:>8}: {}",
+                        self.get_style(Some(Cyan), None, Some(FontStyle::new().bold(true)))
+                            .decorate("target"),
+                        span.metadata().target()
+                    );
+                    printed = true;
+                }
+
+                // span 的 file 和 line
+                if self.with_file {
+                    println!(
+                        "{prefix}{inner_prefix}{:>8}: {}:{}",
+                        self.get_style(Some(Cyan), None, Some(FontStyle::new().bold(true)))
+                            .decorate("file"),
+                        span.metadata().file().unwrap_or("N/A"),
+                        span.metadata().line().unwrap_or(u32::MAX)
+                    );
+                    printed = true;
+                }
+
+                if printed {
+                    println!("{prefix}{inner_splitter}");
+                }
+
+                // span 的其他域
                 if let Some(storage) = span.extensions().get::<PrettySpanFieldsStorage>() {
                     for (k, v) in &storage.fields {
                         println!(

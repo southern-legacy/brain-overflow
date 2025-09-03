@@ -9,6 +9,7 @@ use std::sync::LazyLock;
 
 use crate::app_config;
 use crate::entity::usr::usr_info::UsrInfo;
+use crate::http::middleware::auth::AuthLayer;
 use crate::server::ServerState;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -26,6 +27,7 @@ pub(super) fn build_router() -> Router<ServerState> {
         .route("/", routing::delete(danger_zone::delete_account))
         .route("/", routing::put(danger_zone::change_auth_info))
         .route("/bio", routing::get(bio::bio_get))
+        .layer(AuthLayer::new())
         .route("/{id}", routing::get(info::info))
         .route("/", routing::post(signup::signup))
         .route("/login", routing::post(login::login))
@@ -54,15 +56,16 @@ impl UsrIdent {
     }
 
     pub fn issue_as_jwt(self, config: &JwtConfig) -> Response {
-        let iss_config = app_config::server().auth().jwt_config_builder();
+        let iss_config = app_config::server().auth().iss_config();
 
         (
             StatusCode::OK,
             Jwt::encode(
                 &Jwt::new(self)
                     .issue_as_option(iss_config.issue_as())
-                    .audiences(app_config::server().auth().jwt_config_builder().issue_to().unwrap_or(&vec![]))
-                    .expires_in(chrono::Duration::seconds(3600)),
+                    .audiences_option(iss_config.issue_to())
+                    .expires_in(iss_config.expire_in())
+                    .not_valid_in(iss_config.not_before()),
                 config,
             ),
         )

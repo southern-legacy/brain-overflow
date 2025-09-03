@@ -1,7 +1,9 @@
-use crate::{app_config, http, logger};
+use crate::{
+    app_config::{self, server::AuthConfig},
+    http, logger,
+};
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
-use crab_vault_auth::JwtConfig;
 use sqlx::PgPool;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
@@ -20,7 +22,7 @@ use tracing::{error, info};
 #[derive(Clone)]
 pub struct ServerState {
     db: Arc<PgPool>,
-    auth: Arc<JwtConfig>,
+    auth: &'static AuthConfig,
 }
 
 impl ServerState {
@@ -28,7 +30,7 @@ impl ServerState {
         &self.db
     }
 
-    pub fn jwt_config(&self) -> &JwtConfig {
+    pub fn auth_config(&self) -> &AuthConfig {
         &self.auth
     }
 }
@@ -42,7 +44,7 @@ pub async fn start() {
             let method = req.method().to_string();
             let uri = req.uri().to_string();
             let req_id = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::new_v4()); // 使用 base64 编码的 uuid 作为请求 req_id
-            tracing::info_span!("", req_id, method, uri)
+            tracing::info_span!("[request id]", req_id, method, uri)
         })
         .on_failure(())
         .on_request(DefaultOnRequest::new().level(tracing::Level::INFO))
@@ -69,16 +71,14 @@ pub async fn start() {
         .layer(cors_layer)
         .layer(path_normalize_layer);
 
-    let listener = if app_config::server().ipv4_enabled() {
-        TcpListener::bind((Ipv4Addr::UNSPECIFIED, app_config::server().port()))
-            .await
-            .unwrap()
-    } else if app_config::server().ipv6_enabled() {
+    let listener = if app_config::server().ipv6_enabled() {
         TcpListener::bind((Ipv6Addr::UNSPECIFIED, app_config::server().port()))
             .await
             .unwrap()
     } else {
-        panic!()
+        TcpListener::bind((Ipv4Addr::UNSPECIFIED, app_config::server().port()))
+            .await
+            .unwrap()
     };
 
     let error = match logo {
@@ -97,15 +97,7 @@ pub async fn start() {
         listener,
         router.with_state(ServerState {
             db: Arc::new(conn),
-            auth: Arc::new(
-                app_config::server()
-                    .auth()
-                    .jwt_config_builder()
-                    .clone()
-                    .build()
-                    .map_err(|e| e.exit_now())
-                    .unwrap(),
-            ),
+            auth: app_config::server().auth(),
         }),
     )
     .await

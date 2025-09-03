@@ -56,10 +56,6 @@ impl AppConfig {
             file_conf.server.port = port
         }
 
-        let server_config = &file_conf.server;
-        if !server_config.ipv6_enabled() ^ server_config.ipv4_enabled() {
-            panic!("无法同时支持 IPv4 和 IPv6 监听.")
-        }
         file_conf
     }
 }

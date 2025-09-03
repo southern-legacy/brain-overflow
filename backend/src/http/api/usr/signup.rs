@@ -6,7 +6,6 @@ use axum::{
     http::{StatusCode, header},
     response::IntoResponse,
 };
-use crab_vault_auth::Jwt;
 use serde::Deserialize;
 use validator::{Validate, ValidationErrors};
 
@@ -88,26 +87,17 @@ pub(super) async fn signup(
 
     let id = UsrInfo::insert_and_return_id(state.db(), new_usr).await?;
     tracing::info!("Successfully inserted a user into database.");
+
+    let usr_ident = UsrIdent {
+        id,
+        name,
+        email,
+        phone,
+    };
     Ok((
         StatusCode::CREATED,
         [(header::LOCATION, format!("/usr/{}", id))],
-        Jwt::encode(
-            &Jwt::<UsrIdent> {
-                iss: Some("".into()),
-                aud: vec![],
-                exp: i64::MAX,
-                nbf: 0,
-                iat: chrono::Utc::now().timestamp(),
-                jti: uuid::Uuid::new_v4(),
-                payload: UsrIdent {
-                    id,
-                    name,
-                    email,
-                    phone,
-                },
-            },
-            state.jwt_config(),
-        ),
+        usr_ident.issue_as_jwt(state.auth_config().jwt_config().await),
     )
         .into_response())
 }
