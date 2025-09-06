@@ -27,6 +27,7 @@ pub(super) fn build_router() -> Router<ServerState> {
         .route("/", routing::delete(danger_zone::delete_account))
         .route("/", routing::put(danger_zone::change_auth_info))
         .route("/bio", routing::get(bio::bio_get))
+        .route("/bio", routing::put(bio::bio_operation))
         .layer(AuthLayer::new())
         .route("/{id}", routing::get(info::info))
         .route("/", routing::post(signup::signup))
@@ -56,7 +57,7 @@ impl UsrIdent {
     }
 
     pub fn issue_as_jwt(self, config: &JwtConfig) -> Response {
-        let iss_config = app_config::server().auth().iss_config();
+        let iss_config = app_config::auth().iss_config();
 
         (
             StatusCode::OK,

@@ -21,6 +21,7 @@ crab-vault-auth = "0.2.6"
 jsonwebtoken = "9.3"
 num_cpus = "1.17"
 regex = "1.11.1"
+reqwest = "0.12.23"
 rust-argon2 = "3.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.142", features = ["raw_value"] }

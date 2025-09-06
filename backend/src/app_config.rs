@@ -1,7 +1,9 @@
+pub mod auth;
 pub mod db;
 pub mod logger;
 pub mod server;
 
+use crate::app_config::auth::AuthConfig;
 use crate::app_config::logger::LoggerConfig;
 use crate::cli::Cli;
 use crate::error::cli::CliError;
@@ -20,10 +22,14 @@ struct AppConfig {
     #[serde(default)]
     server: ServerConfig, // server 配置字段
 
-    database: DatabaseConfig, // db 配置字段
-
     #[serde(default)]
     logger: LoggerConfig, // logger 字段
+
+    database: DatabaseConfig, // db 配置字段
+
+    auth: AuthConfig,
+
+    crab_vault_location: String
 }
 
 impl AppConfig {
@@ -70,4 +76,12 @@ pub fn database() -> &'static DatabaseConfig {
 
 pub fn logger() -> &'static LoggerConfig {
     &CONFIG.logger
+}
+
+pub fn auth() -> &'static AuthConfig {
+    &CONFIG.auth
+}
+
+pub fn crab_vault_location() -> &'static str {
+    &CONFIG.crab_vault_location
 }

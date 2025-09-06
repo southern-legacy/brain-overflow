@@ -20,18 +20,6 @@ pub struct JwtConfigBuilder {
     iss_config: IssueConfig,
 }
 
-#[derive(Default, Serialize, Deserialize, Clone)]
-pub struct IssueConfig {
-    /// 签发令牌的时候署什么名，即令牌中的 iss 字段是什么值
-    issue_as: Option<String>,
-
-    /// 签发令牌的时候这个令牌的受众是谁
-    issue_to: Option<Vec<String>>,
-
-    expire_in: Option<Duration>,
-    not_before: Option<Duration>,
-}
-
 #[derive(Serialize, Deserialize, Default, Clone)]
 pub struct AlgKeyPair {
     algorithm: Algorithm,
@@ -68,6 +56,18 @@ pub struct ValidationConfig {
     decode_algorithms: Vec<Algorithm>,
 }
 
+#[derive(Default, Serialize, Deserialize, Clone)]
+pub struct IssueConfig {
+    /// 签发令牌的时候署什么名，即令牌中的 iss 字段是什么值
+    issue_as: Option<String>,
+
+    /// 签发令牌的时候这个令牌的受众是谁
+    issue_to: Option<Vec<String>>,
+
+    expire_in: Option<Duration>,
+    not_before: Option<Duration>,
+}
+
 impl Default for JwtConfigBuilder {
     fn default() -> Self {
         Self::new()
@@ -84,6 +84,7 @@ impl JwtConfigBuilder {
         }
     }
 
+    #[inline]
     pub fn iss_config(&self) -> &IssueConfig {
         &self.iss_config
     }
@@ -135,6 +136,7 @@ impl JwtConfigBuilder {
 }
 
 impl IssueConfig {
+    #[inline]
     pub fn issue_as(&self) -> Option<&str> {
         match &self.issue_as {
             Some(iss) => Some(iss),
@@ -142,6 +144,7 @@ impl IssueConfig {
         }
     }
 
+    #[inline]
     pub fn issue_to(&self) -> Option<&[String]> {
         match &self.issue_to {
             Some(aud) => Some(aud.as_slice()),
@@ -149,6 +152,7 @@ impl IssueConfig {
         }
     }
 
+    #[inline]
     pub fn expire_in(&self) -> Duration {
         match self.expire_in {
             Some(duration) => duration,
@@ -156,6 +160,7 @@ impl IssueConfig {
         }
     }
 
+    #[inline]
     pub fn not_before(&self) -> Duration {
         match self.not_before {
             Some(duration) => duration,
@@ -336,6 +341,7 @@ impl ValidationConfig {
 }
 
 impl Default for ValidationConfig {
+    #[inline]
     fn default() -> Self {
         Self::new(Algorithm::default())
     }

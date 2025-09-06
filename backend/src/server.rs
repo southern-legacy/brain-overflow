@@ -1,5 +1,5 @@
 use crate::{
-    app_config::{self, server::AuthConfig},
+    app_config::{self, auth::AuthConfig},
     http, logger,
 };
 use axum::extract::{DefaultBodyLimit, Request};
@@ -36,7 +36,50 @@ impl ServerState {
 }
 
 pub async fn start() {
-    let logo = tokio::fs::read_to_string("logo").await;
+    let logo = r"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣴⡶⠿⢶⣦⡀⠀⢰⣶⠀⣶⡆⢰⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣶⠿⠟⠁⣴⣶⣦⠈⢿⡆⢸⣿⠀⣿⣇⢸⣿⡀⢀⣴⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⠟⢠⣶⣶⣤⣿⣿⣿⠁⢸⡟⠛⠛⠛⠛⠛⠛⠛⠛⠻⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⠟⢡⡄⠸⣿⣿⣿⡛⠛⠻⠆⢸⡿⠟⠛⠛⠛⠛⠛⠟⣿⡆⢹⡿⠿⠿⠿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⠀⣿⣿⣶⣄⠙⣿⣿⣿⣷⡀⢸⡇⠀⠀⠀⠀⠀⠀⠀⣿⡇⢸⣷⣶⣶⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣾⠟⢀⡈⢻⣿⣿⣿⣿⣿⣋⠉⠀⢸⡇⠀⠀⠀⠀⠀⠀⠀⣿⡇⢸⣧⣤⣤⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠃⣰⣿⣧⣈⠛⠛⣿⣿⣿⣿⣿⠄⢸⡇⠀⠀⠀⠀⠀⠀⠀⣿⡇⢸⣏⣉⣉⣉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⡄⢻⣿⣿⣿⣿⣿⣿⣿⣤⣈⠹⠆⢸⡇⠀⠀⠀⠀⠀⠀⠀⣿⡇⢸⡟⠛⠛⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣷⣤⡉⠉⣡⣼⣿⠻⣿⣿⣿⡆⠀⢸⡇⠀⠀⠀⠀⠀⠀⠀⣿⡇⢸⡿⠿⠿⠿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⠀⣾⣿⣿⣿⡄⠹⢿⣿⣿⠄⢸⣷⣤⣤⣤⣤⣤⣤⣤⣿⠇⣸⣷⣶⣶⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣦⡘⠻⠿⠛⢁⣶⣤⣤⣿⠀⢸⣧⣤⣤⣤⣤⣤⣤⣤⣤⣴⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠻⠷⣶⣦⠈⢿⣿⣿⡿⠀⣼⡏⢸⣿⠀⣿⡏⢸⣿⠁⠈⠻⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢷⣦⣤⣥⣤⣾⠟⠀⠸⠿⠀⠿⠇⠸⠿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢸⣿⣿⠿⠿⣿⣶⠀⢸⣿⣿⠿⢿⣿⣦⠀⠀⠀⣼⣿⣿⣇⠀⠀⠀⣿⣿⠀⢸⣿⣷⡄⠀⢸⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢸⣿⣿⣤⣤⣿⡿⠀⢸⣿⣇⣀⣀⣿⣿⠀⠀⢰⣿⡏⢻⣿⡄⠀⠀⣿⣿⠀⢸⣿⣿⣿⣆⢸⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢸⣿⣿⠉⠉⢻⣿⡆⢸⣿⡿⠻⣿⣿⠁⠀⢀⣿⣿⣤⣼⣿⣿⡀⠀⣿⣿⠀⢸⣿⡇⠹⣿⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠸⣿⣿⣶⣾⣿⠿⠃⢸⣿⡇⠀⠙⣿⣷⠀⣼⣿⠏⠉⠉⠹⣿⣧⠀⣿⣿⠀⢸⣿⠇⠀⠙⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⡀⢀⡀⠀⣀⡀⣀⣀⣀⠀⣀⣀⣀⠀⣀⣀⣀⡀⣀⠀⠀⢀⣀⣀⣀⢀⣀⠀⣀⡀⢀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢠⣿⠉⠙⣿⠘⣷⢀⣿⠀⣿⣭⣭⠀⣿⣉⣽⠇⣿⣭⣭⠀⣿⠀⠀⣾⡏⠉⣿⡆⣿⣠⣿⣇⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠻⠦⠾⠟⠀⠹⠿⠃⠀⠿⠤⠤⠀⠿⠈⠿⠄⠿⠇⠀⠀⠿⠶⠦⠹⠷⡴⠿⠁⠸⠿⠁⠿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀";
+    println!("{logo}");
+
+    logger::init();
+
+    match reqwest::get(app_config::crab_vault_location().to_string() + "/health").await {
+        Ok(val) => {
+            info!(
+                "crab vault instance `{}` returned `{}` as response",
+                &(app_config::crab_vault_location().to_string() + "/health"),
+                val.status()
+            );
+        }
+        Err(e) => {
+            error!(
+                "Cannot establish a connection to the crab vault instance `{}`, which means this instance might not be valid, details: {e}",
+                &(app_config::crab_vault_location().to_string() + "/health")
+            );
+        }
+    };
+
     let conn = crate::db::init().await;
 
     let tracing_layer = TraceLayer::new_for_http()
@@ -81,23 +124,13 @@ pub async fn start() {
             .unwrap()
     };
 
-    let error = match logo {
-        Ok(val) => Ok(println!("{val}")),
-        Err(e) => Err(e),
-    };
-
-    logger::init();
-
-    if let Err(e) = error {
-        error!("cannot load logo file because {e}");
-    }
-
     info!("Listening on {}", listener.local_addr().unwrap());
+
     axum::serve(
         listener,
         router.with_state(ServerState {
             db: Arc::new(conn),
-            auth: app_config::server().auth(),
+            auth: app_config::auth(),
         }),
     )
     .await

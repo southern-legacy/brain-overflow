@@ -4,9 +4,11 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use crab_vault_auth::{Jwt, Permission, error::AuthError};
 
 use crate::{
-    entity::usr::user_profiles::UsrProfile, http::api::usr::UsrIdent, server::ServerState,
+    app_config, entity::usr::user_profiles::UsrProfile, http::api::usr::UsrIdent,
+    server::ServerState,
 };
 
 #[debug_handler]
@@ -26,4 +28,13 @@ pub(super) async fn bio_get(
             }
         }
     }
+}
+
+#[debug_handler]
+#[tracing::instrument(name = "[usr/bio/issue token]")]
+pub(super) async fn bio_operation() -> Result<String, AuthError> {
+    Jwt::encode(
+        &Jwt::new(Permission::new_root()),
+        app_config::auth().jwt_config().await,
+    )
 }

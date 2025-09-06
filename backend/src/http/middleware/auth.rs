@@ -5,10 +5,7 @@ use std::{
 };
 
 use axum::{
-    http::{
-        HeaderMap,
-        header::AUTHORIZATION,
-    },
+    http::{HeaderMap, header::AUTHORIZATION},
     response::{IntoResponse, Response},
 };
 use crab_vault_auth::{Jwt, JwtConfig, error::AuthError};
@@ -49,11 +46,8 @@ where
                 }
             };
 
-            match extract_and_validate_token(
-                req.headers(),
-                app_config::server().auth().jwt_config().await,
-            )
-            .await
+            match extract_and_validate_token(req.headers(), app_config::auth().jwt_config().await)
+                .await
             {
                 Ok(permission) => {
                     req.extensions_mut().insert(permission);
