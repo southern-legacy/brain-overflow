@@ -3,82 +3,92 @@ import { ref } from 'vue'
 import { userLoginService } from '@/api/userLogin'
 import { useUserStore } from '@/stores'
 const formModel = ref({
-  id:'',
-  phone:'',
-  email:'',
-  password: ''
+  id: '',
+  phone: '',
+  email: '',
+  password: '',
 })
 const form = ref(null)
 const selectLogin = ref('id')
 const selectOptions = [
   { value: 'id', label: 'ID登录' },
   { value: 'phone', label: '手机号登录' },
-  { value: 'email', label: '邮箱登录' }
+  { value: 'email', label: '邮箱登录' },
 ]
 const rules = {
-  id:[
-    {required: true, message:'请输入id',trigger:'blur'},
-    {pattern:/^\d+$/, message:'请输入正确格式的id',trigger:'blur'}
+  id: [
+    { required: true, message: '请输入id', trigger: 'blur' },
+    { pattern: /^\d+$/, message: '请输入正确格式的id', trigger: 'blur' },
   ],
-  email:[
-    {required: true, message: '请输入邮箱', trigger: 'blur'},
-    {pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, message: '邮箱格式不符合规范, 请输入正确的邮箱' , trigger: 'blur' }
-  ],
-  phone:[
-    {required: true, message: '请输入手机号码', trigger: 'blur'},
-    {pattern: /^\+[1-9]\d{0,2}\s\d{4,14}$/, message: '手机格式不符合规范, 请输入正确的手机号码(E164格式)' , trigger: 'blur' }
-  ],
-  password:[
-    {required: true, message: '请输入密码', trigger: 'blur'},
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
     {
-    validator: (rule, value, callback) => {
-      if (!value) {
-        return callback(new Error('请输入密码'))
-      }
-      if (value.length < 8) {
-        return callback(new Error('密码长度必须大于8位'))
-      }
-
-      let hasNumber = /\d/.test(value)                  // 数字
-      let hasAlpha = /[a-zA-Z]/.test(value)             // 字母
-      let hasSpecial = /[^a-zA-Z0-9]/.test(value)       // 特殊字符（包括中文）
-
-      let typeCount = [hasNumber, hasAlpha, hasSpecial].filter(Boolean).length
-
-      if (typeCount < 2) {
-        return callback(new Error('密码必须包含数字、字母、特殊字符中的至少两种'))
-      }
-
-      return callback() // 验证通过
+      pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      message: '邮箱格式不符合规范, 请输入正确的邮箱',
+      trigger: 'blur',
     },
-    trigger: 'blur'
-  }
- ]
+  ],
+  phone: [
+    { required: true, message: '请输入手机号码', trigger: 'blur' },
+    {
+      pattern: /^\+[1-9]\d{0,2}\s\d{4,14}$/,
+      message: '手机格式不符合规范, 请输入正确的手机号码(E164格式)',
+      trigger: 'blur',
+    },
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (!value) {
+          return callback(new Error('请输入密码'))
+        }
+        if (value.length < 8) {
+          return callback(new Error('密码长度必须大于8位'))
+        }
+
+        let hasNumber = /\d/.test(value) // 数字
+        let hasAlpha = /[a-zA-Z]/.test(value) // 字母
+        let hasSpecial = /[^a-zA-Z0-9]/.test(value) // 特殊字符（包括中文）
+
+        let typeCount = [hasNumber, hasAlpha, hasSpecial].filter(Boolean).length
+
+        if (typeCount < 2) {
+          return callback(new Error('密码必须包含数字、字母、特殊字符中的至少两种'))
+        }
+
+        return callback() // 验证通过
+      },
+      trigger: 'blur',
+    },
+  ],
 }
 
 const handleLogin = async () => {
   await form.value.validate()
   let token = ''
-  try{
-    if(selectLogin.value ==='id'){
-      token = await userLoginService(+formModel.value.id,'','',formModel.value.password)
+  try {
+    if (selectLogin.value === 'id') {
+      token = await userLoginService(+formModel.value.id, '', '', formModel.value.password)
+    } else if (selectLogin.value === 'email') {
+      token = await userLoginService('', formModel.value.email, '', formModel.value.password)
+    } else if (selectLogin.value === 'phone') {
+      token = await userLoginService(
+        '',
+        '',
+        formModel.value.phone.replace(/\s/g, ''),
+        formModel.value.password,
+      )
     }
-    else if(selectLogin.value === 'email'){
-      token = await userLoginService('',formModel.value.email,'',formModel.value.password)
-    }
-    else if(selectLogin.value === 'phone'){
-      token = await userLoginService('','',formModel.value.phone.replace(/\s/g, ''),formModel.value.password)
-    }
-  }catch(err){
+  } catch (err) {
     return err
   }
   ElMessage({
-    type:'success',
-    message:'恭喜您，登录成功'
+    type: 'success',
+    message: '恭喜您，登录成功',
   })
   const userStore = useUserStore()
   userStore.setToken(token)
-
 }
 
 const emit = defineEmits(['changingAuth'])
@@ -109,27 +119,15 @@ const changeAuth = () => {
 
       <!-- 用户名 -->
       <el-form-item v-if="selectLogin === 'id'" prop="id">
-        <el-input
-          v-model="formModel.id"
-          placeholder="请输入账户"
-          class="username"
-        />
+        <el-input v-model="formModel.id" placeholder="请输入账户" class="username" />
       </el-form-item>
 
-      <el-form-item v-else-if = "selectLogin === 'phone'" prop="phone">
-        <el-input
-          v-model="formModel.phone"
-          placeholder="请输入手机号码"
-          class="username"
-        />
+      <el-form-item v-else-if="selectLogin === 'phone'" prop="phone">
+        <el-input v-model="formModel.phone" placeholder="请输入手机号码" class="username" />
       </el-form-item>
 
       <el-form-item v-else-if="selectLogin === 'email'" prop="email">
-        <el-input
-          v-model="formModel.email"
-          placeholder="请输入邮箱"
-          class="username"
-        />
+        <el-input v-model="formModel.email" placeholder="请输入邮箱" class="username" />
       </el-form-item>
 
       <!-- 密码 -->

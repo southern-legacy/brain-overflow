@@ -1,4 +1,9 @@
 [![Rust](https://img.shields.io/badge/Rust-1.70%2B-dea584?logo=rust)](https://www.rust-lang.org/)
+
+[![Vue.js Badge](https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js&logoColor=white)](https://cn.vuejs.org/)
+
+[![npm](https://img.shields.io/badge/npm-22.18.0-CB3837?logo=npm&logoColor=white)](https://npm.nodejs.cn/)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # Brain Overflow 🤯
@@ -20,9 +25,9 @@
 
 ### 前端
 
-- 框架：[Vue2](https://v2.cn.vuejs.org/v2/guide/)
-- 状态管理： [Vuex](https://vuex.vuejs.org/zh/guide/)
-- UI框架： [element-ui](https://element.eleme.cn/#/zh-CN)
+- 框架：[Vue 3.x](https://cn.vuejs.org/)
+- 状态管理： [Pinia](https://pinia.vuejs.org/)
+- UI框架： [element-plus](https://element-plus.org/)
 - 前后端交互： [axios](https://www.axios-http.cn/)
 
 ### 数据访问

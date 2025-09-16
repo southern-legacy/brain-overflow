@@ -4,23 +4,23 @@ import { userRegisService } from '@/api/userLogin'
 import { jwtDecode } from 'jwt-decode'
 const form = ref(null)
 const formModel = ref({
-  regisType:'email',
-  name:'',
-  email:'',
-  phone:'',
-  imgCode:'',
-  verifyCode:'',
-  password:'',
-  rePassword:''
+  regisType: 'email',
+  name: '',
+  email: '',
+  phone: '',
+  imgCode: '',
+  verifyCode: '',
+  password: '',
+  rePassword: '',
 })
 const defaultForm = {
-  regisType:'email',
-  email:'',
-  phone:'',
-  imgCode:'',
-  verifyCode:'',
-  password:'',
-  rePassword:''
+  regisType: 'email',
+  email: '',
+  phone: '',
+  imgCode: '',
+  verifyCode: '',
+  password: '',
+  rePassword: '',
 }
 const emit = defineEmits(['changingAuth'])
 const changeAuth = () => {
@@ -28,91 +28,107 @@ const changeAuth = () => {
   emit('changingAuth')
 }
 const rules = ref({
-  name:[
-    {required: true, message: '请输入用户名', trigger: 'blur'},
-  ],
-  email:[
-    {required: true, message: '请输入邮箱', trigger: 'blur'},
-    {pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, message: '邮箱格式不符合规范, 请输入正确的邮箱' , trigger: 'blur' }
-  ],
-  phone:[
-    {required: true, message: '请输入手机号码', trigger: 'blur'},
-    {pattern: /^\+[1-9]\d{0,2}\s\d{4,14}$/, message: '手机格式不符合规范, 请输入正确的手机号码(E164格式)' , trigger: 'blur' }
-  ],
-  password:[
-    {required: true, message: '请输入密码', trigger: 'blur'},
+  name: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
     {
-    validator: (rule, value, callback) => {
-      if (!value) {
-        return callback(new Error('请输入密码'))
-      }
-      if (value.length < 8) {
-        return callback(new Error('密码长度必须大于8位'))
-      }
-
-      let hasNumber = /\d/.test(value)                  // 数字
-      let hasAlpha = /[a-zA-Z]/.test(value)             // 字母
-      let hasSpecial = /[^a-zA-Z0-9]/.test(value)       // 特殊字符（包括中文）
-
-      let typeCount = [hasNumber, hasAlpha, hasSpecial].filter(Boolean).length
-
-      if (typeCount < 2) {
-        return callback(new Error('密码必须包含数字、字母、特殊字符中的至少两种'))
-      }
-
-      return callback() // 验证通过
+      pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      message: '邮箱格式不符合规范, 请输入正确的邮箱',
+      trigger: 'blur',
     },
-    trigger: 'blur'
-  }
   ],
-  rePassword:[
-    {required: true, message: '请再次输入密码', trigger: 'blur'},
-    {validator: (rule, value, callback)=>{
-      if (!value) {
-        return callback(new Error('请再次输入密码'))
-      }
-      if(value !==formModel.value.password)
-        return callback(new Error('前后两次密码输入不一致'))
-      return callback()
-    }, trigger:'blur'}
-  ]
+  phone: [
+    { required: true, message: '请输入手机号码', trigger: 'blur' },
+    {
+      pattern: /^\+[1-9]\d{0,2}\s\d{4,14}$/,
+      message: '手机格式不符合规范, 请输入正确的手机号码(E164格式)',
+      trigger: 'blur',
+    },
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (!value) {
+          return callback(new Error('请输入密码'))
+        }
+        if (value.length < 8) {
+          return callback(new Error('密码长度必须大于8位'))
+        }
+
+        let hasNumber = /\d/.test(value) // 数字
+        let hasAlpha = /[a-zA-Z]/.test(value) // 字母
+        let hasSpecial = /[^a-zA-Z0-9]/.test(value) // 特殊字符（包括中文）
+
+        let typeCount = [hasNumber, hasAlpha, hasSpecial].filter(Boolean).length
+
+        if (typeCount < 2) {
+          return callback(new Error('密码必须包含数字、字母、特殊字符中的至少两种'))
+        }
+
+        return callback() // 验证通过
+      },
+      trigger: 'blur',
+    },
+  ],
+  rePassword: [
+    { required: true, message: '请再次输入密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (!value) {
+          return callback(new Error('请再次输入密码'))
+        }
+        if (value !== formModel.value.password) return callback(new Error('前后两次密码输入不一致'))
+        return callback()
+      },
+      trigger: 'blur',
+    },
+  ],
 })
 const handleRegis = async () => {
   await form.value.validate()
   let decodedToken = ''
-  try{
-    if(formModel.value.regisType === 'phone'){
-      const res = await userRegisService(formModel.value.name,'',formModel.value.phone.replace(/\s/g, ''),formModel.value.password)
+  try {
+    if (formModel.value.regisType === 'phone') {
+      const res = await userRegisService(
+        formModel.value.name,
+        '',
+        formModel.value.phone.replace(/\s/g, ''),
+        formModel.value.password,
+      )
+      decodedToken = jwtDecode(res)
+    } else {
+      const res = await userRegisService(
+        formModel.value.name,
+        formModel.value.email,
+        '',
+        formModel.value.password,
+      )
       decodedToken = jwtDecode(res)
     }
-    else{
-      const res = await userRegisService(formModel.value.name,formModel.value.email,'',formModel.value.password)
-      decodedToken = jwtDecode(res)
-    }
-  }
-  catch(err){
-    if(err.status === 422 && err.code ==='unique'){
+  } catch (err) {
+    if (err.status === 422 && err.code === 'unique') {
       return ElMessage({
-        type:'error',
-        message:'当前账号已被人注册，请修改你的用户名或注册方式'
+        type: 'error',
+        message: '当前账号已被人注册，请修改你的用户名或注册方式',
       })
     }
   }
-  console.log(decodedToken);
-  
+  console.log(decodedToken)
+
   ElMessage({
-    type:'success',
-    duration:0,
-    message:`注册成功, 您的id为: ${decodedToken.id}`,
-    showClose:true
+    type: 'success',
+    duration: 0,
+    message: `注册成功, 您的id为: ${decodedToken.id}`,
+    showClose: true,
   })
-  
+
   emit('changingAuth')
 }
 </script>
 
 <template>
-  <div class="regisForm" >
+  <div class="regisForm">
     <el-form :model="formModel" ref="form" :rules="rules">
       <!-- 注册方式选择 -->
       <el-form-item label="请选择注册方式" class="selectBox" prop="regisType">
@@ -131,32 +147,60 @@ const handleRegis = async () => {
       </el-form-item>
       <!-- 邮箱/手机号 -->
       <el-form-item v-if="formModel.regisType === 'email'" prop="email">
-        <el-input placeholder="请输入您的邮箱" class="username" v-model="formModel.email"></el-input>
+        <el-input
+          placeholder="请输入您的邮箱"
+          class="username"
+          v-model="formModel.email"
+        ></el-input>
       </el-form-item>
       <el-form-item v-else prop="phone">
-        <el-input placeholder="请输入您的手机号码" class="username" v-model="formModel.phone"></el-input>
+        <el-input
+          placeholder="请输入您的手机号码"
+          class="username"
+          v-model="formModel.phone"
+        ></el-input>
       </el-form-item>
 
       <!-- 图形验证码 -->
       <el-form-item prop="imgCode">
-        <el-input placeholder="请输入验证码" style="width: 60%;" class="verifyInput" v-model="formModel.imgCode"></el-input>
-        <img src="@/assets/code.png" alt="#" class="imgCode" loading="lazy"/>
+        <el-input
+          placeholder="请输入验证码"
+          style="width: 60%"
+          class="verifyInput"
+          v-model="formModel.imgCode"
+        ></el-input>
+        <img src="@/assets/code.png" alt="#" class="imgCode" loading="lazy" />
       </el-form-item>
 
       <!-- 短信/邮箱验证码 -->
       <el-form-item prop="verifyCode">
-        <el-input placeholder="请输入验证码" class="verifyInput" style="width: 60%;" v-model="formModel.verifyCode"></el-input>
+        <el-input
+          placeholder="请输入验证码"
+          class="verifyInput"
+          style="width: 60%"
+          v-model="formModel.verifyCode"
+        ></el-input>
         <el-button class="codeBtn">点击获取验证码</el-button>
       </el-form-item>
 
       <!-- 密码 -->
       <el-form-item prop="password">
-        <el-input type="password" placeholder="请输入密码" class="password" v-model="formModel.password"></el-input>
+        <el-input
+          type="password"
+          placeholder="请输入密码"
+          class="password"
+          v-model="formModel.password"
+        ></el-input>
       </el-form-item>
 
       <!-- 确认密码 -->
       <el-form-item prop="rePassword">
-        <el-input type="password" placeholder="请再次输入密码" class="password" v-model="formModel.rePassword"></el-input>
+        <el-input
+          type="password"
+          placeholder="请再次输入密码"
+          class="password"
+          v-model="formModel.rePassword"
+        ></el-input>
       </el-form-item>
 
       <!-- 注册按钮 -->
@@ -183,10 +227,10 @@ const handleRegis = async () => {
 }
 
 :deep(.el-form-item) {
-  margin-bottom: 16px
+  margin-bottom: 16px;
 }
 
-:deep(.el-form-item__label){
+:deep(.el-form-item__label) {
   line-height: 42px;
 }
 

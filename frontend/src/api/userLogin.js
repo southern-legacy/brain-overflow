@@ -3,7 +3,7 @@ import request from '@/utils/request'
 export const userRegisService = (name, email, phone, passwd) => {
   const data = {
     name,
-    passwd
+    passwd,
   }
 
   if (email) {
@@ -16,27 +16,27 @@ export const userRegisService = (name, email, phone, passwd) => {
   return request({
     url: '/usr',
     method: 'post',
-    data
+    data,
   })
 }
 
 export const userLoginService = (id, email, phone, passwd) => {
   const data = {
-    passwd
+    passwd,
   }
-  if(id){
+  if (id) {
     data.id = id
   }
-  if(phone){
+  if (phone) {
     data.phone = phone
   }
-  if(email){
+  if (email) {
     data.email = email
   }
 
   return request({
-    url:'/usr/login',
-    method:'post',
-    data
+    url: '/usr/login',
+    method: 'post',
+    data,
   })
 }
