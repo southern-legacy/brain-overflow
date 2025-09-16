@@ -1,10 +1,4 @@
-[![Rust](https://img.shields.io/badge/Rust-1.70%2B-dea584?logo=rust)](https://www.rust-lang.org/)
-
-[![Vue.js Badge](https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js&logoColor=white)](https://cn.vuejs.org/)
-
-[![npm](https://img.shields.io/badge/npm-22.18.0-CB3837?logo=npm&logoColor=white)](https://npm.nodejs.cn/)
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+​							![Rust](https://img.shields.io/badge/Rust-1.70%2B-dea584?logo=rust)   ![Vue.js Badge](https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js&logoColor=white)   ![npm](https://img.shields.io/badge/npm-22.18.0-CB3837?logo=npm&logoColor=white)   ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 # Brain Overflow 🤯
 
