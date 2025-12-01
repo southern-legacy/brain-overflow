@@ -9,7 +9,17 @@ const router = createRouter({
     },
     {
       path: '/',
-      component: () => import('@/views/layout/LayoutContainer.vue'),
+      component: () => import('@/layout/index.vue'),
+      children: [
+        {
+          path: '',
+          component: () => import('@/views/mainpage/index.vue'),
+        },
+      ],
+    },
+    {
+      path: '/userProfile',
+      component: () => import('@/views/userProfile/layout/index.vue'),
     },
   ],
 })
