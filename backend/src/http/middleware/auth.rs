@@ -8,10 +8,10 @@ use axum::{
     http::{HeaderMap, header::AUTHORIZATION},
     response::{IntoResponse, Response},
 };
-use crab_vault_auth::{Jwt, JwtConfig, error::AuthError};
+use crab_vault::auth::{Jwt, JwtDecoder, error::AuthError};
 use tower::{Layer, Service};
 
-use crate::{app_config, http::api::usr::UsrIdent};
+use crate::http::{DECODER_FROM_SELF, api::usr::UsrIdent};
 
 #[derive(Clone)]
 pub struct AuthMiddleware<Inner> {
@@ -46,7 +46,7 @@ where
                 }
             };
 
-            match extract_and_validate_token(req.headers(), app_config::auth().jwt_config().await)
+            match extract_and_validate_token(req.headers(), &DECODER_FROM_SELF)
                 .await
             {
                 Ok(permission) => {
@@ -79,7 +79,7 @@ impl<Inner> Layer<Inner> for AuthLayer {
 /// 提取并验证JWT令牌
 async fn extract_and_validate_token(
     headers: &HeaderMap,
-    jwt_config: &JwtConfig,
+    jwt_config: &JwtDecoder,
 ) -> Result<UsrIdent, Response> {
     // 1. 提取Authorization头
     let auth_header = headers
@@ -94,7 +94,7 @@ async fn extract_and_validate_token(
         .ok_or(AuthError::InvalidAuthFormat)?;
 
     // 3. 解码并验证JWT
-    let jwt: Jwt<UsrIdent> = Jwt::decode(token, jwt_config)?;
+    let jwt: Jwt<UsrIdent> = jwt_config.decode(token)?;
 
-    Ok(jwt.payload)
+    Ok(jwt.load)
 }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::logger::LogLevel;
+use crab_vault::logger::LogLevel;
 
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields, default)]

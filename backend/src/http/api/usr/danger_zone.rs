@@ -145,7 +145,7 @@ async fn try_change_auth_info(
     match res {
         Ok(res) => {
             if res.id == id {
-                Ok(UsrIdent::from(res).issue_as_jwt(state.auth_config().jwt_config().await))
+                Ok(UsrIdent::from(res).issue_as_jwt())
             } else {
                 unreachable!()
             }

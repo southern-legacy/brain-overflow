@@ -14,7 +14,7 @@ use crate::{
 };
 
 use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse};
-use crab_vault_auth::JwtConfig;
+use crab_vault::auth::JwtEncoder;
 use serde::Deserialize;
 use validator::{Validate, ValidationErrors};
 
@@ -60,13 +60,13 @@ pub(super) async fn login(
         }
     };
 
-    check_passwd_and_respond(res, &param.passwd, state.auth_config().jwt_config().await).await
+    check_passwd_and_respond(res, &param.passwd).await
 }
 
-async fn check_passwd_and_respond(usr: UsrInfo, passwd: &str, config: &JwtConfig) -> ApiResult {
+async fn check_passwd_and_respond(usr: UsrInfo, passwd: &str) -> ApiResult {
     check_passwd(&usr, passwd).await?;
 
-    Ok(UsrIdent::from(usr).issue_as_jwt(config))
+    Ok(UsrIdent::from(usr).issue_as_jwt())
 }
 
 impl LoginMethod {

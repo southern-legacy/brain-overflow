@@ -4,11 +4,14 @@ mod info;
 mod login;
 mod signup;
 
-use crab_vault_auth::{Jwt, JwtConfig};
+use axum::routing::MethodRouter;
+use crab_vault::auth::{Jwt, JwtEncoder};
+use jsonwebtoken::Header;
 use std::sync::LazyLock;
 
 use crate::app_config;
 use crate::entity::usr::usr_info::UsrInfo;
+use crate::http::ENCODER_TO_SELF;
 use crate::http::middleware::auth::AuthLayer;
 use crate::server::ServerState;
 use axum::http::StatusCode;
@@ -23,12 +26,15 @@ static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::d
 
 pub(super) fn build_router() -> Router<ServerState> {
     let router = Router::new();
+
+    let safe_bio_op_router = MethodRouter::new().get(bio::safe_bio_operation);
+
     router
         .route("/", routing::delete(danger_zone::delete_account))
         .route("/", routing::put(danger_zone::change_auth_info))
         .route("/bio", routing::get(bio::bio_get))
-        .route("/bio", routing::put(bio::bio_operation))
         .layer(AuthLayer::new())
+        .route("/bio", safe_bio_op_router)
         .route("/{id}", routing::get(info::info))
         .route("/", routing::post(signup::signup))
         .route("/login", routing::post(login::login))
@@ -56,18 +62,17 @@ impl UsrIdent {
         }
     }
 
-    pub fn issue_as_jwt(self, config: &JwtConfig) -> Response {
-        let iss_config = app_config::auth().iss_config();
+    pub fn issue_as_jwt(self) -> Response {
+        let config = app_config::auth().encoder_to_self();
 
         (
             StatusCode::OK,
-            Jwt::encode(
-                &Jwt::new(self)
-                    .issue_as_option(iss_config.issue_as())
-                    .audiences_option(iss_config.issue_to())
-                    .expires_in(iss_config.expire_in())
-                    .not_valid_in(iss_config.not_before()),
-                config,
+            ENCODER_TO_SELF.encode(
+                &Header::new(jsonwebtoken::Algorithm::HS256),
+                &Jwt::new(config.issue_as(), config.audience(), self)
+                    .expires_in(config.expire_in())
+                    .not_valid_in(config.not_valid_in()),
+                config.kids().first().unwrap(),
             ),
         )
             .into_response()

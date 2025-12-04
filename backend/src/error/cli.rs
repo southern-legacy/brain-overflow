@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::{CommandFactory, error::ErrorKind};
-use crab_vault_auth::error::AuthError;
+use crab_vault::auth::error::AuthError;
 
 use crate::cli::Cli;
 
@@ -17,6 +17,7 @@ pub struct CliError {
     source: Vec<String>,
 }
 
+#[derive(Debug)]
 pub struct MultiCliError {
     errors: Vec<CliError>,
 }
@@ -59,9 +60,7 @@ impl CliError {
 
     pub fn exit_now(self) -> ! {
         let (kind, message) = (self.kind, self.into_message());
-        Cli::command()
-            .error(kind, format!("\n\n{message}"))
-            .exit()
+        Cli::command().error(kind, format!("\n\n{message}")).exit()
     }
 
     pub fn add_source(mut self, source: String) -> Self {
@@ -130,35 +129,35 @@ impl From<base64::DecodeError> for CliError {
 
 impl From<AuthError> for CliError {
     fn from(value: AuthError) -> Self {
+        use AuthError::*;
         let (general_message, source) = match value {
-            AuthError::MissingAuthHeader => ("missing auth header".into(), None),
-            AuthError::InvalidAuthFormat => ("invalid token format".into(), None),
-            AuthError::TokenInvalid => ("token is invalid".into(), None),
-            AuthError::TokenExpired => ("token expired".into(), None),
-            AuthError::TokenNotYetValid => ("token not yet valid".into(), None),
-            AuthError::InvalidSignature => ("token signature is invalid".into(), None),
-            AuthError::InvalidAlgorithm(alg) => {
-                (format!("cannot validate token encoded by {:?}", alg), None)
-            }
-            AuthError::InvalidIssuer => ("token is issued by untrusted issuer".into(), None),
-            AuthError::InvalidAudience => ("token has invalid audience".into(), None),
-            AuthError::InvalidSubject => ("subject of this token is invalid".into(), None),
-            AuthError::MissingClaim(claim) => (format!("claim `{claim}` is absent"), None),
-            AuthError::InsufficientPermissions => ("the permission is not sufficient".into(), None),
-            AuthError::TokenRevoked => ("this token is revoked by the server".into(), None),
-            AuthError::InvalidUtf8(e) => (
+            MissingAuthHeader => ("missing auth header".into(), None),
+            InvalidAuthFormat => ("invalid token format".into(), None),
+            InvalidToken => ("token is invalid".into(), None),
+            TokenExpired => ("token expired".into(), None),
+            TokenNotYetValid => ("token not yet valid".into(), None),
+            InvalidSignature => ("token signature is invalid".into(), None),
+            InvalidAlgorithm(alg) => (format!("cannot validate token encoded by {:?}", alg), None),
+            InvalidIssuer => ("token is issued by untrusted issuer".into(), None),
+            InvalidAudience => ("token has invalid audience".into(), None),
+            InvalidSubject => ("subject of this token is invalid".into(), None),
+            InsufficientPermissions => ("the permission is not sufficient".into(), None),
+            InvalidKeyId => (format!("no such key id!"), None),
+            MissingClaim(claim) => (format!("claim `{claim}` is absent"), None),
+            TokenRevoked => ("this token is revoked by the server".into(), None),
+            InvalidUtf8(e) => (
                 format!("the token has some invalid utf-8 character, details: {e}"),
                 None,
             ),
-            AuthError::InvalidJson(e) => (
+            InvalidJson(e) => (
                 format!("this token cannot be deserialized, details: {e}"),
                 None,
             ),
-            AuthError::InvalidBase64(e) => (
+            InvalidBase64(e) => (
                 format!("this token is not encoded in standard base64, details: {e}"),
                 None,
             ),
-            AuthError::InternalError(e) => (
+            InternalError(e) => (
                 format!("something wrong while handling the token, details: {e}"),
                 None,
             ),

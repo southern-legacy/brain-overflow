@@ -1,13 +1,14 @@
 use axum::{
     Extension, debug_handler,
-    extract::State,
+    extract::{Request, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use crab_vault_auth::{Jwt, Permission, error::AuthError};
+use crab_vault::auth::{HttpMethod, Jwt, Permission, error::AuthError};
+use jsonwebtoken::Header;
 
 use crate::{
-    app_config, entity::usr::user_profiles::UsrProfile, http::api::usr::UsrIdent,
+    app_config, entity::usr::user_profiles::UsrProfile, http::{ENCODER_TO_CRAB_VAULT, api::usr::UsrIdent},
     server::ServerState,
 };
 
@@ -32,9 +33,31 @@ pub(super) async fn bio_get(
 
 #[debug_handler]
 #[tracing::instrument(name = "[usr/bio/issue token]")]
-pub(super) async fn bio_operation() -> Result<String, AuthError> {
-    Jwt::encode(
-        &Jwt::new(Permission::new_root()),
-        app_config::auth().jwt_config().await,
-    )
+pub(super) async fn safe_bio_operation(
+    method: axum::http::Method,
+    request: Request,
+) -> Result<String, AuthError> {
+    let method = <axum::http::Method as Into<HttpMethod>>::into(method);
+
+    if !method.safe() {
+        return Err(AuthError::InsufficientPermissions);
+    }
+
+    let permission = Permission::new_minimum()
+        .permit_method(vec![method])
+        .permit_resource_pattern(request.uri().path())
+        .restrict_maximum_size(0)
+        .permit_content_type(vec![
+            "image/jpeg".into(),
+            "image/png".into(),
+            "image/webp".into(),
+        ]);
+
+    // TODO !
+    let config = app_config::auth().encoder_config_to_crab_vault();
+    let jwt = Jwt::new(config.issue_as(), config.audience(), permission)
+        .expires_in(config.expire_in())
+        .not_valid_in(config.not_valid_in());
+
+    ENCODER_TO_CRAB_VAULT.encode(&Header::new(jsonwebtoken::Algorithm::HS256), &jwt, config.kids().first().unwrap())
 }

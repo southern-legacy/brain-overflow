@@ -20,6 +20,9 @@ pub enum ApiError {
     ValueParsingError,
 
     BadRequest,
+
+    MethodNotAllowed,
+
     // 服务器错误
     InternalServerError,
 }
@@ -33,6 +36,8 @@ impl ApiError {
             | ApiError::BodyTooLarge
             | ApiError::EncodingError
             | ApiError::ValueParsingError => StatusCode::UNPROCESSABLE_ENTITY,
+
+            ApiError::MethodNotAllowed => StatusCode::METHOD_NOT_ALLOWED,
 
             ApiError::BadRequest => StatusCode::BAD_REQUEST,
 

@@ -97,7 +97,7 @@ pub(super) async fn signup(
     Ok((
         StatusCode::CREATED,
         [(header::LOCATION, format!("/usr/{}", id))],
-        usr_ident.issue_as_jwt(state.auth_config().jwt_config().await),
+        usr_ident.issue_as_jwt(),
     )
         .into_response())
 }
