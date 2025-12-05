@@ -14,7 +14,6 @@ use crate::{
 };
 
 use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse};
-use crab_vault::auth::JwtEncoder;
 use serde::Deserialize;
 use validator::{Validate, ValidationErrors};
 

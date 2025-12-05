@@ -407,6 +407,7 @@ dependencies = [
  "config",
  "crab-vault",
  "glob",
+ "http",
  "jsonwebtoken",
  "num_cpus",
  "regex",
@@ -704,9 +705,9 @@ dependencies = [
 
 [[package]]
 name = "crab-vault"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49554b2aeec11d251699cbe589ea2d75749dbc6c90b1dc1fb94bc31a24e5a19f"
+checksum = "2532570ef4f6df4ab62d5b1f7d0dd221518201513e0d9d397c77131ac5a6e724"
 dependencies = [
  "axum",
  "base64",
@@ -737,9 +738,9 @@ dependencies = [
 
 [[package]]
 name = "crab-vault-auth"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "617d3cd25ceacace976f20780f006b1593b1959ea31f87445c7b2e1b771db7d8"
+checksum = "41d0b8424cbb992bd4ce106d9e0beb9c3876ba65bbda95be0562edf926be6c04"
 dependencies = [
  "axum",
  "base64",
@@ -747,6 +748,7 @@ dependencies = [
  "clap",
  "glob",
  "jsonwebtoken",
+ "rand 0.9.2",
  "serde",
  "serde_json",
  "thiserror",
@@ -756,9 +758,9 @@ dependencies = [
 
 [[package]]
 name = "crab-vault-engine"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49539c7a312855900bf4d54bcfda89bc5ebc27662a4972c8d097513c32d5a4c8"
+checksum = "766da0e7dd18ab3e6c60488ee99a5fc761f34e473baae8801c58094e2fcca191"
 dependencies = [
  "axum",
  "chrono",
@@ -770,9 +772,9 @@ dependencies = [
 
 [[package]]
 name = "crab-vault-logger"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef5615de3365d0c0e395a5b8bfc4bd32a439cd5895897305bff5d8453cf43360"
+checksum = "20d0ea4dd7de64cfa60a04a5fa86f9ec6bce9356c8647e6f5d9ea6188a98bc9b"
 dependencies = [
  "chrono",
  "clap",
@@ -785,9 +787,9 @@ dependencies = [
 
 [[package]]
 name = "crab-vault-utils"
-version = "0.2.12"
+version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3abe0a2016fc23e92fea2ac468df34aa1b935eb95560ede3df7c9a4c32d0ab2"
+checksum = "55ed277e14ab0f3b8b248862273651af643575d4d2fa31709c44aae2f4a135b2"
 
 [[package]]
 name = "crc"
@@ -1456,9 +1458,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-util"
-version = "0.1.18"
+version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52e9a2a24dc5c6821e71a7030e1e14b7b632acac55c40e9d2e082c621261bb56"
+checksum = "727805d60e7938b76b826a6ef209eb70eaa1812794f9424d4a4e2d740662df5f"
 dependencies = [
  "base64",
  "bytes",
@@ -1813,9 +1815,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69d83b0086dc8ecf3ce9ae2874b2d1290252e2a30720bea58a5c6639b0092873"
+checksum = "a69bcab0ad47271a0234d9422b131806bf3968021e5dc9328caf2d4cd58557fc"
 dependencies = [
  "libc",
  "wasi",

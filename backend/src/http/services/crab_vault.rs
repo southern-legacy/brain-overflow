@@ -3,7 +3,7 @@ use std::{collections::HashSet, convert::Infallible, pin::Pin, sync::Arc};
 use crate::{app_config, error::api::ApiError, http::ENCODER_TO_CRAB_VAULT};
 
 use axum::response::{IntoResponse, Response};
-use crab_vault::auth::{HttpMethod, Jwt, Permission, error::AuthError};
+use crab_vault::auth::{HttpMethod, Jwt, Permission};
 use jsonwebtoken::Header;
 use regex::Regex;
 use tower::Service;
@@ -78,7 +78,7 @@ impl<R: std::marker::Send + 'static> Service<axum::http::request::Request<R>>
                 header.kid = config.kids().first().map(|v| v.clone());
 
             // TODO! unwrap 纠正
-            match ENCODER_TO_CRAB_VAULT.encode(&header, &jwt, config.kids().first().unwrap()) {
+            match ENCODER_TO_CRAB_VAULT.encode_randomly(&jwt) {
                 Ok(v) => Ok(v.into_response()),
                 Err(e) => Ok(e.into_response()),
             }

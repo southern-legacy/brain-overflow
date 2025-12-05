@@ -99,6 +99,7 @@ impl AuthConfig {
         &self.jwt_decoder_config
     }
 
+    #[must_use]
     pub fn get_compiled_path_rules(&self) -> Vec<(Pattern, HashSet<HttpMethod>)> {
         self.path_rules
             .iter()
@@ -154,8 +155,8 @@ impl TryFrom<JwtEncoderConfig> for JwtEncoder {
 
         for key in encoding_keys {
             match key.build_as_encode_key() {
-                Ok((kid, _alg, key)) => {
-                    mapping.insert(kid, key);
+                Ok((kid, alg, key)) => {
+                    mapping.insert(kid, (key, alg));
                 }
                 Err(e) => {
                     errors.add(e);

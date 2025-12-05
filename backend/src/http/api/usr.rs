@@ -5,14 +5,14 @@ mod login;
 mod signup;
 
 use axum::routing::MethodRouter;
-use crab_vault::auth::{Jwt, JwtEncoder};
-use jsonwebtoken::Header;
-use std::sync::LazyLock;
+use crab_vault::auth::Jwt;
+use std::sync::{Arc, LazyLock};
 
 use crate::app_config;
 use crate::entity::usr::usr_info::UsrInfo;
-use crate::http::ENCODER_TO_SELF;
+use crate::error::cli::MultiCliError;
 use crate::http::middleware::auth::AuthLayer;
+use crate::http::ENCODER_TO_SELF;
 use crate::server::ServerState;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -33,7 +33,14 @@ pub(super) fn build_router() -> Router<ServerState> {
         .route("/", routing::delete(danger_zone::delete_account))
         .route("/", routing::put(danger_zone::change_auth_info))
         .route("/bio", routing::get(bio::bio_get))
-        .layer(AuthLayer::new())
+        .layer(AuthLayer::new(Arc::new(
+            app_config::auth()
+                .decoder()
+                .clone()
+                .try_into()
+                .map_err(MultiCliError::exit_now)
+                .unwrap(),
+        )))
         .route("/bio", safe_bio_op_router)
         .route("/{id}", routing::get(info::info))
         .route("/", routing::post(signup::signup))
@@ -67,12 +74,10 @@ impl UsrIdent {
 
         (
             StatusCode::OK,
-            ENCODER_TO_SELF.encode(
-                &Header::new(jsonwebtoken::Algorithm::HS256),
+            ENCODER_TO_SELF.encode_randomly(
                 &Jwt::new(config.issue_as(), config.audience(), self)
                     .expires_in(config.expire_in())
                     .not_valid_in(config.not_valid_in()),
-                config.kids().first().unwrap(),
             ),
         )
             .into_response()

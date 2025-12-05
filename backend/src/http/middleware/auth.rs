@@ -1,23 +1,69 @@
 use std::{
+    collections::HashSet,
     convert::Infallible,
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
 };
 
 use axum::{
-    http::{HeaderMap, header::AUTHORIZATION},
+    http::{
+        HeaderMap,
+        header::{AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE},
+    },
     response::{IntoResponse, Response},
 };
-use crab_vault::auth::{Jwt, JwtDecoder, error::AuthError};
+use crab_vault::auth::{HttpMethod, Jwt, JwtDecoder, Permission, error::AuthError};
+use glob::Pattern;
+use tokio::sync::OnceCell;
 use tower::{Layer, Service};
 
-use crate::http::{DECODER_FROM_SELF, api::usr::UsrIdent};
+use crate::{
+    app_config,
+    error::api::ApiError,
+};
 
 #[derive(Clone)]
 pub struct AuthMiddleware<Inner> {
     inner: Inner,
+    jwt_config: Arc<JwtDecoder>,
+    path_rules: Arc<PathRulesCache>,
 }
 
+struct PathRulesCache {
+    path_rules: OnceCell<Vec<(Pattern, HashSet<HttpMethod>)>>,
+}
+
+impl PathRulesCache {
+    fn new() -> Self {
+        Self {
+            path_rules: OnceCell::new(),
+        }
+    }
+
+    async fn should_not_protect(&self, path: &str, method: HttpMethod) -> bool {
+        let path_rules = self
+            .path_rules
+            .get_or_init(async || app_config::auth().get_compiled_path_rules())
+            .await;
+
+        for (pattern, allowed_method) in path_rules {
+            if pattern.matches(path)
+                && (allowed_method.contains(&HttpMethod::All)
+                    || allowed_method.contains(&method)
+                    || (allowed_method.contains(&HttpMethod::Safe) && method.safe())
+                    || (allowed_method.contains(&HttpMethod::Unsafe) && !method.safe()))
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
+// 在 Inner 是一个 Service 的情况下，可以为 AuthMiddleware<Inner> 实现 Service
+// 这个 AuthMiddleware 和 Inner 使用同样的请求参数，axum::http::Request<ReqBody>
 impl<Inner, ReqBody> Service<axum::http::Request<ReqBody>> for AuthMiddleware<Inner>
 where
     Inner: Service<axum::http::Request<ReqBody>> + Send + Clone + 'static,
@@ -37,6 +83,8 @@ where
     fn call(&mut self, mut req: axum::http::Request<ReqBody>) -> Self::Future {
         let cloned = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, cloned);
+        let jwt_config = self.jwt_config.clone();
+        let path_rules = self.path_rules.clone();
 
         Box::pin(async move {
             let call_inner_with_req = |req| async move {
@@ -46,8 +94,21 @@ where
                 }
             };
 
-            match extract_and_validate_token(req.headers(), &DECODER_FROM_SELF)
+            if path_rules
+                .should_not_protect(req.uri().path(), req.method().into())
                 .await
+            {
+                req.extensions_mut().insert(Permission::new_root());
+                return call_inner_with_req(req).await;
+            }
+
+            match extract_and_validate_token(
+                req.headers(),
+                req.method().into(),
+                req.uri().path(),
+                &jwt_config,
+            )
+            .await
             {
                 Ok(permission) => {
                     req.extensions_mut().insert(permission);
@@ -60,27 +121,39 @@ where
 }
 
 #[derive(Clone)]
-pub struct AuthLayer;
+pub struct AuthLayer(Arc<JwtDecoder>, Arc<PathRulesCache>);
 
 impl AuthLayer {
-    pub fn new() -> Self {
-        Self
+    /// 此函数将在堆上创建一个 [`JwtConfig`] 结构作为这个中间件的配置
+    pub fn new(jwt_decoder: Arc<JwtDecoder>) -> Self {
+        Self(
+            jwt_decoder,
+            Arc::new(PathRulesCache::new()),
+        )
     }
 }
 
 impl<Inner> Layer<Inner> for AuthLayer {
     type Service = AuthMiddleware<Inner>;
 
-    fn layer(&self, service: Inner) -> Self::Service {
-        AuthMiddleware { inner: service }
+    fn layer(&self, inner: Inner) -> Self::Service {
+        let Self(jwt_config, path_rules) = self.clone();
+
+        AuthMiddleware {
+            inner,
+            jwt_config,
+            path_rules,
+        }
     }
 }
 
 /// 提取并验证JWT令牌
 async fn extract_and_validate_token(
     headers: &HeaderMap,
-    jwt_config: &JwtDecoder,
-) -> Result<UsrIdent, Response> {
+    method: HttpMethod,
+    path: &str,
+    decoder: &JwtDecoder,
+) -> Result<Permission, Response> {
     // 1. 提取Authorization头
     let auth_header = headers
         .get(AUTHORIZATION)
@@ -94,7 +167,41 @@ async fn extract_and_validate_token(
         .ok_or(AuthError::InvalidAuthFormat)?;
 
     // 3. 解码并验证JWT
-    let jwt: Jwt<UsrIdent> = jwt_config.decode(token)?;
+    let jwt: Jwt<Permission> = decoder.decode(token)?;
+
+    // 4. 检查 content-length，如果没过这个要求，那更是演都不演了
+    // 当然，如果访问的是一个 bucket (只有一个) 那就不用检查
+    if path.split('/').filter(|v| !v.is_empty()).count() <= 1 {
+        return Ok(jwt.load);
+    }
+
+    let content_length = headers
+        .get(CONTENT_LENGTH)
+        .ok_or(ApiError::MissingContentLength)?
+        .to_str()
+        .map_err(|_| ApiError::HeaderWithOpaqueBytes)?
+        .parse()
+        .map_err(|_| ApiError::ValueParsingError)?;
+
+    let perm = jwt.load.clone().compile();
+    if !perm.check_size(content_length) {
+        return Err(ApiError::BodyTooLarge.into());
+    }
+
+    // 5. 检查资源路径匹配和请求方法
+    if !perm.can_perform_method(method) || !perm.can_access(path) {
+        return Err(AuthError::InsufficientPermissions.into());
+    }
+
+    // 6. 检查 content-type
+    let content_type = headers
+        .get(CONTENT_TYPE)
+        .ok_or(ApiError::MissingContentType)?
+        .to_str()
+        .map_err(|_| ApiError::InvalidContentType)?;
+    if !perm.check_content_type(content_type) {
+        return Err(ApiError::InvalidContentType.into());
+    }
 
     Ok(jwt.load)
 }

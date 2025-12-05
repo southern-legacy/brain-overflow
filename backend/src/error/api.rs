@@ -22,6 +22,7 @@ pub enum ApiError {
     BadRequest,
 
     MethodNotAllowed,
+    HeaderWithOpaqueBytes,
 
     // 服务器错误
     InternalServerError,
@@ -35,6 +36,7 @@ impl ApiError {
             | ApiError::MissingContentLength
             | ApiError::BodyTooLarge
             | ApiError::EncodingError
+            | ApiError::HeaderWithOpaqueBytes
             | ApiError::ValueParsingError => StatusCode::UNPROCESSABLE_ENTITY,
 
             ApiError::MethodNotAllowed => StatusCode::METHOD_NOT_ALLOWED,

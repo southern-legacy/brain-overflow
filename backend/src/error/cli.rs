@@ -8,7 +8,7 @@ use crab_vault::auth::error::AuthError;
 
 use crate::cli::Cli;
 
-pub type CliResult<T> = Result<T, CliError>;
+// pub type CliResult<T> = Result<T, CliError>;
 
 #[derive(Debug)]
 pub struct CliError {

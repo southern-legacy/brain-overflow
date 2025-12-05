@@ -1,7 +1,5 @@
-use crate::{
-    app_config::{self, auth::AuthConfig},
-    http, logger,
-};
+use crate::{app_config, http, logger};
+use ::http::StatusCode;
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
 use sqlx::PgPool;
@@ -22,16 +20,11 @@ use tracing::{error, info};
 #[derive(Clone)]
 pub struct ServerState {
     db: Arc<PgPool>,
-    auth: &'static AuthConfig,
 }
 
 impl ServerState {
     pub fn db(&self) -> &PgPool {
         &self.db
-    }
-
-    pub fn auth_config(&self) -> &AuthConfig {
-        &self.auth
     }
 }
 
@@ -93,7 +86,8 @@ pub async fn start() {
         .on_request(DefaultOnRequest::new().level(tracing::Level::INFO))
         .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
 
-    let timeout_layer = TimeoutLayer::new(Duration::from_secs(120));
+    let timeout_layer =
+        TimeoutLayer::with_status_code(StatusCode::REQUEST_TIMEOUT, Duration::from_secs(120));
 
     let body_limit_layer = DefaultBodyLimit::max((1024 * 1024 * 16) as usize); // 16 MB 的最大报文大小
 
@@ -128,10 +122,7 @@ pub async fn start() {
 
     axum::serve(
         listener,
-        router.with_state(ServerState {
-            db: Arc::new(conn),
-            auth: app_config::auth(),
-        }),
+        router.with_state(ServerState { db: Arc::new(conn) }),
     )
     .await
     .unwrap()

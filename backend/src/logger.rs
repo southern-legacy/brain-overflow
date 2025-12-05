@@ -15,8 +15,8 @@ pub fn init() {
 
     if logger_config.dump_path().is_some() {
         let json = JsonLogger::new(
-            logger_config.dump_path().unwrap(),
-            logger_config.dump_level().unwrap(),
+            logger_config.dump_path().expect("no panic"),
+            logger_config.dump_level().expect("no panic"),
         );
 
         match json {

@@ -5,7 +5,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use crab_vault::auth::{HttpMethod, Jwt, Permission, error::AuthError};
-use jsonwebtoken::Header;
 
 use crate::{
     app_config, entity::usr::user_profiles::UsrProfile, http::{ENCODER_TO_CRAB_VAULT, api::usr::UsrIdent},
@@ -59,5 +58,5 @@ pub(super) async fn safe_bio_operation(
         .expires_in(config.expire_in())
         .not_valid_in(config.not_valid_in());
 
-    ENCODER_TO_CRAB_VAULT.encode(&Header::new(jsonwebtoken::Algorithm::HS256), &jwt, config.kids().first().unwrap())
+    ENCODER_TO_CRAB_VAULT.encode_randomly(&jwt)
 }
