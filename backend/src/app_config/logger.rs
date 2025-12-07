@@ -6,25 +6,25 @@ use crab_vault::logger::LogLevel;
 #[serde(deny_unknown_fields, default)]
 pub struct LoggerConfig {
     /// 最低的日志输出等级
-    pub(super) level: LogLevel,
+    level: LogLevel,
 
     /// 彩色日志
-    pub(super) with_ansi: bool,
+    with_ansi: bool,
 
     /// 调用日志输出的文件
-    pub(super) with_file: bool,
+    with_file: bool,
 
     /// 调用日志输出的模块
-    pub(super) with_target: bool,
+    with_target: bool,
 
     /// 展示线程信息
-    pub(super) with_thread: bool,
+    with_thread: bool,
 
     /// 日志文件输出到哪个文件夹下
-    pub(super) dump_path: Option<String>,
+    dump_path: Option<String>,
 
     /// 日志文件的最低输出等级
-    pub(super) dump_level: Option<LogLevel>,
+    dump_level: Option<LogLevel>,
 }
 
 

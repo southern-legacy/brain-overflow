@@ -180,27 +180,28 @@ impl From<serde_json::Error> for CliError {
 
 impl From<config::ConfigError> for CliError {
     fn from(value: config::ConfigError) -> Self {
+        use config::ConfigError::*;
         match value {
-            config::ConfigError::Frozen => Self::new(
+            Frozen => Self::new(
                 ErrorKind::Io,
                 format!(
                     "Failed to read configuration file, because configuration file is frozen and no further mutations can be made."
                 ),
                 None,
             ),
-            config::ConfigError::NotFound(e) => Self::new(
+            NotFound(e) => Self::new(
                 ErrorKind::Io,
                 format!(
                     "Failed to read configuration file, because configuration field `{e}` is not found"
                 ),
                 None,
             ),
-            config::ConfigError::PathParse { cause } => Self::new(
+            PathParse { cause } => Self::new(
                 ErrorKind::Io,
                 format!("Failed to read configuration file, because `{cause}`"),
                 None,
             ),
-            config::ConfigError::FileParse { uri, cause } => Self::new(
+            FileParse { uri, cause } => Self::new(
                 ErrorKind::Io,
                 format!(
                     "Failed to understand the configuration file `{}`, because `{cause}`",
@@ -208,7 +209,7 @@ impl From<config::ConfigError> for CliError {
                 ),
                 None,
             ),
-            config::ConfigError::Type {
+            Type {
                 origin,
                 unexpected,
                 expected,
@@ -222,7 +223,7 @@ impl From<config::ConfigError> for CliError {
                 ),
                 None,
             ),
-            config::ConfigError::At { error, origin, key } => Self::new(
+            At { error, origin, key } => Self::new(
                 ErrorKind::Io,
                 format!(
                     "Failed to read configuration file, error: {error}, origin: `{}`, key: `{}` ",
@@ -231,12 +232,12 @@ impl From<config::ConfigError> for CliError {
                 ),
                 None,
             ),
-            config::ConfigError::Message(e) => Self::new(
+            Message(e) => Self::new(
                 ErrorKind::Io,
                 format!("Failed to read configuration file, details: {e}"),
                 None,
             ),
-            config::ConfigError::Foreign(e) => Self::new(
+            Foreign(e) => Self::new(
                 ErrorKind::Io,
                 format!("Failed to read configuration file, details: {e}"),
                 None,

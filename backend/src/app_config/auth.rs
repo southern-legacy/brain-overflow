@@ -21,28 +21,28 @@ pub struct AuthConfig {
     ///
     /// 在编译规则时保证如果同一个路径下有多种公开方式时，采取最后指定的公开请求方法而非并集
     #[serde(default)]
-    pub(super) path_rules: Vec<PathRule>,
+    path_rules: Vec<PathRule>,
 
     #[serde(default)]
-    pub(super) crab_vault_encoder_config: JwtEncoderConfig,
+    crab_vault_encoder_config: JwtEncoderConfig,
 
     #[serde(default)]
-    pub(super) self_encoder_config: JwtEncoderConfig,
+    self_encoder_config: JwtEncoderConfig,
 
     /// jwt 鉴权相关设置
     #[serde(default)]
-    pub(super) jwt_decoder_config: JwtDecoderConfig,
+    jwt_decoder_config: JwtDecoderConfig,
 }
 
 #[derive(Default, Serialize, Deserialize, Clone)]
 #[serde(deny_unknown_fields, default)]
 pub struct PathRule {
     /// 路径的通配符，UNIX shell 通配符
-    pub(super) pattern: String,
+    pattern: String,
 
     /// 无需 token 即可访问的那些方法
     #[serde(default)]
-    pub(super) public_methods: HashSet<HttpMethod>,
+    public_methods: HashSet<HttpMethod>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -264,7 +264,7 @@ impl KeyInfo {
         let res = match self.form {
             KeyForm::DerInline => BASE64_STANDARD.decode(self.key.clone()).map_err(|e| {
                 CliError::from(e).add_source(format!(
-                    "while decoding the given jwt secrete key `{}` into binary form",
+                    "while decoding the secrete key `{}` into binary, note this should be encoded in standard base64",
                     self.key
                         .get(0..4)
                         .map(|val| format!("{val}..."))
@@ -404,10 +404,12 @@ impl KeyInfo {
 }
 
 impl KeyForm {
+    #[inline]
     fn is_der(&self) -> bool {
         matches!(self, KeyForm::DerInline | KeyForm::DerFile)
     }
 
+    #[inline]
     fn is_pem(&self) -> bool {
         matches!(self, KeyForm::PemInline | KeyForm::PemFile)
     }

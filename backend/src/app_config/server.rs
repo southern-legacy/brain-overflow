@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields, default)]
 pub struct ServerConfig {
     pub(super) port: u16,
-    pub(super) ipv6_enabled: bool,
+    pub(super) ipv6: bool,
 }
 
 impl ServerConfig {
@@ -15,8 +15,8 @@ impl ServerConfig {
     }
 
     #[inline]
-    pub fn ipv6_enabled(&self) -> bool {
-        self.ipv6_enabled
+    pub fn ipv6(&self) -> bool {
+        self.ipv6
     }
 }
 
@@ -25,7 +25,7 @@ impl Default for ServerConfig {
     fn default() -> Self {
         Self {
             port: 32767,
-            ipv6_enabled: false,
+            ipv6: false,
         }
     }
 }

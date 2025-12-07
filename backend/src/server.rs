@@ -108,7 +108,7 @@ pub async fn start() {
         .layer(cors_layer)
         .layer(path_normalize_layer);
 
-    let listener = if app_config::server().ipv6_enabled() {
+    let listener = if app_config::server().ipv6() {
         TcpListener::bind((Ipv6Addr::UNSPECIFIED, app_config::server().port()))
             .await
             .unwrap()

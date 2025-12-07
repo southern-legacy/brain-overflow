@@ -52,7 +52,6 @@ pub(super) async fn safe_bio_operation(
             "image/webp".into(),
         ]);
 
-    // TODO !
     let config = app_config::auth().encoder_config_to_crab_vault();
     let jwt = Jwt::new(config.issue_as(), config.audience(), permission)
         .expires_in(config.expire_in())

@@ -4,23 +4,23 @@ use std::cmp::{max, min};
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DatabaseConfig {
-    pub(super) host: Option<String>,
-    pub(super) port: Option<u16>,
+    host: Option<String>,
+    port: Option<u16>,
 
     #[serde(rename = "user")]
-    pub(super) usr: Option<String>,
+    usr: Option<String>,
 
     #[serde(rename = "password")]
-    pub(super) passwd: Option<String>,
+    passwd: Option<String>,
 
     #[serde(rename = "database")]
-    pub(super) db: Option<String>,
+    db: Option<String>,
 
     #[serde(rename = "max_connection")]
-    pub(super) max_conn: Option<u32>,
+    max_conn: Option<u32>,
 
     #[serde(rename = "min_connection")]
-    pub(super) min_conn: Option<u32>,
+    min_conn: Option<u32>,
 }
 
 impl DatabaseConfig {

@@ -42,21 +42,12 @@ impl AppConfig {
                     .format(config::FileFormat::Toml),
             )
             .build()
-            .map_err(|e| {
+            .and_then(|v| v.try_deserialize())
+            .unwrap_or_else(|e| {
                 CliError::from(e)
                     .add_source("while reading the configuration file or deserializing it".into())
                     .exit_now()
-            })
-            .unwrap()
-            .try_deserialize()
-            .map_err(|e| {
-                CliError::from(e)
-                    .add_source(
-                        "while converting the configuration file into expected structure".into()
-                    )
-                    .exit_now()
-            })
-            .unwrap();
+            });
 
         if let Some(port) = cli_conf.port {
             file_conf.server.port = port
