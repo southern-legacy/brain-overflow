@@ -14,8 +14,8 @@ pub fn build_router() -> Router<ServerState> {
     let inner = TokenIssueServiceInner::default()
         .regex("")
         .allowed_content_types(vec![])
-        .allowed_methods(&vec![])
-        .map_fn(|_: Regex, _: &'_ str| Box::pin(async { Ok("".into()) }))
+        .allowed_methods(&[])
+        .map_fn(|_: Regex, _: &'_ str| Ok("".into()))
         .max_size_option(None);
 
     let service = TokenIssueService::new(inner);

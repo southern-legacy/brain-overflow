@@ -22,7 +22,7 @@ pub async fn init() -> PgPool {
 
     tracing::info!("Connecting to database: {url}");
     let conn = conn_opts
-        .connect(&url)
+        .connect(url)
         .await
         .map_err(|e| FatalError::from(e).when("while setting up database connection".into()).exit_now())
         .unwrap();

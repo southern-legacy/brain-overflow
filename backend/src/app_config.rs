@@ -95,6 +95,8 @@ impl RuntimeAppConfig {
 
         let mut errors = MultiFatalError::new();
 
+        // 这里这么写好看一些
+        #[allow(clippy::unnecessary_unwrap)]
         if database_res.is_ok() && auth_res.is_ok() && crab_vault_res.is_ok() {
             // unwrap safety: 全部在上面进行了 is_ok 检查
             RuntimeAppConfig {

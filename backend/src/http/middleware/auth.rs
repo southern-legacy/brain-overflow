@@ -66,7 +66,7 @@ where
                 req.headers(),
                 req.method().into(),
                 req.uri().path(),
-                &jwt_config,
+                jwt_config,
             )
             .await
             {

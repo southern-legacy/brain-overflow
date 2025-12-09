@@ -161,7 +161,7 @@ impl From<AuthError> for FatalError {
             InvalidAudience => ("token has invalid audience".into(), None),
             InvalidSubject => ("subject of this token is invalid".into(), None),
             InsufficientPermissions => ("the permission is not sufficient".into(), None),
-            InvalidKeyId => (format!("no such key id!"), None),
+            InvalidKeyId => ("no such key id!".into(), None),
             MissingClaim(claim) => (format!("claim `{claim}` is absent"), None),
             TokenRevoked => ("this token is revoked by the server".into(), None),
             InvalidUtf8(e) => (
@@ -192,9 +192,7 @@ impl From<config::ConfigError> for FatalError {
         match value {
             Frozen => Self::new(
                 ErrorKind::Io,
-                format!(
-                    "Failed to read configuration file, because configuration file is frozen and no further mutations can be made."
-                ),
+                "Failed to read configuration file, because configuration file is frozen and no further mutations can be made.".into(),
                 None,
             ),
             NotFound(e) => Self::new(
@@ -252,7 +250,7 @@ impl From<config::ConfigError> for FatalError {
             ),
             _ => Self::new(
                 ErrorKind::Io,
-                format!("Failed to read configuration file, unknown error"),
+                "Failed to read configuration file, unknown error".into(),
                 None,
             ),
         }

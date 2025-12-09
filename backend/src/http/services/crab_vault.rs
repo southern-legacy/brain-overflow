@@ -15,7 +15,7 @@ pub struct TokenIssueService {
 pub struct TokenIssueServiceInner {
     path_regex: Regex,
 
-    map_fn: fn(Regex, &str) -> Pin<Box<dyn Future<Output = Result<String, Response>> + Send>>,
+    map_fn: fn(Regex, &str) -> Result<String, Response>,
 
     // 条件限制
     allowed_methods: HashSet<HttpMethod>,
@@ -54,10 +54,10 @@ impl<R: std::marker::Send + 'static> Service<axum::http::request::Request<R>>
 
         Box::pin(async move {
             if !safe_to_issue {
-                return Ok(ApiError::MethodNotAllowed).map(<ApiError as Into<Response>>::into);
+                return Ok(<ApiError as Into<Response>>::into(ApiError::MethodNotAllowed));
             }
 
-            let mapped_crab_vault_path = match map_fn(regex, request.uri().path()).await {
+            let mapped_crab_vault_path = match map_fn(regex, request.uri().path()) {
                 Ok(value) => value,
                 Err(e) => return Ok(e),
             };
@@ -92,16 +92,9 @@ impl TokenIssueService {
 
 impl Default for TokenIssueServiceInner {
     fn default() -> Self {
-        fn default_map_fn(
-            _: Regex,
-            _: &str,
-        ) -> Pin<Box<dyn Future<Output = Result<String, Response>> + Send>> {
-            Box::pin(async { Ok("".into()) })
-        }
-
         Self {
             path_regex: Regex::new("()").expect("你把正则表达式写错啦"),
-            map_fn: default_map_fn,
+            map_fn: |_, _| Ok("".into()),
             allowed_methods: HashSet::new(),
             allowed_content_types: vec![],
             max_size: Some(5 * 1024 * 1024),
@@ -120,7 +113,7 @@ impl TokenIssueServiceInner {
     #[inline]
     pub fn map_fn(
         mut self,
-        map_fn: fn(Regex, &str) -> Pin<Box<dyn Future<Output = Result<String, Response>> + Send>>,
+        map_fn: fn(Regex, &str) -> Result<String, Response>,
     ) -> Self {
         self.map_fn = map_fn;
         self
