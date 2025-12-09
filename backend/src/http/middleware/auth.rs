@@ -1,8 +1,6 @@
 use std::{
-    collections::HashSet,
     convert::Infallible,
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll},
 };
 
@@ -14,57 +12,23 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use crab_vault::auth::{HttpMethod, Jwt, JwtDecoder, Permission, error::AuthError};
-use glob::Pattern;
-use tokio::sync::OnceCell;
 use tower::{Layer, Service};
 
-use crate::{
-    app_config,
-    error::api::ApiError,
-};
+use crate::{app_config, error::api::ApiError};
+
 
 #[derive(Clone)]
-pub struct AuthMiddleware<Inner> {
+pub struct Auth<Inner> {
     inner: Inner,
-    jwt_config: Arc<JwtDecoder>,
-    path_rules: Arc<PathRulesCache>,
+    jwt_config: &'static JwtDecoder,
 }
 
-struct PathRulesCache {
-    path_rules: OnceCell<Vec<(Pattern, HashSet<HttpMethod>)>>,
-}
+#[derive(Clone)]
+pub struct AuthLayer(&'static JwtDecoder);
 
-impl PathRulesCache {
-    fn new() -> Self {
-        Self {
-            path_rules: OnceCell::new(),
-        }
-    }
-
-    async fn should_not_protect(&self, path: &str, method: HttpMethod) -> bool {
-        let path_rules = self
-            .path_rules
-            .get_or_init(async || app_config::auth().get_compiled_path_rules())
-            .await;
-
-        for (pattern, allowed_method) in path_rules {
-            if pattern.matches(path)
-                && (allowed_method.contains(&HttpMethod::All)
-                    || allowed_method.contains(&method)
-                    || (allowed_method.contains(&HttpMethod::Safe) && method.safe())
-                    || (allowed_method.contains(&HttpMethod::Unsafe) && !method.safe()))
-            {
-                return true;
-            }
-        }
-
-        false
-    }
-}
-
-// 在 Inner 是一个 Service 的情况下，可以为 AuthMiddleware<Inner> 实现 Service
-// 这个 AuthMiddleware 和 Inner 使用同样的请求参数，axum::http::Request<ReqBody>
-impl<Inner, ReqBody> Service<axum::http::Request<ReqBody>> for AuthMiddleware<Inner>
+// 在 Inner 是一个 Service 的情况下，可以为 Auth<Inner> 实现 Service
+// 这个 Auth 和 Inner 使用同样的请求参数，axum::http::Request<ReqBody>
+impl<Inner, ReqBody> Service<axum::http::Request<ReqBody>> for Auth<Inner>
 where
     Inner: Service<axum::http::Request<ReqBody>> + Send + Clone + 'static,
     ReqBody: 'static + Send,
@@ -82,9 +46,8 @@ where
 
     fn call(&mut self, mut req: axum::http::Request<ReqBody>) -> Self::Future {
         let cloned = self.inner.clone();
+        let jwt_config = self.jwt_config;
         let mut inner = std::mem::replace(&mut self.inner, cloned);
-        let jwt_config = self.jwt_config.clone();
-        let path_rules = self.path_rules.clone();
 
         Box::pin(async move {
             let call_inner_with_req = |req| async move {
@@ -94,10 +57,7 @@ where
                 }
             };
 
-            if path_rules
-                .should_not_protect(req.uri().path(), req.method().into())
-                .await
-            {
+            if should_not_protect(req.uri().path(), req.method().into()).await {
                 req.extensions_mut().insert(Permission::new_root());
                 return call_inner_with_req(req).await;
             }
@@ -120,31 +80,37 @@ where
     }
 }
 
-#[derive(Clone)]
-pub struct AuthLayer(Arc<JwtDecoder>, Arc<PathRulesCache>);
 
 impl AuthLayer {
     /// 此函数将在堆上创建一个 [`JwtConfig`] 结构作为这个中间件的配置
-    pub fn new(jwt_decoder: Arc<JwtDecoder>) -> Self {
-        Self(
-            jwt_decoder,
-            Arc::new(PathRulesCache::new()),
-        )
+    pub fn new(jwt_decoder: &'static JwtDecoder) -> Self {
+        Self(jwt_decoder)
     }
 }
 
 impl<Inner> Layer<Inner> for AuthLayer {
-    type Service = AuthMiddleware<Inner>;
+    type Service = Auth<Inner>;
 
     fn layer(&self, inner: Inner) -> Self::Service {
-        let Self(jwt_config, path_rules) = self.clone();
+        let Self(jwt_config) = self.clone();
+        
+        Auth { inner, jwt_config }
+    }
+}
 
-        AuthMiddleware {
-            inner,
-            jwt_config,
-            path_rules,
+async fn should_not_protect(path: &str, method: HttpMethod) -> bool {
+    for (pattern, allowed_method) in &app_config::auth().path_rules {
+        if pattern.matches(path)
+            && (allowed_method.contains(&HttpMethod::All)
+                || allowed_method.contains(&method)
+                || (allowed_method.contains(&HttpMethod::Safe) && method.safe())
+                || (allowed_method.contains(&HttpMethod::Unsafe) && !method.safe()))
+        {
+            return true;
         }
     }
+
+    false
 }
 
 /// 提取并验证JWT令牌

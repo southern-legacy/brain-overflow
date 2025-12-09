@@ -8,28 +8,34 @@ use crab_vault::auth::error::AuthError;
 
 use crate::cli::Cli;
 
-// pub type CliResult<T> = Result<T, CliError>;
+pub type FatalResult<T> = Result<T, MultiFatalError>;
 
-#[derive(Debug)]
-pub struct CliError {
+#[derive(Debug, Clone)]
+pub struct FatalError {
     kind: ErrorKind,
     general_message: String,
     source: Vec<String>,
 }
 
 #[derive(Debug)]
-pub struct MultiCliError {
-    errors: Vec<CliError>,
+pub struct MultiFatalError {
+    errors: Vec<FatalError>,
 }
 
-impl MultiCliError {
-    pub fn new() -> Self {
+impl MultiFatalError {
+    #[inline]
+    pub const fn new() -> Self {
         Self { errors: vec![] }
     }
 
-    pub fn add(&mut self, error: CliError) -> &mut Self {
+    #[inline]
+    pub fn push(&mut self, error: FatalError) {
         self.errors.push(error);
-        self
+    }
+
+    #[inline]
+    pub fn append(&mut self, rhs: &mut MultiFatalError) {
+        self.errors.append(&mut rhs.errors);
     }
 
     pub fn exit_now(self) -> ! {
@@ -41,12 +47,13 @@ impl MultiCliError {
         Cli::command().error(ErrorKind::Io, final_message).exit()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.errors.len() == 0
+    #[inline]
+    pub const fn is_empty(&self) -> bool {
+        self.errors.is_empty()
     }
 }
 
-impl CliError {
+impl FatalError {
     pub fn new(kind: ErrorKind, general_message: String, source: Option<String>) -> Self {
         Self {
             kind,
@@ -63,7 +70,7 @@ impl CliError {
         Cli::command().error(kind, format!("\n\n{message}")).exit()
     }
 
-    pub fn add_source(mut self, source: String) -> Self {
+    pub fn when(mut self, source: String) -> Self {
         self.source.push(source);
         self
     }
@@ -81,27 +88,27 @@ impl CliError {
     }
 }
 
-impl From<ParseIntError> for CliError {
+impl From<ParseIntError> for FatalError {
     fn from(err: ParseIntError) -> Self {
         Self::new(
             ErrorKind::InvalidValue,
-            format!("cannot transfer the value to an i64 value, details: {err}"),
+            format!("cannot transfer the value to an i32/i64 value, details: {err}"),
             None,
         )
     }
 }
 
-impl From<ParseFloatError> for CliError {
+impl From<ParseFloatError> for FatalError {
     fn from(err: ParseFloatError) -> Self {
         Self::new(
             ErrorKind::InvalidValue,
-            format!("cannot transfer the value to a f64 value, details: {err}"),
+            format!("cannot transfer the value to a f32/f64 value, details: {err}"),
             None,
         )
     }
 }
 
-impl From<ParseBoolError> for CliError {
+impl From<ParseBoolError> for FatalError {
     fn from(err: ParseBoolError) -> Self {
         Self::new(
             ErrorKind::InvalidValue,
@@ -111,7 +118,7 @@ impl From<ParseBoolError> for CliError {
     }
 }
 
-impl From<std::io::Error> for CliError {
+impl From<std::io::Error> for FatalError {
     fn from(err: std::io::Error) -> Self {
         Self::new(
             ErrorKind::Io,
@@ -121,13 +128,25 @@ impl From<std::io::Error> for CliError {
     }
 }
 
-impl From<base64::DecodeError> for CliError {
+impl From<base64::DecodeError> for FatalError {
     fn from(value: base64::DecodeError) -> Self {
-        Self::new(ErrorKind::Io, format!("base64 error: {}", value), None)
+        Self::new(ErrorKind::Io, format!("base64 error: {value}"), None)
     }
 }
 
-impl From<AuthError> for CliError {
+impl From<glob::GlobError> for FatalError {
+    fn from(value: glob::GlobError) -> Self {
+        Self::new(ErrorKind::Io, format!("glob pattern error: {value}"), None)
+    }
+}
+
+impl From<glob::PatternError> for FatalError {
+    fn from(value: glob::PatternError) -> Self {
+        Self::new(ErrorKind::Io, format!("glob pattern error: {value}"), None)
+    }
+}
+
+impl From<AuthError> for FatalError {
     fn from(value: AuthError) -> Self {
         use AuthError::*;
         let (general_message, source) = match value {
@@ -167,18 +186,7 @@ impl From<AuthError> for CliError {
     }
 }
 
-impl From<serde_json::Error> for CliError {
-    fn from(value: serde_json::Error) -> Self {
-        match value.classify() {
-            serde_json::error::Category::Io => todo!(),
-            serde_json::error::Category::Syntax => todo!(),
-            serde_json::error::Category::Data => todo!(),
-            serde_json::error::Category::Eof => todo!(),
-        }
-    }
-}
-
-impl From<config::ConfigError> for CliError {
+impl From<config::ConfigError> for FatalError {
     fn from(value: config::ConfigError) -> Self {
         use config::ConfigError::*;
         match value {
@@ -251,39 +259,39 @@ impl From<config::ConfigError> for CliError {
     }
 }
 
-impl From<sqlx::error::Error> for CliError {
+impl From<sqlx::error::Error> for FatalError {
     fn from(value: sqlx::error::Error) -> Self {
         match value {
-            sqlx::Error::Configuration(e) => CliError::new(
+            sqlx::Error::Configuration(e) => FatalError::new(
                 ErrorKind::Io,
                 format!("We failed to parse the database connection url, details: {e}"),
                 None,
             ),
-            sqlx::Error::InvalidArgument(e) => CliError::new(
+            sqlx::Error::InvalidArgument(e) => FatalError::new(
                 ErrorKind::Io,
                 format!(
                     "One or more of the arguments to the called sqlx function was invalid, details: {e}"
                 ),
                 None,
             ),
-            sqlx::Error::Database(e) => CliError::new(
+            sqlx::Error::Database(e) => FatalError::new(
                 ErrorKind::Io,
                 format!("Database returned an error message: `{e}`"),
                 None,
             ),
-            sqlx::Error::Io(e) => CliError::new(
+            sqlx::Error::Io(e) => FatalError::new(
                 ErrorKind::Io,
                 format!("Cannot communicate with the database backend, details: `{e}`"),
                 None,
             ),
-            sqlx::Error::Tls(e) => CliError::new(
+            sqlx::Error::Tls(e) => FatalError::new(
                 ErrorKind::Io,
                 format!(
                     "Error occurred while attempting to establish a TLS connection to database, details: {e}"
                 ),
                 None,
             ),
-            sqlx::Error::Protocol(e) => CliError::new(
+            sqlx::Error::Protocol(e) => FatalError::new(
                 ErrorKind::Io,
                 format!(
                     "Unexpected or invalid data encountered while communicating with the database, details `{e}`"

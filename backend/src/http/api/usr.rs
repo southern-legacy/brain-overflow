@@ -6,13 +6,11 @@ mod signup;
 
 use axum::routing::MethodRouter;
 use crab_vault::auth::Jwt;
-use std::sync::{Arc, LazyLock};
+use std::sync::LazyLock;
 
 use crate::app_config;
 use crate::entity::usr::usr_info::UsrInfo;
-use crate::error::cli::MultiCliError;
 use crate::http::middleware::auth::AuthLayer;
-use crate::http::ENCODER_TO_SELF;
 use crate::server::ServerState;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -33,14 +31,7 @@ pub(super) fn build_router() -> Router<ServerState> {
         .route("/", routing::delete(danger_zone::delete_account))
         .route("/", routing::put(danger_zone::change_auth_info))
         .route("/bio", routing::get(bio::bio_get))
-        .layer(AuthLayer::new(Arc::new(
-            app_config::auth()
-                .decoder()
-                .clone()
-                .try_into()
-                .map_err(MultiCliError::exit_now)
-                .unwrap(),
-        )))
+        .layer(AuthLayer::new(&app_config::auth().decoder.decoder))
         .route("/bio", safe_bio_op_router)
         .route("/{id}", routing::get(info::info))
         .route("/", routing::post(signup::signup))
@@ -70,14 +61,14 @@ impl UsrIdent {
     }
 
     pub fn issue_as_jwt(self) -> Response {
-        let config = app_config::auth().encoder_to_self();
+        let config = &app_config::auth().encoder;
 
         (
             StatusCode::OK,
-            ENCODER_TO_SELF.encode_randomly(
-                &Jwt::new(config.issue_as(), config.audience(), self)
-                    .expires_in(config.expire_in())
-                    .not_valid_in(config.not_valid_in()),
+            config.encoder.encode_randomly(
+                &Jwt::new(&config.issue_as, &config.audience, self)
+                    .expires_in(config.expires_in)
+                    .not_valid_in(config.not_valid_in),
             ),
         )
             .into_response()

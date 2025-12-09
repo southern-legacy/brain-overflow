@@ -1,10 +1,9 @@
 use std::{collections::HashSet, convert::Infallible, pin::Pin, sync::Arc};
 
-use crate::{app_config, error::api::ApiError, http::ENCODER_TO_CRAB_VAULT};
+use crate::{app_config, error::api::ApiError};
 
 use axum::response::{IntoResponse, Response};
 use crab_vault::auth::{HttpMethod, Jwt, Permission};
-use jsonwebtoken::Header;
 use regex::Regex;
 use tower::Service;
 
@@ -69,16 +68,12 @@ impl<R: std::marker::Send + 'static> Service<axum::http::request::Request<R>>
                 .restrict_maximum_size_option(max_size)
                 .permit_content_type(allowed_content_types);
 
-            let config = app_config::auth().encoder_config_to_crab_vault();
-            let jwt = Jwt::new(config.issue_as(), config.audience(), permission)
-                .expires_in(config.expire_in())
-                .not_valid_in(config.not_valid_in());
+            let config = &app_config::crab_vault().encoder;
+            let jwt = Jwt::new(&config.issue_as, &config.audience, permission)
+                .expires_in(config.expires_in)
+                .not_valid_in(config.not_valid_in);
 
-            let mut header = Header::new(jsonwebtoken::Algorithm::HS256);
-                header.kid = config.kids().first().map(|v| v.clone());
-
-            // TODO! unwrap 纠正
-            match ENCODER_TO_CRAB_VAULT.encode_randomly(&jwt) {
+            match config.encoder.encode_randomly(&jwt) {
                 Ok(v) => Ok(v.into_response()),
                 Err(e) => Ok(e.into_response()),
             }

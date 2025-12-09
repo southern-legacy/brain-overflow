@@ -1,5 +1,5 @@
 use crate::app_config;
-use crate::error::cli::CliError;
+use crate::error::fatal::FatalError;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, query};
 use std::time::Duration;
@@ -10,18 +10,12 @@ pub async fn init() -> PgPool {
     let _ = span.enter();
 
     let db_config = app_config::database();
-    let url = format!(
-        "postgres://{}:{}@{}:{}/{}",
-        db_config.usr(),
-        db_config.passwd(),
-        db_config.host(),
-        db_config.port(),
-        db_config.db()
-    );
+
+    let url = &db_config.url;
 
     let conn_opts = PgPoolOptions::new()
-        .min_connections(db_config.min_conn())
-        .max_connections(db_config.max_conn())
+        .min_connections(db_config.max_connection)
+        .max_connections(db_config.min_connection)
         .idle_timeout(Duration::from_secs(5))
         .max_lifetime(Duration::from_secs(300))
         .acquire_timeout(Duration::from_secs(20));
@@ -30,7 +24,7 @@ pub async fn init() -> PgPool {
     let conn = conn_opts
         .connect(&url)
         .await
-        .map_err(|e| CliError::from(e).add_source("while setting up database connection".into()).exit_now())
+        .map_err(|e| FatalError::from(e).when("while setting up database connection".into()).exit_now())
         .unwrap();
     tracing::info!("Connection set up successfully!");
 

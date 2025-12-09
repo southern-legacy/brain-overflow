@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use crab_vault::logger::LogLevel;
 
-#[derive(Deserialize, Serialize)]
+use crate::{app_config::ConfigItem, error::fatal::FatalResult};
+
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields, default)]
 pub struct LoggerConfig {
     /// 最低的日志输出等级
@@ -27,7 +29,13 @@ pub struct LoggerConfig {
     dump_level: Option<LogLevel>,
 }
 
-
+impl ConfigItem for LoggerConfig {
+    type RuntimeConfig = Self;
+    
+    fn into_runtime(self) -> FatalResult<Self::RuntimeConfig> {
+        Ok(self)
+    }
+}
 
 impl Default for LoggerConfig {
     fn default() -> Self {

@@ -1,63 +1,61 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
 
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
+use crate::{
+    app_config::ConfigItem,
+    error::fatal::FatalResult,
+};
+
+#[derive(Deserialize, Serialize, Clone)]
+#[serde(deny_unknown_fields, default)]
 pub struct DatabaseConfig {
-    host: Option<String>,
-    port: Option<u16>,
-
-    #[serde(rename = "user")]
-    usr: Option<String>,
-
-    #[serde(rename = "password")]
-    passwd: Option<String>,
-
-    #[serde(rename = "database")]
-    db: Option<String>,
-
-    #[serde(rename = "max_connection")]
-    max_conn: Option<u32>,
-
-    #[serde(rename = "min_connection")]
-    min_conn: Option<u32>,
+    host: String,
+    port: u16,
+    user: String,
+    password: String,
+    database: String,
+    max_connection: u32,
+    min_connection: u32,
 }
 
-impl DatabaseConfig {
-    #[inline]
-    pub fn host(&self) -> &str {
-        self.host.as_deref().unwrap_or("localhost")
-    }
+pub struct RuntimeDatabaseConfig {
+    pub url: String,
+    pub max_connection: u32,
+    pub min_connection: u32,
+}
 
-    #[inline]
-    pub fn port(&self) -> u16 {
-        self.port.unwrap_or(5432)
-    }
+impl ConfigItem for DatabaseConfig {
+    type RuntimeConfig = RuntimeDatabaseConfig;
 
-    #[inline]
-    pub fn usr(&self) -> &str {
-        self.usr.as_deref().unwrap_or("postgres")
-    }
+    fn into_runtime(self) -> FatalResult<Self::RuntimeConfig> {
+        let DatabaseConfig {
+            host,
+            port,
+            user,
+            password,
+            database,
+            max_connection,
+            min_connection,
+        } = self;
 
-    #[inline]
-    pub fn passwd(&self) -> &str {
-        self.passwd.as_deref().expect("passwd unknown")
+        Ok(RuntimeDatabaseConfig {
+            url: format!("postgres://{user}:{password}@{host}:{port}/{database}"),
+            max_connection,
+            min_connection,
+        })
     }
+}
 
-    #[inline]
-    pub fn db(&self) -> &str {
-        self.db.as_deref().unwrap_or("postgres")
-    }
-
-    #[inline]
-    pub fn max_conn(&self) -> u32 {
-        self.max_conn
-            .unwrap_or(max((num_cpus::get() * 8) as u32, 10))
-    }
-
-    #[inline]
-    pub fn min_conn(&self) -> u32 {
-        self.min_conn
-            .unwrap_or(min((num_cpus::get() * 4) as u32, 10))
+impl Default for DatabaseConfig {
+    fn default() -> Self {
+        Self {
+            host: "locahost".into(),
+            port: 5432,
+            user: "postgres".into(),
+            password: "passwd unknown".into(),
+            database: "postgres".into(),
+            max_connection: max((num_cpus::get() * 8) as u32, 10),
+            min_connection: min((num_cpus::get() * 4) as u32, 10),
+        }
     }
 }

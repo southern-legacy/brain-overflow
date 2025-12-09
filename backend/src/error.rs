@@ -1,4 +1,4 @@
-pub mod cli;
+pub mod fatal;
 pub mod db;
 pub mod api;
 

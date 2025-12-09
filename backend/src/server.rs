@@ -15,7 +15,7 @@ use tower_http::{
     timeout::TimeoutLayer,
     trace::{DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
-use tracing::{error, info};
+use tracing::info;
 
 #[derive(Clone)]
 pub struct ServerState {
@@ -56,22 +56,6 @@ pub async fn start() {
     println!("{logo}");
 
     logger::init();
-
-    match reqwest::get(app_config::crab_vault_location().to_string() + "/health").await {
-        Ok(val) => {
-            info!(
-                "crab vault instance `{}` returned `{}` as response",
-                &(app_config::crab_vault_location().to_string() + "/health"),
-                val.status()
-            );
-        }
-        Err(e) => {
-            error!(
-                "Cannot establish a connection to the crab vault instance `{}`, which means this instance might not be valid, details: {e}",
-                &(app_config::crab_vault_location().to_string() + "/health")
-            );
-        }
-    };
 
     let conn = crate::db::init().await;
 

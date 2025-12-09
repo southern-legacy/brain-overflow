@@ -7,7 +7,7 @@ use axum::{
 use crab_vault::auth::{HttpMethod, Jwt, Permission, error::AuthError};
 
 use crate::{
-    app_config, entity::usr::user_profiles::UsrProfile, http::{ENCODER_TO_CRAB_VAULT, api::usr::UsrIdent},
+    app_config, entity::usr::user_profiles::UsrProfile, http::api::usr::UsrIdent,
     server::ServerState,
 };
 
@@ -52,10 +52,10 @@ pub(super) async fn safe_bio_operation(
             "image/webp".into(),
         ]);
 
-    let config = app_config::auth().encoder_config_to_crab_vault();
-    let jwt = Jwt::new(config.issue_as(), config.audience(), permission)
-        .expires_in(config.expire_in())
-        .not_valid_in(config.not_valid_in());
+    let config = &app_config::auth().encoder;
+    let jwt = Jwt::new(&config.issue_as, &config.audience, permission)
+        .expires_in(config.expires_in)
+        .not_valid_in(config.not_valid_in);
 
-    ENCODER_TO_CRAB_VAULT.encode_randomly(&jwt)
+    config.encoder.encode_randomly(&jwt)
 }
