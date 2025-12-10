@@ -133,9 +133,7 @@ impl ConfigItem for JwtEncoderConfig {
 impl ConfigItem for JwtDecoderConfig {
     type RuntimeConfig = RuntimeJwtDecoderConfig;
 
-    fn into_runtime(
-        self
-    ) -> FatalResult<RuntimeJwtDecoderConfig> {
+    fn into_runtime(self) -> FatalResult<RuntimeJwtDecoderConfig> {
         let JwtDecoderConfig {
             decoding_keys,
             leeway,

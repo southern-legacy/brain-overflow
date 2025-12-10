@@ -1,11 +1,10 @@
 use regex::Regex;
-use validator::ValidationError;
 use std::{borrow::Cow, sync::LazyLock};
+use validator::ValidationError;
 
 pub static EMAIL_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[\w._%+-]+@[\w.-]+\.\w{2,}$").unwrap());
 pub static PHONE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+\d{1,15}$").unwrap());
-
 
 fn meet_email_format(email: &str) -> bool {
     EMAIL_REGEX.captures(email).is_some()
@@ -17,8 +16,7 @@ fn meet_phone_format(phone: &str) -> bool {
 
 pub fn validate_email(email: &str) -> Result<(), ValidationError> {
     if !meet_email_format(email) {
-        let err = ValidationError::new("format")
-            .with_message(Cow::Borrowed(""));
+        let err = ValidationError::new("format").with_message(Cow::Borrowed(""));
         Err(err)
     } else {
         Ok(())

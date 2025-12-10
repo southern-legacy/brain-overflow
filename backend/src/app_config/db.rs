@@ -1,10 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
 
-use crate::{
-    app_config::ConfigItem,
-    error::fatal::FatalResult,
-};
+use crate::{app_config::ConfigItem, error::fatal::FatalResult};
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields, default)]

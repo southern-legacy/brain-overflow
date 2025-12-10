@@ -22,6 +22,8 @@ impl ConfigItem for CrabVaultConfig {
 
     fn into_runtime(self) -> FatalResult<RuntimeCrabVaultConfig> {
         let CrabVaultConfig { encoder } = self;
-        Ok(RuntimeCrabVaultConfig {encoder: encoder.into_runtime()? })
+        Ok(RuntimeCrabVaultConfig {
+            encoder: encoder.into_runtime()?,
+        })
     }
 }

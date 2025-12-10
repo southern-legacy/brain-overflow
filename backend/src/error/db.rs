@@ -71,9 +71,9 @@ impl From<sqlx::Error> for DbError {
             PoolTimedOut => DbError::new(Unprocessable(Borrowed(
                 "Pool Time Out, which shouldn't have been",
             ))),
-            PoolClosed => {
-                DbError::new(Unprocessable(Borrowed("Pool Closed, which shouldn't have been")))
-            }
+            PoolClosed => DbError::new(Unprocessable(Borrowed(
+                "Pool Closed, which shouldn't have been",
+            ))),
             WorkerCrashed => DbError::new(Unprocessable(Borrowed(
                 "Worker Crashed, which shouldn't have been",
             ))),
@@ -117,7 +117,7 @@ impl Display for DbError {
 impl From<DbError> for Response {
     fn from(value: DbError) -> Self {
         use DbErrorKind::*;
-        use tracing::{warn, error};
+        use tracing::{error, warn};
         match value.kind() {
             Unprocessable(e) => {
                 error!("Error occurs while manipulating database! Details: {e}");
@@ -126,19 +126,19 @@ impl From<DbError> for Response {
             Unique(error) => {
                 warn!("Unique key violation! Details: {}", error.message());
                 (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(value)).into_response()
-            },
+            }
             Foreign(error) => {
                 warn!("Foreign key violation! Details: {}", error.message());
                 (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(value)).into_response()
-            },
+            }
             Check(error) => {
                 warn!("Check key violation! Details: {}", error.message());
                 (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(value)).into_response()
-            },
+            }
             NotNull(error) => {
                 warn!("Not null key violation! Details: {}", error.message());
                 (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(value)).into_response()
-            },
+            }
             Other(error) => {
                 warn!("Other violation! Details: {}", error.message());
                 (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(value)).into_response()
@@ -163,7 +163,7 @@ impl Display for DbErrorKind {
         match self {
             Check(e) | Other(e) | Unique(e) | Foreign(e) | NotNull(e) => f.write_str(e.message()),
             Unprocessable(e) => f.write_str(e),
-            NotFound => f.write_str("specified row not found")
+            NotFound => f.write_str("specified row not found"),
         }
     }
 }
@@ -181,7 +181,7 @@ impl Serialize for DbErrorKind {
             NotNull(_) => (3, "notNull"),
             Other(_) => (4, "other"),
             NotFound => (5, "notFound"),
-            Unprocessable(_) => (6, "unprocessable")
+            Unprocessable(_) => (6, "unprocessable"),
         };
         serializer.serialize_unit_variant("violationKind", idx, val)
     }

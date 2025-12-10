@@ -33,7 +33,7 @@ pub struct LoggerConfig {
 
 impl ConfigItem for LoggerConfig {
     type RuntimeConfig = RuntimeLoggerConfig;
-    
+
     fn into_runtime(self) -> FatalResult<Self::RuntimeConfig> {
         Ok(self)
     }

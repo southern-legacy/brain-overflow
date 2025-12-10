@@ -26,4 +26,3 @@ pub fn build_router() -> Router<ServerState> {
         .fallback(|| async { StatusCode::NOT_FOUND })
         .method_not_allowed_fallback(|| async { StatusCode::METHOD_NOT_ALLOWED })
 }
- 

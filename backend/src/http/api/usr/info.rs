@@ -1,16 +1,8 @@
-use axum::{
-    debug_handler,
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-};
+use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse};
 
 use crate::{
     entity::usr::user_profiles::UsrProfile,
-    http::{
-        api::ApiResult,
-        extractor::Path
-    },
+    http::{api::ApiResult, extractor::Path},
     server::ServerState,
 };
 

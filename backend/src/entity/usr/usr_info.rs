@@ -134,7 +134,8 @@ RETURNING "id";
     }
 
     pub async fn update_email(db: &PgPool, id: i64, new_email: &str) -> Result<UsrInfo, DbError> {
-        let statement = sqlx::query_as!(UsrInfo,
+        let statement = sqlx::query_as!(
+            UsrInfo,
             r#"
 UPDATE "usr"."usr_info"
 SET "email" = $1
@@ -148,7 +149,8 @@ RETURNING *;
     }
 
     pub async fn update_phone(db: &PgPool, id: i64, new_phone: &str) -> Result<UsrInfo, DbError> {
-        let statement = sqlx::query_as!(UsrInfo,
+        let statement = sqlx::query_as!(
+            UsrInfo,
             r#"
 UPDATE "usr"."usr_info"
 SET "phone" = $1
@@ -166,7 +168,8 @@ RETURNING *;
         id: i64,
         new_passwd_hash: &str,
     ) -> Result<UsrInfo, DbError> {
-        let statement = sqlx::query_as!(UsrInfo,
+        let statement = sqlx::query_as!(
+            UsrInfo,
             r#"
 UPDATE "usr"."usr_info"
 SET "passwd_hash" = $1

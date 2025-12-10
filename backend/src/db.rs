@@ -24,7 +24,11 @@ pub async fn init() -> PgPool {
     let conn = conn_opts
         .connect(url)
         .await
-        .map_err(|e| FatalError::from(e).when("while setting up database connection".into()).exit_now())
+        .map_err(|e| {
+            FatalError::from(e)
+                .when("while setting up database connection".into())
+                .exit_now()
+        })
         .unwrap();
     tracing::info!("Connection set up successfully!");
 

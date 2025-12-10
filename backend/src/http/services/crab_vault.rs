@@ -54,7 +54,9 @@ impl<R: std::marker::Send + 'static> Service<axum::http::request::Request<R>>
 
         Box::pin(async move {
             if !safe_to_issue {
-                return Ok(<ApiError as Into<Response>>::into(ApiError::MethodNotAllowed));
+                return Ok(<ApiError as Into<Response>>::into(
+                    ApiError::MethodNotAllowed,
+                ));
             }
 
             let mapped_crab_vault_path = match map_fn(regex, request.uri().path()) {
@@ -111,10 +113,7 @@ impl TokenIssueServiceInner {
     }
 
     #[inline]
-    pub fn map_fn(
-        mut self,
-        map_fn: fn(Regex, &str) -> Result<String, Response>,
-    ) -> Self {
+    pub fn map_fn(mut self, map_fn: fn(Regex, &str) -> Result<String, Response>) -> Self {
         self.map_fn = map_fn;
         self
     }

@@ -22,10 +22,10 @@ pub(super) struct AuthConfig {
     /// 在编译规则时保证如果同一个路径下有多种公开方式时，采取最后指定的公开请求方法而非并集
     #[serde(default)]
     path_rules: Vec<PathRule>,
-    
+
     #[serde(default)]
     encoder: JwtEncoderConfig,
-    
+
     /// jwt 鉴权相关设置
     #[serde(default)]
     decoder: JwtDecoderConfig,

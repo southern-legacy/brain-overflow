@@ -1,6 +1,6 @@
 use chrono::{DateTime, Local};
 use serde::Serialize;
-use sqlx::{query_as, PgPool};
+use sqlx::{PgPool, query_as};
 
 use crate::error::db::DbError;
 

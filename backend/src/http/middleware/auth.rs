@@ -16,7 +16,6 @@ use tower::{Layer, Service};
 
 use crate::{app_config, error::api::ApiError};
 
-
 #[derive(Clone)]
 pub struct Auth<Inner> {
     inner: Inner,
@@ -80,7 +79,6 @@ where
     }
 }
 
-
 impl AuthLayer {
     /// 此函数将在堆上创建一个 [`JwtConfig`] 结构作为这个中间件的配置
     pub fn new(jwt_decoder: &'static JwtDecoder) -> Self {
@@ -93,7 +91,7 @@ impl<Inner> Layer<Inner> for AuthLayer {
 
     fn layer(&self, inner: Inner) -> Self::Service {
         let Self(jwt_config) = self.clone();
-        
+
         Auth { inner, jwt_config }
     }
 }
