@@ -8,7 +8,8 @@ pub mod utils;
 use crate::app_config::auth::{AuthConfig, RuntimeAuthConfig};
 use crate::app_config::crab_vault::{CrabVaultConfig, RuntimeCrabVaultConfig};
 use crate::app_config::db::RuntimeDatabaseConfig;
-use crate::app_config::logger::LoggerConfig;
+use crate::app_config::logger::{LoggerConfig, RuntimeLoggerConfig};
+use crate::app_config::server::RuntimeServerConfig;
 use crate::cli::Cli;
 use crate::error::fatal::{FatalError, FatalResult, MultiFatalError};
 
@@ -37,8 +38,8 @@ struct AppConfig {
 }
 
 struct RuntimeAppConfig {
-    server: ServerConfig,
-    logger: LoggerConfig,
+    server: RuntimeServerConfig,
+    logger: RuntimeLoggerConfig,
     database: RuntimeDatabaseConfig,
     auth: RuntimeAuthConfig,
     crab_vault: RuntimeCrabVaultConfig,

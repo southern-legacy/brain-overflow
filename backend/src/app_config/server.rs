@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{app_config::ConfigItem, error::fatal::FatalResult};
 
+pub type RuntimeServerConfig = ServerConfig;
 
 #[derive(Deserialize, Serialize, Clone, Copy)]
 #[serde(deny_unknown_fields, default)]
@@ -33,7 +34,7 @@ impl Default for ServerConfig {
 }
 
 impl ConfigItem for ServerConfig {
-    type RuntimeConfig = Self;
+    type RuntimeConfig = RuntimeServerConfig;
 
     fn into_runtime(self) -> FatalResult<Self> {
         Ok(self)

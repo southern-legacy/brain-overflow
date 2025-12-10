@@ -16,16 +16,16 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields, default)]
-pub struct AuthConfig {
+pub(super) struct AuthConfig {
     /// 这里使用 Vec
     ///
     /// 在编译规则时保证如果同一个路径下有多种公开方式时，采取最后指定的公开请求方法而非并集
     #[serde(default)]
     path_rules: Vec<PathRule>,
-
+    
     #[serde(default)]
     encoder: JwtEncoderConfig,
-
+    
     /// jwt 鉴权相关设置
     #[serde(default)]
     decoder: JwtDecoderConfig,
@@ -35,6 +35,17 @@ pub struct RuntimeAuthConfig {
     pub path_rules: Vec<(Pattern, HashSet<HttpMethod>)>,
     pub encoder: RuntimeJwtEncoderConfig,
     pub decoder: RuntimeJwtDecoderConfig,
+}
+
+#[derive(Default, Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields, default)]
+pub struct PathRule {
+    /// 路径的通配符，UNIX shell 通配符
+    pattern: String,
+
+    /// 无需 token 即可访问的那些方法
+    #[serde(default)]
+    public_methods: HashSet<HttpMethod>,
 }
 
 impl TryFrom<AuthConfig> for RuntimeAuthConfig {
@@ -114,17 +125,6 @@ impl ConfigItem for AuthConfig {
             Err(errors)
         }
     }
-}
-
-#[derive(Default, Serialize, Deserialize, Clone)]
-#[serde(deny_unknown_fields, default)]
-pub struct PathRule {
-    /// 路径的通配符，UNIX shell 通配符
-    pattern: String,
-
-    /// 无需 token 即可访问的那些方法
-    #[serde(default)]
-    public_methods: HashSet<HttpMethod>,
 }
 
 impl From<PathRule> for (String, HashSet<HttpMethod>) {

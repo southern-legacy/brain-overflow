@@ -8,7 +8,7 @@ use crate::{
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields, default)]
-pub struct DatabaseConfig {
+pub(super) struct DatabaseConfig {
     host: String,
     port: u16,
     user: String,

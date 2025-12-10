@@ -4,6 +4,8 @@ use crab_vault::logger::LogLevel;
 
 use crate::{app_config::ConfigItem, error::fatal::FatalResult};
 
+pub type RuntimeLoggerConfig = LoggerConfig;
+
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields, default)]
 pub struct LoggerConfig {
@@ -30,7 +32,7 @@ pub struct LoggerConfig {
 }
 
 impl ConfigItem for LoggerConfig {
-    type RuntimeConfig = Self;
+    type RuntimeConfig = RuntimeLoggerConfig;
     
     fn into_runtime(self) -> FatalResult<Self::RuntimeConfig> {
         Ok(self)

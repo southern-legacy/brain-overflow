@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Clone, Default)]
-pub struct CrabVaultConfig {
+pub(super) struct CrabVaultConfig {
     encoder: JwtEncoderConfig,
 }
 
