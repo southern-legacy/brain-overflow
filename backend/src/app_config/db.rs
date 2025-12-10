@@ -49,10 +49,10 @@ impl ConfigItem for DatabaseConfig {
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
-            host: "locahost".into(),
+            host: "localhost".into(),
             port: 5432,
             user: "postgres".into(),
-            password: "passwd unknown".into(),
+            password: "password unknown".into(),
             database: "postgres".into(),
             max_connection: max((num_cpus::get() * 8) as u32, 10),
             min_connection: min((num_cpus::get() * 4) as u32, 10),

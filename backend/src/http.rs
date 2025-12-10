@@ -1,5 +1,5 @@
 mod api;
-pub mod auth;
+mod auth;
 mod extractor;
 mod middleware;
 mod services;

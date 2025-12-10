@@ -48,46 +48,6 @@ pub struct PathRule {
     public_methods: HashSet<HttpMethod>,
 }
 
-impl TryFrom<AuthConfig> for RuntimeAuthConfig {
-    type Error = MultiFatalError;
-
-    fn try_from(
-        AuthConfig {
-            path_rules,
-            encoder,
-            decoder,
-        }: AuthConfig,
-    ) -> FatalResult<Self> {
-        let (mut errors, mut compiled_path_rules) = (MultiFatalError::new(), vec![]);
-
-        let encoder = encoder
-            .into_runtime()
-            .map_err(|mut e| errors.append(&mut e));
-        let decoder = decoder
-            .into_runtime()
-            .map_err(|mut e| errors.append(&mut e));
-
-        for path_rule in path_rules {
-            match path_rule.compile() {
-                Ok(v) => compiled_path_rules.push(v),
-                Err(e) => errors.push(e),
-            }
-        }
-
-        if let Ok(encoder) = encoder
-            && let Ok(decoder) = decoder
-        {
-            Ok(Self {
-                path_rules: compiled_path_rules,
-                encoder,
-                decoder,
-            })
-        } else {
-            Err(errors)
-        }
-    }
-}
-
 impl ConfigItem for AuthConfig {
     type RuntimeConfig = RuntimeAuthConfig;
 
