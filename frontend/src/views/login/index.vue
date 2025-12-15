@@ -1,6 +1,6 @@
 <script setup>
-import LoginForm from '@/views/login/LoginForm.vue'
-import RegisForm from '@/views/login/RegisForm.vue'
+import LoginForm from '@/views/login/components/LoginForm.vue'
+import RegisForm from '@/views/login/components/RegisForm.vue'
 import { ref } from 'vue'
 
 const isLogin = ref(true)
