@@ -1,4 +1,4 @@
-pub mod usr;
+pub mod user;
 
 use axum::{Router, http::StatusCode, response::Response};
 use regex::Regex;
@@ -21,8 +21,8 @@ pub fn build_router() -> Router<ServerState> {
     let service = TokenIssueService::new(inner);
 
     Router::new()
-        .nest("/usr", usr::build_router())
-        .route_service("/usr/bio/{*}", service)
+        .nest("/user", user::build_router())
+        .route_service("/user/bio/{*}", service)
         .fallback(|| async { StatusCode::NOT_FOUND })
         .method_not_allowed_fallback(|| async { StatusCode::METHOD_NOT_ALLOWED })
 }

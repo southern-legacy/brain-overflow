@@ -25,11 +25,11 @@ regex = "1.11.1"
 rust-argon2 = "3.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.142", features = ["raw_value"] }
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "derive", "macros", "chrono", "rust_decimal", "json"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "derive", "macros", "chrono", "rust_decimal", "json", "uuid"] }
 tokio = { version = "1.47.1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "timeout", "cors", "limit", "normalize-path", "auth", "fs"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }
-uuid = { version = "1.17", features = ["v4"] }
+uuid = { version = "1.17", features = ["v4", "v7"] }
 validator = { version = "0.20", features = ["derive"] }

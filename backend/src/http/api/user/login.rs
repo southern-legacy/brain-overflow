@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
 use crate::{
-    entity::usr::usr_info::UsrInfo,
+    entity::user::user_info::UserInfo,
     http::{
         api::{
             ApiResult,
-            usr::{UsrIdent, check_passwd},
+            user::{UserIdent, check_passwd},
         },
         extractor::ValidJson,
         utils::{validate_email, validate_passwd, validate_phone},
@@ -36,16 +36,16 @@ pub(super) struct LoginParam {
 }
 
 #[debug_handler]
-#[tracing::instrument(name = "[usr/login]", skip_all, fields(login_method = %param.method.get_anyway()))]
+#[tracing::instrument(name = "[user/login]", skip_all, fields(login_method = %param.method.get_anyway()))]
 pub(super) async fn login(
     State(state): State<ServerState>,
     ValidJson(param): ValidJson<LoginParam>,
 ) -> ApiResult {
     let method = &param.method;
     let res = match method {
-        LoginMethod::Phone(phone) => UsrInfo::fetch_all_fields_by_phone(state.db(), phone).await,
-        LoginMethod::Email(email) => UsrInfo::fetch_all_fields_by_email(state.db(), email).await,
-        LoginMethod::Id(id) => UsrInfo::fetch_all_fields_by_id(state.db(), *id).await,
+        LoginMethod::Phone(phone) => UserInfo::fetch_all_fields_by_phone(state.db(), phone).await,
+        LoginMethod::Email(email) => UserInfo::fetch_all_fields_by_email(state.db(), email).await,
+        LoginMethod::Id(id) => UserInfo::fetch_all_fields_by_id(state.db(), *id).await,
     };
 
     let res = match res {
@@ -62,10 +62,10 @@ pub(super) async fn login(
     check_passwd_and_respond(res, &param.passwd).await
 }
 
-async fn check_passwd_and_respond(usr: UsrInfo, passwd: &str) -> ApiResult {
-    check_passwd(&usr, passwd).await?;
+async fn check_passwd_and_respond(user: UserInfo, passwd: &str) -> ApiResult {
+    check_passwd(&user, passwd).await?;
 
-    Ok(UsrIdent::from(usr).issue_as_jwt())
+    Ok(UserIdent::from(user).issue_as_jwt())
 }
 
 impl LoginMethod {

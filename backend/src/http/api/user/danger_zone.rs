@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::http::{
-    api::usr::generate_passwd_hash,
+    api::user::generate_passwd_hash,
     utils::{validate_email, validate_passwd, validate_phone},
 };
 use axum::{Extension, debug_handler, extract::State, http::StatusCode, response::IntoResponse};
@@ -10,11 +10,11 @@ use sqlx::PgPool;
 use validator::{Validate, ValidationError};
 
 use crate::{
-    entity::usr::usr_info::UsrInfo,
+    entity::user::user_info::UserInfo,
     http::{
         api::{
             ApiResult,
-            usr::{UsrIdent, check_passwd},
+            user::{UserIdent, check_passwd},
         },
         extractor::ValidJson,
     },
@@ -22,19 +22,19 @@ use crate::{
 };
 
 #[debug_handler]
-#[tracing::instrument(name = "[usr/delete_account]", skip_all, fields(usr_id = %ident.id))]
+#[tracing::instrument(name = "[user/delete_account]", skip_all, fields(user_id = %ident.id))]
 pub(super) async fn delete_account(
     state: State<ServerState>,
-    ident: Extension<UsrIdent>,
+    ident: Extension<UserIdent>,
     passwd: String,
 ) -> ApiResult {
-    let usr_info = ident.retrieve_self_from_db(state.db()).await?;
-    check_passwd(&usr_info, &passwd).await?;
+    let user_info = ident.retrieve_self_from_db(state.db()).await?;
+    check_passwd(&user_info, &passwd).await?;
     try_delete_account(state.db(), ident.id).await
 }
 
 async fn try_delete_account(db: &PgPool, id: i64) -> ApiResult {
-    let res = UsrInfo::delete_by_id(db, id).await;
+    let res = UserInfo::delete_by_id(db, id).await;
     match res {
         Ok(id) => {
             tracing::info!("User (id: {id}) deleted his/her account forever");
@@ -90,13 +90,13 @@ impl ChangeAuthParam {
 }
 
 #[debug_handler]
-#[tracing::instrument(name = "[usr/delete_account]", skip_all, fields(usr_id = %ident.id))]
+#[tracing::instrument(name = "[user/delete_account]", skip_all, fields(user_id = %ident.id))]
 pub(super) async fn change_auth_info(
     state: State<ServerState>,
-    ident: Extension<UsrIdent>,
+    ident: Extension<UserIdent>,
     param: ValidJson<ChangeAuthParam>,
 ) -> ApiResult {
-    let usr_info = ident.retrieve_self_from_db(state.db()).await?;
+    let user_info = ident.retrieve_self_from_db(state.db()).await?;
 
     let ChangeAuthParam {
         new_email,
@@ -105,7 +105,7 @@ pub(super) async fn change_auth_info(
         passwd,
     } = param.unwrap();
 
-    check_passwd(&usr_info, &passwd).await?;
+    check_passwd(&user_info, &passwd).await?;
 
     let new_passwd_hash = match &new_passwd {
         Some(val) => Some(generate_passwd_hash(val).await?),
@@ -131,11 +131,11 @@ async fn try_change_auth_info(
 ) -> ApiResult {
     let res;
     if let Some(new_email) = new_email {
-        res = UsrInfo::update_email(state.db(), id, new_email).await;
+        res = UserInfo::update_email(state.db(), id, new_email).await;
     } else if let Some(new_phone) = new_phone {
-        res = UsrInfo::update_phone(state.db(), id, new_phone).await;
+        res = UserInfo::update_phone(state.db(), id, new_phone).await;
     } else if let Some(new_passwd_hash) = new_passwd_hash {
-        res = UsrInfo::update_passwd_hash(state.db(), id, new_passwd_hash).await;
+        res = UserInfo::update_passwd_hash(state.db(), id, new_passwd_hash).await;
     } else {
         // 这里应该是 unreachable 的
         // return Err(StatusCode::UNPROCESSABLE_ENTITY.into_response())
@@ -145,7 +145,7 @@ async fn try_change_auth_info(
     match res {
         Ok(res) => {
             if res.id == id {
-                Ok(UsrIdent::from(res).issue_as_jwt())
+                Ok(UserIdent::from(res).issue_as_jwt())
             } else {
                 unreachable!()
             }

@@ -1,2 +1,2 @@
 pub mod user_profiles;
-pub mod usr_info;
+pub mod user_info;

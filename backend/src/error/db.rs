@@ -9,6 +9,8 @@ use sqlx::error::DatabaseError;
 
 use crate::error::CustomError;
 
+pub type DbResult<T> = Result<T, DbError>;
+
 #[derive(Debug, Serialize)]
 pub struct DbError {
     #[serde(rename = "code")]

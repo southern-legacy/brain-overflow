@@ -9,7 +9,7 @@ use crab_vault::auth::Jwt;
 use std::sync::LazyLock;
 
 use crate::app_config;
-use crate::entity::usr::usr_info::UsrInfo;
+use crate::entity::user::user_info::UserInfo;
 use crate::http::middleware::auth::AuthLayer;
 use crate::server::ServerState;
 use axum::http::StatusCode;
@@ -39,17 +39,17 @@ pub(super) fn build_router() -> Router<ServerState> {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct UsrIdent {
+pub struct UserIdent {
     pub id: i64,
     pub name: String,
     pub email: Option<String>,
     pub phone: Option<String>,
 }
 
-impl UsrIdent {
-    pub async fn retrieve_self_from_db(&self, db: &PgPool) -> Result<UsrInfo, Response> {
-        match UsrInfo::fetch_all_fields_by_id(db, self.id).await {
-            Ok(usr_info) => Ok(usr_info),
+impl UserIdent {
+    pub async fn retrieve_self_from_db(&self, db: &PgPool) -> Result<UserInfo, Response> {
+        match UserInfo::fetch_all_fields_by_id(db, self.id).await {
+            Ok(user_info) => Ok(user_info),
             Err(e) => {
                 if e.is_not_found() {
                     Err(StatusCode::UNAUTHORIZED.into_response())
@@ -75,19 +75,19 @@ impl UsrIdent {
     }
 }
 
-impl From<UsrInfo> for UsrIdent {
-    fn from(usr: UsrInfo) -> Self {
+impl From<UserInfo> for UserIdent {
+    fn from(user: UserInfo) -> Self {
         Self {
-            email: usr.email,
-            phone: usr.phone,
-            id: usr.id,
-            name: usr.name,
+            email: user.email,
+            phone: user.phone,
+            id: user.id,
+            name: user.name,
         }
     }
 }
 
-#[tracing::instrument(name = "[usr/check password]", skip_all)]
-async fn check_passwd(val: &UsrInfo, passwd: &str) -> Result<(), Response> {
+#[tracing::instrument(name = "[user/check password]", skip_all)]
+async fn check_passwd(val: &UserInfo, passwd: &str) -> Result<(), Response> {
     match argon2::verify_encoded(&val.passwd_hash, passwd.as_bytes()) {
         Ok(true) => {
             tracing::info!("Authorization of user (id: {}) successfully.", val.id);
@@ -107,9 +107,9 @@ async fn check_passwd(val: &UsrInfo, passwd: &str) -> Result<(), Response> {
     }
 }
 
-#[tracing::instrument(name = "[usr/generate password]", skip_all)]
+#[tracing::instrument(name = "[user/generate password]", skip_all)]
 async fn generate_passwd_hash(passwd: &str) -> Result<String, Response> {
-    let salt = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::new_v4().into_bytes());
+    let salt = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::now_v7().into_bytes());
     match argon2::hash_encoded(passwd.as_bytes(), salt.as_bytes(), &ARGON2_CONFIG) {
         Ok(val) => Ok(val),
         Err(e) => {

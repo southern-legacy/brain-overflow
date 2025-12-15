@@ -1,1 +1,1 @@
-DELETE FROM "usr"."usr_info" RETURNING *;
+DELETE FROM "user"."user_info" RETURNING *;

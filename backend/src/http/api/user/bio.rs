@@ -7,17 +7,17 @@ use axum::{
 use crab_vault::auth::{HttpMethod, Jwt, Permission, error::AuthError};
 
 use crate::{
-    app_config, entity::usr::user_profiles::UsrProfile, http::api::usr::UsrIdent,
+    app_config, entity::user::user_profiles::UserProfile, http::api::user::UserIdent,
     server::ServerState,
 };
 
 #[debug_handler]
-#[tracing::instrument(name = "[usr/bio]", skip(state))]
+#[tracing::instrument(name = "[user/bio]", skip(state))]
 pub(super) async fn bio_get(
     State(state): State<ServerState>,
-    Extension(ident): Extension<UsrIdent>,
+    Extension(ident): Extension<UserIdent>,
 ) -> Response {
-    let res = UsrProfile::fetch_all_fields_by_id(state.db(), ident.id).await;
+    let res = UserProfile::fetch_all_fields_by_id(state.db(), ident.id).await;
     match res {
         Ok(profile) => (StatusCode::OK, axum::Json(profile)).into_response(),
         Err(e) => {
@@ -31,7 +31,7 @@ pub(super) async fn bio_get(
 }
 
 #[debug_handler]
-#[tracing::instrument(name = "[usr/bio/issue token]")]
+#[tracing::instrument(name = "[user/bio/issue token]")]
 pub(super) async fn safe_bio_operation(
     method: axum::http::Method,
     request: Request,

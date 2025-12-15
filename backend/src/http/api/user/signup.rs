@@ -8,11 +8,11 @@ use serde::Deserialize;
 use validator::{Validate, ValidationErrors};
 
 use crate::{
-    entity::usr::usr_info::{InsertParam, UsrInfo},
+    entity::user::user_info::{InsertParam, UserInfo},
     http::{
         api::{
             ApiResult,
-            usr::{UsrIdent, generate_passwd_hash},
+            user::{UserIdent, generate_passwd_hash},
         },
         extractor::ValidJson,
         utils::{validate_email, validate_passwd, validate_phone},
@@ -61,7 +61,7 @@ pub(super) struct SignUpParam {
 }
 
 #[debug_handler]
-#[tracing::instrument(name = "[usr/signup]", skip_all, fields(verify = %param.method.get_anyway()))]
+#[tracing::instrument(name = "[user/signup]", skip_all, fields(verify = %param.method.get_anyway()))]
 pub(super) async fn signup(
     State(state): State<ServerState>,
     ValidJson(param): ValidJson<SignUpParam>,
@@ -76,17 +76,17 @@ pub(super) async fn signup(
 
     let passwd_hash = generate_passwd_hash(&passwd).await?;
 
-    let new_usr = InsertParam {
+    let new_user = InsertParam {
         email: email.as_ref(),
         phone: phone.as_ref(),
         name: &name,
         passwd: &passwd_hash,
     };
 
-    let id = UsrInfo::insert_and_return_id(state.db(), new_usr).await?;
+    let id = UserInfo::insert_and_return_id(state.db(), new_user).await?;
     tracing::info!("Successfully inserted a user into database.");
 
-    let usr_ident = UsrIdent {
+    let user_ident = UserIdent {
         id,
         name,
         email,
@@ -94,8 +94,8 @@ pub(super) async fn signup(
     };
     Ok((
         StatusCode::CREATED,
-        [(header::LOCATION, format!("/usr/{}", id))],
-        usr_ident.issue_as_jwt(),
+        [(header::LOCATION, format!("/user/{}", id))],
+        user_ident.issue_as_jwt(),
     )
         .into_response())
 }
