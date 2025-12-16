@@ -284,7 +284,7 @@ const handleRegis = async () => {
 .imgCode {
   width: auto;
   height: 42px;
-  margin-left: 9px;
+  margin-left: 7px;
   border-radius: 8px;
   border: 1px solid #d9aeb8;
   box-shadow: 0 2px 6px rgba(215, 175, 185, 0.15);

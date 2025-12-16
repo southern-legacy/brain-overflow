@@ -1,11 +1,141 @@
-<script setup></script>
+<script setup>
+// 这里先不接真实数据，只做 layout 骨架
+</script>
 
 <template>
-  <div class="app-container">
-    <!-- todo： 个人主页，主要依靠grid布局实现 -->
-    <!-- todo： 头像/关注/数据/文章....-->
-    <!-- todo： 个人信息设置界面 -->
+  <div class="profile-page">
+    <div class="profile-layout">
+      <!-- 左侧：Header + 内容区 -->
+      <main class="profile-main">
+        <!-- Header：头像 + 基本信息 + 设置 -->
+        <section class="profile-header">
+          <div class="user-basic">
+            <el-avatar :size="80" />
+            <div class="info">
+              <h2 class="username">用户名</h2>
+              <p class="desc">这里是个人简介，可以写一句话</p>
+            </div>
+          </div>
+
+          <el-button type="primary">编辑资料</el-button>
+        </section>
+
+        <!-- 内容区：文章 / 关注 / 收藏 -->
+        <section class="profile-content">
+          <el-tabs>
+            <el-tab-pane label="文章">
+              <div class="placeholder">文章列表区域</div>
+            </el-tab-pane>
+            <el-tab-pane label="关注">
+              <div class="placeholder">关注列表区域</div>
+            </el-tab-pane>
+            <el-tab-pane label="收藏">
+              <div class="placeholder">收藏列表区域</div>
+            </el-tab-pane>
+          </el-tabs>
+        </section>
+      </main>
+
+      <!-- 右侧：用户数据栏 -->
+      <aside class="profile-sidebar">
+        <div class="stat-item">
+          <span class="label">关注</span>
+          <span class="num">12</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">收藏</span>
+          <span class="num">8</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">点赞</span>
+          <span class="num">56</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">加入时间</span>
+          <span class="value">2024-05</span>
+        </div>
+      </aside>
+    </div>
   </div>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.profile-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* 外层两列布局 */
+.profile-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* 左侧主内容：Header + 内容 */
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .user-basic {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .username {
+      margin: 0;
+    }
+
+    .desc {
+      font-size: 14px;
+      color: #86909c;
+    }
+  }
+}
+
+/* 内容区 */
+.profile-content {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.placeholder {
+  padding: 24px;
+  color: #86909c;
+}
+
+/* 右侧用户数据栏 */
+.profile-sidebar {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .stat-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+
+    .num {
+      font-weight: 600;
+    }
+
+    .label {
+      color: #86909c;
+    }
+  }
+}
+</style>

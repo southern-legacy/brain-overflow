@@ -32,14 +32,14 @@ const handleChangingAuth = () => {
 
 <style scoped lang="scss">
 .loginBox {
-  height: 700px;
+  height: 750px;
   padding: 30px;
   background: #d5dfe6;
   border-radius: 20px;
   opacity: 0.8;
   backdrop-filter: blur(10px);
   box-shadow: 0px 10px 10px -2px #a3a0a5;
-  margin-top: 50px;
+  margin-top: 100px;
   display: flex;
   justify-content: space-between;
 }
@@ -68,7 +68,6 @@ const handleChangingAuth = () => {
 }
 
 .right img {
-  margin-top: 40px;
   width: 90%;
   border-radius: 16px;
   object-fit: cover;
