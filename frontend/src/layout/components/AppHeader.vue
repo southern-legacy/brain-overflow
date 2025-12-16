@@ -1,4 +1,5 @@
 <script setup>
+import UserAvatar from '@/components/UserAvatar.vue'
 import { ref } from 'vue'
 const keyword = ref('')
 </script>
@@ -16,7 +17,7 @@ const keyword = ref('')
 
     <div class="actions">
       <el-button type="primary">Ask Question</el-button>
-      <el-avatar src="xxx" />
+      <UserAvatar></UserAvatar>
       <el-button circle size="large" type="primary">登录</el-button>
       <el-button circle size="large">注册</el-button>
     </div>
@@ -36,6 +37,7 @@ const keyword = ref('')
 .logo {
   font-size: 24px;
   font-weight: bold;
+  cursor: pointer;
 }
 
 .search {
