@@ -2,6 +2,18 @@
 /**
  * todo:  动态数据： 头像， 用户关注，个人主页跳转，个人设置跳转，收藏页面，历史记录
  */
+
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+function jumpToProfile() {
+  router.push('/user-profile')
+}
+
+function jumpToSetting() {
+  router.push('/user-setting')
+}
 </script>
 
 <template>
@@ -38,9 +50,9 @@
       </el-row>
 
       <!-- 功能区 -->
-      <el-row class="user-actions" justify="middle">
-        <el-link class="link" underline="never">个人主页</el-link>
-        <el-link class="link" underline="never">用户设置</el-link>
+      <el-row class="user-actions" justify="center">
+        <el-link class="link" underline="never" @click="jumpToProfile">个人主页</el-link>
+        <el-link class="link" underline="never" @click="jumpToSetting">用户设置</el-link>
         <el-link class="link" underline="never">收藏文章</el-link>
         <el-link class="link" underline="never">我的足迹</el-link>
       </el-row>
