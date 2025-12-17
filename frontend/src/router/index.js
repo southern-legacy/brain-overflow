@@ -31,6 +31,11 @@ const router = createRouter({
       path: '/edit-article',
       component: () => import('@/views/edit-article/index.vue'),
     },
+    {
+      path: '/:pathMatch(.*)*', // 匹配所有未匹配的路径
+      name: 'NotFound',
+      component: () => import('@/views/404/index.vue'),
+    },
   ],
 })
 

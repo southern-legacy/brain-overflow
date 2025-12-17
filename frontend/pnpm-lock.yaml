@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@element-plus/icons-vue':
+        specifier: ^2.3.2
+        version: 2.3.2(vue@3.5.20)
       '@kangc/v-md-editor':
         specifier: ^2.3.18
         version: 2.3.18(@vue/compiler-sfc@3.5.20)(vue@3.5.20)
