@@ -7,6 +7,7 @@ const router = createRouter({
       path: '/login',
       component: () => import('@/views/login/index.vue'),
     },
+
     {
       path: '/',
       component: () => import('@/layout/index.vue'),
@@ -17,6 +18,7 @@ const router = createRouter({
         },
       ],
     },
+
     {
       path: '/user-profile',
       component: () => import('@/views/user-profile/layout/index.vue'),
@@ -27,10 +29,23 @@ const router = createRouter({
         },
       ],
     },
+
+    {
+      path: '/user-settings',
+      component: () => import('@/views/user-profile/layout/index.vue'),
+      children: [
+        {
+          path: '',
+          component: () => import('@/views/user-profile/UserSettings.vue'),
+        },
+      ],
+    },
+
     {
       path: '/edit-article',
       component: () => import('@/views/edit-article/index.vue'),
     },
+
     {
       path: '/:pathMatch(.*)*', // 匹配所有未匹配的路径
       name: 'NotFound',

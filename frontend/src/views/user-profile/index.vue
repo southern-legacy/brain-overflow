@@ -1,5 +1,7 @@
 <script setup>
 // 这里先不接真实数据，只做 layout 骨架
+import { useRouter } from 'vue-router'
+let router = useRouter()
 </script>
 
 <template>
@@ -18,7 +20,12 @@
             </div>
           </div>
 
-          <el-button type="primary" class="edit-profile-button">编辑资料</el-button>
+          <el-button
+            type="primary"
+            class="edit-profile-button"
+            @click="router.push('/user-settings')"
+            >编辑资料</el-button
+          >
         </el-card>
 
         <!-- 内容区：文章 / 关注 / 收藏 -->
