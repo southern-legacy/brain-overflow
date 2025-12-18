@@ -15,12 +15,13 @@ use crate::{
 
 use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
+use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub(super) enum LoginMethod {
-    Id(i64),
+    Id(Uuid),
     Email(String),
     Phone(String),
 }

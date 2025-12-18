@@ -6,6 +6,7 @@ mod signup;
 
 use axum::routing::MethodRouter;
 use crab_vault::auth::Jwt;
+use uuid::Uuid;
 use std::sync::LazyLock;
 
 use crate::app_config;
@@ -40,7 +41,7 @@ pub(super) fn build_router() -> Router<ServerState> {
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct UserIdent {
-    pub id: i64,
+    pub id: Uuid,
     pub name: String,
     pub email: Option<String>,
     pub phone: Option<String>,

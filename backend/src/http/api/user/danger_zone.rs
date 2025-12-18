@@ -7,6 +7,7 @@ use crate::http::{
 use axum::{Extension, debug_handler, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
 use sqlx::PgPool;
+use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
 use crate::{
@@ -33,7 +34,7 @@ pub(super) async fn delete_account(
     try_delete_account(state.db(), ident.id).await
 }
 
-async fn try_delete_account(db: &PgPool, id: i64) -> ApiResult {
+async fn try_delete_account(db: &PgPool, id: Uuid) -> ApiResult {
     let res = UserInfo::delete_by_id(db, id).await;
     match res {
         Ok(id) => {
@@ -124,7 +125,7 @@ pub(super) async fn change_auth_info(
 
 async fn try_change_auth_info(
     state: &ServerState,
-    id: i64,
+    id: Uuid,
     new_email: Option<&String>,
     new_phone: Option<&String>,
     new_passwd_hash: Option<&String>,

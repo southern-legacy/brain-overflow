@@ -4,7 +4,6 @@ use crate::{app_config, error::api::ApiError};
 
 use axum::response::{IntoResponse, Response};
 use crab_vault::auth::{HttpMethod, Jwt, Permission};
-use regex::Regex;
 use tower::Service;
 
 #[derive(Clone)]
@@ -13,10 +12,6 @@ pub struct TokenIssueService {
 }
 
 pub struct TokenIssueServiceInner {
-    path_regex: Regex,
-
-    map_fn: fn(Regex, &str) -> Result<String, Response>,
-
     // 条件限制
     allowed_methods: HashSet<HttpMethod>,
     allowed_content_types: Vec<String>,
@@ -44,11 +39,9 @@ impl<R: std::marker::Send + 'static> Service<axum::http::request::Request<R>>
 
     fn call(&mut self, request: axum::http::request::Request<R>) -> Self::Future {
         let max_size = self.inner.max_size;
-        // Regex 的结构很小，32字节，就不堆分配了
-        let regex = self.inner.path_regex.clone();
-        let map_fn = self.inner.map_fn;
         let allowed_content_types = self.inner.allowed_content_types.clone();
 
+        let path = request.uri().path().to_string();
         let method = <&axum::http::Method as Into<HttpMethod>>::into(request.method());
         let safe_to_issue = self.inner.allowed_methods.contains(&method);
 
@@ -59,14 +52,9 @@ impl<R: std::marker::Send + 'static> Service<axum::http::request::Request<R>>
                 ));
             }
 
-            let mapped_crab_vault_path = match map_fn(regex, request.uri().path()) {
-                Ok(value) => value,
-                Err(e) => return Ok(e),
-            };
-
             let permission = Permission::new_minimum()
                 .permit_method(vec![method])
-                .permit_resource_pattern(mapped_crab_vault_path)
+                .permit_resource_pattern(path)
                 .restrict_maximum_size_option(max_size)
                 .permit_content_type(allowed_content_types);
 
@@ -95,8 +83,6 @@ impl TokenIssueService {
 impl Default for TokenIssueServiceInner {
     fn default() -> Self {
         Self {
-            path_regex: Regex::new("()").expect("你把正则表达式写错啦"),
-            map_fn: |_, _| Ok("".into()),
             allowed_methods: HashSet::new(),
             allowed_content_types: vec![],
             max_size: Some(5 * 1024 * 1024),
@@ -106,18 +92,6 @@ impl Default for TokenIssueServiceInner {
 
 #[allow(dead_code)]
 impl TokenIssueServiceInner {
-    #[inline]
-    pub fn regex(mut self, regex: &str) -> Self {
-        self.path_regex = regex.try_into().expect("你把正则表达式写错啦");
-        self
-    }
-
-    #[inline]
-    pub fn map_fn(mut self, map_fn: fn(Regex, &str) -> Result<String, Response>) -> Self {
-        self.map_fn = map_fn;
-        self
-    }
-
     #[inline]
     pub fn allowed_methods(mut self, methods: &[HttpMethod]) -> Self {
         self.allowed_methods = methods.iter().copied().collect();

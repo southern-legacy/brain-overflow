@@ -1,7 +1,6 @@
 pub mod user;
 
 use axum::{Router, http::StatusCode, response::Response};
-use regex::Regex;
 
 use crate::{
     http::services::crab_vault::{TokenIssueService, TokenIssueServiceInner},
@@ -12,10 +11,8 @@ type ApiResult = Result<Response, Response>;
 
 pub fn build_router() -> Router<ServerState> {
     let inner = TokenIssueServiceInner::default()
-        .regex("")
         .allowed_content_types(vec![])
         .allowed_methods(&[])
-        .map_fn(|_: Regex, _: &'_ str| Ok("".into()))
         .max_size_option(None);
 
     let service = TokenIssueService::new(inner);

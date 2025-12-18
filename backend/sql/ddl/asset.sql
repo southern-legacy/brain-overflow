@@ -1,4 +1,11 @@
-DROP TABLE asset;
+CREATE TYPE asset_status AS ENUM (
+    'init',
+    'uploading',
+    'available',
+    'failed',
+    'aborted',
+    'deleted'
+);
 
 CREATE TABLE asset(
     "id"            UUID        PRIMARY KEY,

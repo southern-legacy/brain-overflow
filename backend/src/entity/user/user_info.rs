@@ -1,11 +1,11 @@
 use serde::Serialize;
 use sqlx::PgPool;
-
+use uuid::Uuid;
 use crate::error::db::DbResult;
 
 #[derive(Serialize)]
 pub struct UserInfo {
-    pub id: i64,
+    pub id: Uuid,
     pub name: String,
     pub email: Option<String>,
     pub phone: Option<String>,
@@ -22,7 +22,7 @@ pub struct InsertParam<'a> {
 }
 
 impl UserInfo {
-    pub async fn fetch_all_fields_by_id(db: &PgPool, id: i64) -> DbResult<Self> {
+    pub async fn fetch_all_fields_by_id(db: &PgPool, id: Uuid) -> DbResult<Self> {
         let statement = sqlx::query_as!(
             Self,
             r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."id" = $1"#,
@@ -58,12 +58,12 @@ impl UserInfo {
             phone,
             passwd,
         }: InsertParam<'a>,
-    ) -> DbResult<i64> {
+    ) -> DbResult<Uuid> {
         let statement = sqlx::query!(
             r#"
-INSERT INTO "user"."user_info" (name, email, phone, passwd_hash)
-VALUES ($1, $2, $3, $4)
-RETURNING "id";
+                INSERT INTO "user"."user_info" (name, email, phone, passwd_hash)
+                VALUES ($1, $2, $3, $4)
+                RETURNING "id";
             "#,
             name,
             email,
@@ -73,9 +73,9 @@ RETURNING "id";
         let res = statement.fetch_one(db).await?;
         let _profile = sqlx::query!(
             r#"
-INSERT INTO "user"."user_profile" ("user_id")
-VALUES ($1)
-RETURNING "user_id";
+                INSERT INTO "user"."user_profile" ("user_id")
+                VALUES ($1)
+                RETURNING "user_id";
             "#,
             res.id
         )
@@ -87,27 +87,27 @@ RETURNING "user_id";
 
     /// 按照提供的 id 删除一个用户的信息，这也会删除用户的 profile
     ///
-    /// 返回值：`i64` 标识删除的用户的 id
-    pub async fn delete_by_id(db: &PgPool, id: i64) -> DbResult<i64> {
+    /// 返回值：`Uuid` 标识删除的用户的 id
+    pub async fn delete_by_id(db: &PgPool, id: Uuid) -> DbResult<Uuid> {
         let statement = sqlx::query!(
             r#"
-DELETE FROM "user"."user_info"
-WHERE "id" = $1
-RETURNING "id";
-        "#,
+                DELETE FROM "user"."user_info"
+                WHERE "id" = $1
+                RETURNING "id";
+            "#,
             id
         );
         Ok(statement.fetch_one(db).await?.id)
     }
 
-    pub async fn update_email(db: &PgPool, id: i64, new_email: &str) -> DbResult<UserInfo> {
+    pub async fn update_email(db: &PgPool, id: Uuid, new_email: &str) -> DbResult<UserInfo> {
         let statement = sqlx::query_as!(
             UserInfo,
             r#"
-UPDATE "user"."user_info"
-SET "email" = $1
-WHERE "id" = $2
-RETURNING *;
+                UPDATE "user"."user_info"
+                SET "email" = $1
+                WHERE "id" = $2
+                RETURNING *;
             "#,
             new_email,
             id
@@ -115,14 +115,14 @@ RETURNING *;
         Ok(statement.fetch_one(db).await?)
     }
 
-    pub async fn update_phone(db: &PgPool, id: i64, new_phone: &str) -> DbResult<UserInfo> {
+    pub async fn update_phone(db: &PgPool, id: Uuid, new_phone: &str) -> DbResult<UserInfo> {
         let statement = sqlx::query_as!(
             UserInfo,
             r#"
-UPDATE "user"."user_info"
-SET "phone" = $1
-WHERE "id" = $2
-RETURNING *;
+                UPDATE "user"."user_info"
+                SET "phone" = $1
+                WHERE "id" = $2
+                RETURNING *;
             "#,
             new_phone,
             id
@@ -132,16 +132,16 @@ RETURNING *;
 
     pub async fn update_passwd_hash(
         db: &PgPool,
-        id: i64,
+        id: Uuid,
         new_passwd_hash: &str,
     ) -> DbResult<UserInfo> {
         let statement = sqlx::query_as!(
             UserInfo,
             r#"
-UPDATE "user"."user_info"
-SET "passwd_hash" = $1
-WHERE "id" = $2
-RETURNING *;
+                UPDATE "user"."user_info"
+                SET "passwd_hash" = $1
+                WHERE "id" = $2
+                RETURNING *;
             "#,
             new_passwd_hash,
             id,
