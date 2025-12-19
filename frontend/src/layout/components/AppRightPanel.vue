@@ -17,3 +17,12 @@ const hotTags = ['javascript', 'vue', 'css', 'node.js']
     </el-card>
   </div>
 </template>
+
+<style scoped lang="scss">
+.right-panel {
+  position: sticky;
+  top: 10px;
+  height: fit-content;
+  flex-shrink: 0;
+}
+</style>
