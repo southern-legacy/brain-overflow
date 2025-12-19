@@ -8,13 +8,17 @@ use uuid::Uuid;
 use crate::error::db::DbResult;
 
 #[derive(sqlx::Type, Serialize, Deserialize, Clone, Copy, Debug)]
+#[sqlx(rename_all = "snake_case", type_name = "owner_type")]
 pub enum OwnerType {
     User,
     Article,
     Question,
+
+    Any,
 }
 
 #[derive(sqlx::Type, Serialize, Deserialize, Clone, Copy, Debug)]
+#[sqlx(rename_all = "snake_case", type_name = "asset_status")]
 pub enum AssetStatus {
     Init,
     Uploading,
@@ -50,6 +54,7 @@ pub struct Asset {
 pub struct AssetHandle {
     id: Uuid,
     allow_deleted: bool,
+    owner_type: OwnerType,
 }
 
 impl Asset {
@@ -78,21 +83,23 @@ impl<'de> Deserialize<'de> for AssetHandle {
 
 impl From<Uuid> for AssetHandle {
     fn from(id: Uuid) -> Self {
-        Self::new_with_id(id)
+        Self::new_with_id(id, OwnerType::Any)
     }
 }
 
 impl AssetHandle {
-    pub fn generate() -> Self {
+    pub fn generate(owner_type: OwnerType) -> Self {
         Self {
             id: Uuid::now_v7(),
             allow_deleted: false,
+            owner_type,
         }
     }
 
-    pub const fn new_with_id(id: Uuid) -> Self {
+    pub const fn new_with_id(id: Uuid, owner_type: OwnerType) -> Self {
         Self {
             id,
+            owner_type,
             allow_deleted: false,
         }
     }

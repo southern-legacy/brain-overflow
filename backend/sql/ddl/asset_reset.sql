@@ -14,7 +14,10 @@ CREATE TYPE asset_status AS ENUM (
 CREATE TYPE owner_type AS ENUM (
     'user',
     'article',
-    'question'
+    'question',
+
+    -- 所有的 owner_type
+    'any'
 );
 
 CREATE TABLE asset(

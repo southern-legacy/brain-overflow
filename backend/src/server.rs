@@ -1,4 +1,4 @@
-use crate::{app_config, http, logger};
+use crate::{app_config, http::{self, services::crab_vault::{CrabVaultService, CrabVaultServiceConfig}}, logger};
 use ::http::StatusCode;
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
@@ -90,7 +90,8 @@ pub async fn start() {
         .layer(body_limit_layer)
         .layer(tracing_layer)
         .layer(cors_layer)
-        .layer(path_normalize_layer);
+        .layer(path_normalize_layer)
+        .fallback_service(CrabVaultService::new(CrabVaultServiceConfig::default()));
 
     let listener = if app_config::server().ipv6() {
         TcpListener::bind((Ipv6Addr::UNSPECIFIED, app_config::server().port()))

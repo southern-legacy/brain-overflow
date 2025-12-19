@@ -2,7 +2,7 @@ mod api;
 mod auth;
 mod extractor;
 mod middleware;
-mod services;
+pub mod services;
 mod utils;
 
 pub use api::build_router;

@@ -7,11 +7,11 @@ use crab_vault::auth::{HttpMethod, Jwt, Permission};
 use tower::Service;
 
 #[derive(Clone)]
-pub struct TokenIssueService {
-    inner: Arc<TokenIssueServiceInner>,
+pub struct CrabVaultService {
+    config: Arc<CrabVaultServiceConfig>,
 }
 
-pub struct TokenIssueServiceInner {
+pub struct CrabVaultServiceConfig {
     // 条件限制
     allowed_methods: HashSet<HttpMethod>,
     allowed_content_types: Vec<String>,
@@ -19,7 +19,7 @@ pub struct TokenIssueServiceInner {
 }
 
 impl<R: std::marker::Send + 'static> Service<axum::http::request::Request<R>>
-    for TokenIssueService
+    for CrabVaultService
 {
     type Response = Response;
 
@@ -38,12 +38,12 @@ impl<R: std::marker::Send + 'static> Service<axum::http::request::Request<R>>
     }
 
     fn call(&mut self, request: axum::http::request::Request<R>) -> Self::Future {
-        let max_size = self.inner.max_size;
-        let allowed_content_types = self.inner.allowed_content_types.clone();
+        let max_size = self.config.max_size;
+        let allowed_content_types = self.config.allowed_content_types.clone();
 
         let path = request.uri().path().to_string();
         let method = <&axum::http::Method as Into<HttpMethod>>::into(request.method());
-        let safe_to_issue = self.inner.allowed_methods.contains(&method);
+        let safe_to_issue = self.config.allowed_methods.contains(&method);
 
         Box::pin(async move {
             if !safe_to_issue {
@@ -71,16 +71,16 @@ impl<R: std::marker::Send + 'static> Service<axum::http::request::Request<R>>
     }
 }
 
-impl TokenIssueService {
+impl CrabVaultService {
     #[inline]
-    pub fn new(inner: TokenIssueServiceInner) -> Self {
+    pub fn new(inner: CrabVaultServiceConfig) -> Self {
         Self {
-            inner: Arc::new(inner),
+            config: Arc::new(inner),
         }
     }
 }
 
-impl Default for TokenIssueServiceInner {
+impl Default for CrabVaultServiceConfig {
     fn default() -> Self {
         Self {
             allowed_methods: HashSet::new(),
@@ -91,7 +91,7 @@ impl Default for TokenIssueServiceInner {
 }
 
 #[allow(dead_code)]
-impl TokenIssueServiceInner {
+impl CrabVaultServiceConfig {
     #[inline]
     pub fn allowed_methods(mut self, methods: &[HttpMethod]) -> Self {
         self.allowed_methods = methods.iter().copied().collect();
