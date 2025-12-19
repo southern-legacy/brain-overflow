@@ -1,13 +1,11 @@
-mod bio;
 mod danger_zone;
 mod info;
 mod login;
 mod signup;
 
-use axum::routing::MethodRouter;
 use crab_vault::auth::Jwt;
-use uuid::Uuid;
 use std::sync::LazyLock;
+use uuid::Uuid;
 
 use crate::app_config;
 use crate::entity::user::user_info::UserInfo;
@@ -26,14 +24,13 @@ static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::d
 pub(super) fn build_router() -> Router<ServerState> {
     let router = Router::new();
 
-    let safe_bio_op_router = MethodRouter::new().get(bio::safe_bio_operation);
-
     router
         .route("/", routing::delete(danger_zone::delete_account))
         .route("/", routing::put(danger_zone::change_auth_info))
-        .route("/bio", routing::get(bio::bio_get))
-        .layer(AuthLayer::new(&app_config::auth().decoder.decoder))
-        .route("/bio", safe_bio_op_router)
+        .layer(AuthLayer::new(
+            &app_config::auth().decoder.decoder,
+            |_, _, _, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
+        ))
         .route("/{id}", routing::get(info::info))
         .route("/", routing::post(signup::signup))
         .route("/login", routing::post(login::login))

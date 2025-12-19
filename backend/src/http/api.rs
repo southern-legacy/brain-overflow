@@ -19,7 +19,6 @@ pub fn build_router() -> Router<ServerState> {
 
     Router::new()
         .nest("/user", user::build_router())
-        .route_service("/user/bio/{*}", service)
-        .fallback(|| async { StatusCode::NOT_FOUND })
         .method_not_allowed_fallback(|| async { StatusCode::METHOD_NOT_ALLOWED })
+        .fallback_service(service)
 }

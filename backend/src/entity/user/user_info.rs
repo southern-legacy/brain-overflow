@@ -61,10 +61,11 @@ impl UserInfo {
     ) -> DbResult<Uuid> {
         let statement = sqlx::query!(
             r#"
-                INSERT INTO "user"."user_info" (name, email, phone, passwd_hash)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO "user"."user_info" (id, name, email, phone, passwd_hash)
+                VALUES ($1, $2, $3, $4, $5)
                 RETURNING "id";
             "#,
+            Uuid::now_v7(),
             name,
             email,
             phone,

@@ -1,7 +1,7 @@
 CREATE SCHEMA "user" AUTHORIZATION postgres;
 
 CREATE TABLE "user"."user_info" (
-    "id"            UUID       PRIMARY KEY,
+    "id"            UUID            PRIMARY KEY,
     "name"          VARCHAR(32)     NOT NULL,
     "email"         VARCHAR(256)    UNIQUE CHECK ("email" ~* '^[\w._%+-]+@[\w.-]+\.\w{2,}$'),
     "phone"         VARCHAR(16)     UNIQUE CHECK ("phone" ~* '^\+\d{1,15}$'),

@@ -1,25 +1,51 @@
-crab_vault_location = "http://localhost:32767"
+# 开放出去的接口
+[auth]
+path_rules = [{ pattern = "*", public_methods = ["SAFE"] }]
 
-[server]
-port = 10086
-ipv6_enabled = true
-# secret_key = "SGVsbG8gd29ybGQ="
+# 鉴权模块的配置，这里配置如何签发令牌
+[auth.encoder]
+encoding_keys = [
+    { algorithm = "HS256", form = "der_inline", kid = "key 1", key = "dGVzdDE="}
+]
+issue_as = "brain overflow"
+audience = ["brain overflow"]
+expires_in = 3600
+not_valid_in = 0
 
-[logger]
-with_ansi = true
-with_file = true
-with_thread = true
-with_target = true
-level = "info"
+# 鉴权模块的配置，这里配置如何解码令牌
+[auth.decoder]
+decoding_keys = [
+    ["brain overflow", { algorithm = "HS256", form = "der_inline", kid = "key 1", key = "dGVzdDE=" }]
+]
+leeway = 60
+reject_tokens_expiring_in_less_than = 0
+audience = [ "brain overflow" ]
 
+
+# 如何签发 Crab Vault 的客户端直连令牌
+[crab_vault.encoder]
+encoding_keys = [
+    { algorithm = "HS256", form = "der_inline", kid = "key 2", key = "dGVzdDI=" }
+]
+issue_as = "brain overflow"
+audience = ["crab vault"]
+expires_in = 3600
+not_valid_in = 0
+
+
+# 数据库配置
 [database]
 host = "localhost"
 port = 5432
 user = "postgres"
 password = "123456"
 database = "br_ovfl"
-max_connection = 80
-min_connection = 4
 
-[auth]
-jwt_config = {}
+
+[logger]
+
+
+# 端口配置
+[server]
+port = 10086
+ipv6 = false
