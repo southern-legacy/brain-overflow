@@ -4,11 +4,11 @@ use crab_vault::logger::LogLevel;
 
 use crate::{app_config::ConfigItem, error::fatal::FatalResult};
 
-pub type RuntimeLoggerConfig = LoggerConfig;
+pub type LoggerConfig = StaticLoggerConfig;
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields, default)]
-pub struct LoggerConfig {
+pub struct StaticLoggerConfig {
     /// 最低的日志输出等级
     level: LogLevel,
 
@@ -31,15 +31,15 @@ pub struct LoggerConfig {
     dump_level: Option<LogLevel>,
 }
 
-impl ConfigItem for LoggerConfig {
-    type RuntimeConfig = RuntimeLoggerConfig;
+impl ConfigItem for StaticLoggerConfig {
+    type RuntimeConfig = LoggerConfig;
 
     fn into_runtime(self) -> FatalResult<Self::RuntimeConfig> {
         Ok(self)
     }
 }
 
-impl Default for LoggerConfig {
+impl Default for StaticLoggerConfig {
     fn default() -> Self {
         Self {
             level: LogLevel::Trace,
@@ -53,7 +53,7 @@ impl Default for LoggerConfig {
     }
 }
 
-impl LoggerConfig {
+impl StaticLoggerConfig {
     #[inline]
     pub fn level(&self) -> LogLevel {
         self.level

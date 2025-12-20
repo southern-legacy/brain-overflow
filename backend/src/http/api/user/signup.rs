@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
 };
 use serde::Deserialize;
+use serde_json::json;
 use validator::{Validate, ValidationErrors};
 
 use crate::{
@@ -48,7 +49,7 @@ impl SignUpMethod {
 }
 
 #[derive(Deserialize, Validate)]
-pub(super) struct SignUpParam {
+pub struct SignUpParam {
     #[validate(length(max = 32))]
     name: String,
 
@@ -83,7 +84,7 @@ pub(super) async fn signup(
         passwd: &passwd_hash,
     };
 
-    let id = UserInfo::insert_and_return_id(state.db(), new_user).await?;
+    let id = UserInfo::insert_and_return_id(&state.database, new_user).await?;
     tracing::info!("Successfully inserted a user into database.");
 
     let user_ident = UserIdent {
@@ -92,10 +93,17 @@ pub(super) async fn signup(
         email,
         phone,
     };
+
     Ok((
         StatusCode::CREATED,
         [(header::LOCATION, format!("/user/{}", id))],
-        user_ident.issue_as_jwt(),
+        json!({
+            "id": user_ident.id,
+            "name": user_ident.name,
+            "email": user_ident.email,
+            "phone": user_ident.phone,
+            "token": user_ident.into_jwt(&state.config.auth.encoder_config)?
+        }).to_string(),
     )
         .into_response())
 }

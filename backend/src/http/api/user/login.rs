@@ -15,6 +15,7 @@ use crate::{
 
 use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
+use serde_json::json;
 use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
@@ -44,9 +45,9 @@ pub(super) async fn login(
 ) -> ApiResult {
     let method = &param.method;
     let res = match method {
-        LoginMethod::Phone(phone) => UserInfo::fetch_all_fields_by_phone(state.db(), phone).await,
-        LoginMethod::Email(email) => UserInfo::fetch_all_fields_by_email(state.db(), email).await,
-        LoginMethod::Id(id) => UserInfo::fetch_all_fields_by_id(state.db(), *id).await,
+        LoginMethod::Phone(phone) => UserInfo::fetch_all_fields_by_phone(&state.database, phone).await,
+        LoginMethod::Email(email) => UserInfo::fetch_all_fields_by_email(&state.database, email).await,
+        LoginMethod::Id(id) => UserInfo::fetch_all_fields_by_id(&state.database, *id).await,
     };
 
     let res = match res {
@@ -60,17 +61,26 @@ pub(super) async fn login(
         }
     };
 
-    check_passwd_and_respond(res, &param.passwd).await
+    check_passwd(&res, &param.passwd).await?;
+
+    let user = UserIdent::from(res);
+
+    Ok((
+        StatusCode::OK,
+        json!({
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone,
+            "token": user.into_jwt(&state.config.auth.encoder_config)?
+        }).to_string(),
+    )
+        .into_response())
 }
 
-async fn check_passwd_and_respond(user: UserInfo, passwd: &str) -> ApiResult {
-    check_passwd(&user, passwd).await?;
-
-    Ok(UserIdent::from(user).issue_as_jwt())
-}
 
 impl LoginMethod {
-    fn get_anyway<'a>(&'a self) -> Cow<'a, str> {
+    fn get_anyway(&self) -> Cow<'_, str> {
         match self {
             LoginMethod::Id(id) => Cow::Owned(id.to_string()),
             LoginMethod::Email(val) | LoginMethod::Phone(val) => Cow::Borrowed(val),

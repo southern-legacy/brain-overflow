@@ -5,44 +5,40 @@ pub mod logger;
 pub mod server;
 pub mod utils;
 
-use crate::app_config::auth::{AuthConfig, RuntimeAuthConfig};
-use crate::app_config::crab_vault::{CrabVaultConfig, RuntimeCrabVaultConfig};
-use crate::app_config::db::RuntimeDatabaseConfig;
-use crate::app_config::logger::{LoggerConfig, RuntimeLoggerConfig};
-use crate::app_config::server::RuntimeServerConfig;
+use crate::app_config::auth::{StaticAuthConfig, AuthConfig};
+use crate::app_config::crab_vault::{StaticCrabVaultConfig, CrabVaultConfig};
+use crate::app_config::db::DatabaseConfig;
+use crate::app_config::logger::{StaticLoggerConfig, LoggerConfig};
+use crate::app_config::server::{ServerConfig, StaticServerConfig};
 use crate::cli::Cli;
 use crate::error::fatal::{FatalError, FatalResult, MultiFatalError};
 
-use self::db::DatabaseConfig;
-use self::server::ServerConfig;
+use self::db::StaticDatabaseConfig;
 use clap::Parser;
 use config::Config;
 use serde::Deserialize;
-use std::sync::LazyLock;
-
-static CONFIG: LazyLock<RuntimeAppConfig> = LazyLock::new(RuntimeAppConfig::load);
 
 #[derive(Deserialize)]
-struct AppConfig {
+struct StaticAppConfig {
     #[serde(default)]
-    server: ServerConfig, // server 配置字段
+    server: StaticServerConfig, // server 配置字段
 
     #[serde(default)]
-    logger: LoggerConfig, // logger 字段
+    logger: StaticLoggerConfig, // logger 字段
 
-    database: DatabaseConfig, // db 配置字段
+    database: StaticDatabaseConfig, // db 配置字段
 
-    auth: AuthConfig,
+    auth: StaticAuthConfig,
 
-    crab_vault: CrabVaultConfig,
+    crab_vault: StaticCrabVaultConfig,
 }
 
-struct RuntimeAppConfig {
-    server: RuntimeServerConfig,
-    logger: RuntimeLoggerConfig,
-    database: RuntimeDatabaseConfig,
-    auth: RuntimeAuthConfig,
-    crab_vault: RuntimeCrabVaultConfig,
+pub struct AppConfig {
+    pub server: ServerConfig,
+    pub logger: LoggerConfig,
+    pub database: DatabaseConfig,
+    pub auth: AuthConfig,
+    pub crab_vault: CrabVaultConfig,
 }
 
 /// [`ConfigItem`] 表示一个配置项，实现了这个 trait 的结构就是一个配置项
@@ -60,11 +56,11 @@ where
     fn into_runtime(self) -> FatalResult<Self::RuntimeConfig>;
 }
 
-impl RuntimeAppConfig {
-    fn load() -> Self {
+impl AppConfig {
+    pub fn load(file_name: &str) -> Self {
         let cli_conf = Cli::parse();
 
-        let AppConfig {
+        let StaticAppConfig {
             mut server,
             logger,
             database,
@@ -72,7 +68,7 @@ impl RuntimeAppConfig {
             crab_vault,
         } = Config::builder()
             .add_source(
-                config::File::with_name("br-ovfl.toml")
+                config::File::with_name(file_name)
                     .required(true)
                     .format(config::FileFormat::Toml),
             )
@@ -100,7 +96,7 @@ impl RuntimeAppConfig {
         #[allow(clippy::unnecessary_unwrap)]
         if database_res.is_ok() && auth_res.is_ok() && crab_vault_res.is_ok() {
             // unwrap safety: 全部在上面进行了 is_ok 检查
-            RuntimeAppConfig {
+            AppConfig {
                 server,
                 logger,
                 database: database_res.unwrap(),
@@ -115,24 +111,4 @@ impl RuntimeAppConfig {
             errors.exit_now()
         }
     }
-}
-
-pub fn server() -> &'static ServerConfig {
-    &CONFIG.server
-}
-
-pub fn database() -> &'static RuntimeDatabaseConfig {
-    &CONFIG.database
-}
-
-pub fn logger() -> &'static LoggerConfig {
-    &CONFIG.logger
-}
-
-pub fn auth() -> &'static RuntimeAuthConfig {
-    &CONFIG.auth
-}
-
-pub fn crab_vault() -> &'static RuntimeCrabVaultConfig {
-    &CONFIG.crab_vault
 }

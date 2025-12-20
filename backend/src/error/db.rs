@@ -66,7 +66,7 @@ impl From<sqlx::Error> for DbError {
                 "Cloumn Decode Error{index}, {source}"
             )))),
             Protocol(e) => DbError::new(Unprocessable(Owned(e))),
-            ColumnNotFound(_error) => todo!(),
+            ColumnNotFound(col) => DbError::new(Unprocessable(Owned(format!("No column: {col}")))),
             ColumnIndexOutOfBounds { index, len } => DbError::new(Unprocessable(Owned(format!(
                 "Column Index Out of Bounds! index: {index}, len: {len}"
             )))),

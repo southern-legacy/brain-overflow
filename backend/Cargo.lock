@@ -726,9 +726,9 @@ dependencies = [
 
 [[package]]
 name = "crab-vault-auth"
-version = "0.2.13"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41d0b8424cbb992bd4ce106d9e0beb9c3876ba65bbda95be0562edf926be6c04"
+checksum = "d617bcc42f50a40e2fb2085cfd053bffa092bdc4df37ea35aa5e6ad7faecf4c9"
 dependencies = [
  "axum",
  "base64",

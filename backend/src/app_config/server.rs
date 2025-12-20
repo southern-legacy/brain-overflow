@@ -2,11 +2,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{app_config::ConfigItem, error::fatal::FatalResult};
 
-pub type RuntimeServerConfig = ServerConfig;
+pub type ServerConfig = StaticServerConfig;
 
 #[derive(Deserialize, Serialize, Clone, Copy)]
 #[serde(deny_unknown_fields, default)]
-pub struct ServerConfig {
+pub struct StaticServerConfig {
     pub(super) port: u16,
     pub(super) ipv6: bool,
 }
@@ -34,7 +34,7 @@ impl Default for ServerConfig {
 }
 
 impl ConfigItem for ServerConfig {
-    type RuntimeConfig = RuntimeServerConfig;
+    type RuntimeConfig = ServerConfig;
 
     fn into_runtime(self) -> FatalResult<Self> {
         Ok(self)

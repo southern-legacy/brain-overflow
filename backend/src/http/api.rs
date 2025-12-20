@@ -1,24 +1,15 @@
+pub mod asset;
 pub mod user;
 
 use axum::{Router, http::StatusCode, response::Response};
 
-use crate::{
-    http::services::crab_vault::{CrabVaultService, CrabVaultServiceConfig},
-    server::ServerState,
-};
+use crate::{app_config::AppConfig, server::ServerState};
 
 type ApiResult = Result<Response, Response>;
 
-pub fn build_router() -> Router<ServerState> {
-    let inner = CrabVaultServiceConfig::default()
-        .allowed_content_types(vec![])
-        .allowed_methods(&[])
-        .max_size_option(None);
-
-    let service = CrabVaultService::new(inner);
-
-    Router::new()
-        .nest("/user", user::build_router())
+pub fn build_router(config: &AppConfig) -> Router<ServerState> {
+    user::build_router(config)
+        .merge(asset::build_router())
         .method_not_allowed_fallback(|| async { StatusCode::METHOD_NOT_ALLOWED })
-        .fallback_service(service)
+        .fallback(|| async { StatusCode::NOT_FOUND })
 }

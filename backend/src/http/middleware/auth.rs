@@ -1,8 +1,5 @@
 use std::{
-    convert::Infallible,
-    marker::PhantomData,
-    pin::Pin,
-    task::{Context, Poll},
+    convert::Infallible, marker::PhantomData, pin::Pin, sync::Arc, task::{Context, Poll}
 };
 
 use axum::{
@@ -11,11 +8,9 @@ use axum::{
         header::AUTHORIZATION,
     }, response::{IntoResponse, Response}
 };
-use crab_vault::auth::{HttpMethod, Jwt, JwtDecoder, Permission, error::AuthError};
+use crab_vault::auth::{HttpMethod, Jwt, JwtDecoder, error::AuthError};
 use serde::Deserialize;
 use tower::{Layer, Service};
-
-use crate::app_config;
 
 #[derive(Clone)]
 pub struct Auth<Inner, T, F>
@@ -32,7 +27,7 @@ where
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     inner: Inner,
-    decoder: &'static JwtDecoder,
+    decoder: Arc<JwtDecoder>,
     validator: F,
     _p: PhantomData<T>,
 }
@@ -51,7 +46,7 @@ where
         ) -> Pin<Box<dyn Future<Output = Result<T, Response>> + Send>>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
-    decoder: &'static JwtDecoder,
+    decoder: JwtDecoder,
     validator: F,
     _p: PhantomData<T>,
 }
@@ -86,7 +81,7 @@ where
     fn call(&mut self, mut req: Request) -> Self::Future {
         let cloned = self.inner.clone();
         let validator = self.validator.clone();
-        let decoder = self.decoder;
+        let decoder = self.decoder.clone();
         let mut inner = std::mem::replace(&mut self.inner, cloned);
 
         Box::pin(async move {
@@ -97,13 +92,7 @@ where
                 }
             };
 
-            if should_not_protect(req.uri().path(), req.method().into()).await {
-                tracing::info!("skipped authorization because this endpoint is guaranteed");
-                req.extensions_mut().insert(Permission::new_root());
-                return call_inner_with_req(req).await;
-            }
-
-            match extract_token::<T>(req.headers(), decoder).await {
+            match extract_token::<T>(req.headers(), decoder.as_ref()).await {
                 Ok(token) => {
                     let (headers, method, path) =
                         (req.headers(), req.method().into(), req.uri().path());
@@ -147,7 +136,7 @@ where
     /// >
     /// > - `Ok(_)` 时，表示里面的 token 合法，现在将这个校验后的 token 给到 `Inner` 服务
     /// > - `Err(response)` 时，表示 token 不合法，直接给客户端返回相应的错误
-    pub fn new(decoder: &'static JwtDecoder, validator: F) -> Self {
+    pub fn new(decoder: JwtDecoder, validator: F) -> Self {
         Self {
             decoder,
             validator,
@@ -181,25 +170,10 @@ where
         Auth {
             inner,
             validator: validator.clone(),
-            decoder,
+            decoder: Arc::new(decoder),
             _p: PhantomData,
         }
     }
-}
-
-async fn should_not_protect(path: &str, method: HttpMethod) -> bool {
-    for (pattern, allowed_method) in &app_config::auth().path_rules {
-        if pattern.matches(path)
-            && (allowed_method.contains(&HttpMethod::All)
-                || allowed_method.contains(&method)
-                || (allowed_method.contains(&HttpMethod::Safe) && method.safe())
-                || (allowed_method.contains(&HttpMethod::Unsafe) && !method.safe()))
-        {
-            return true;
-        }
-    }
-
-    false
 }
 
 /// 提取并验证JWT令牌

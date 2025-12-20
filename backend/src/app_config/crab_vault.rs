@@ -3,27 +3,27 @@ use serde::{Deserialize, Serialize};
 use crate::{
     app_config::{
         ConfigItem,
-        utils::{JwtEncoderConfig, RuntimeJwtEncoderConfig},
+        utils::{StaticJwtEncoderConfig, JwtEncoderConfig},
     },
     error::fatal::FatalResult,
 };
 
 #[derive(Serialize, Deserialize, Clone, Default)]
-pub(super) struct CrabVaultConfig {
-    encoder: JwtEncoderConfig,
+pub(super) struct StaticCrabVaultConfig {
+    encoder: StaticJwtEncoderConfig,
 }
 
-pub struct RuntimeCrabVaultConfig {
-    pub encoder: RuntimeJwtEncoderConfig,
+pub struct CrabVaultConfig {
+    pub encoder_config: JwtEncoderConfig,
 }
 
-impl ConfigItem for CrabVaultConfig {
-    type RuntimeConfig = RuntimeCrabVaultConfig;
+impl ConfigItem for StaticCrabVaultConfig {
+    type RuntimeConfig = CrabVaultConfig;
 
-    fn into_runtime(self) -> FatalResult<RuntimeCrabVaultConfig> {
-        let CrabVaultConfig { encoder } = self;
-        Ok(RuntimeCrabVaultConfig {
-            encoder: encoder.into_runtime()?,
+    fn into_runtime(self) -> FatalResult<CrabVaultConfig> {
+        let StaticCrabVaultConfig { encoder } = self;
+        Ok(CrabVaultConfig {
+            encoder_config: encoder.into_runtime()?,
         })
     }
 }

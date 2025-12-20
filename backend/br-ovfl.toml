@@ -1,7 +1,3 @@
-# 开放出去的接口
-[auth]
-path_rules = [{ pattern = "*", public_methods = ["SAFE"] }]
-
 # 鉴权模块的配置，这里配置如何签发令牌
 [auth.encoder]
 encoding_keys = [

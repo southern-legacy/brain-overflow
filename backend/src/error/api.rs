@@ -4,9 +4,18 @@ use axum::{
 };
 use serde::Serialize;
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase", tag = "code")]
-pub enum ApiError {
+use crate::error::CustomError;
+
+#[derive(Serialize, Debug)]
+pub struct ApiError {
+    kind: ApiErrorKind,
+    context: Option<String>,
+}
+
+#[derive(Serialize, Clone, Copy, Debug)]
+#[serde(rename_all = "camelCase")]
+#[allow(unused)]
+pub enum ApiErrorKind {
     // 客户端错误
     MissingContentType,
     InvalidContentType,
@@ -24,40 +33,68 @@ pub enum ApiError {
     MethodNotAllowed,
     HeaderWithOpaqueBytes,
 
+    Unauthorized,
+
     // 服务器错误
     InternalServerError,
 }
 
-impl ApiError {
+impl ApiErrorKind {
     pub fn code(&self) -> StatusCode {
         match self {
-            ApiError::MissingContentType
-            | ApiError::InvalidContentType
-            | ApiError::MissingContentLength
-            | ApiError::BodyTooLarge
-            | ApiError::EncodingError
-            | ApiError::HeaderWithOpaqueBytes
-            | ApiError::ValueParsingError => StatusCode::UNPROCESSABLE_ENTITY,
+            ApiErrorKind::MissingContentType
+            | ApiErrorKind::InvalidContentType
+            | ApiErrorKind::MissingContentLength
+            | ApiErrorKind::BodyTooLarge
+            | ApiErrorKind::EncodingError
+            | ApiErrorKind::HeaderWithOpaqueBytes
+            | ApiErrorKind::ValueParsingError => StatusCode::UNPROCESSABLE_ENTITY,
 
-            ApiError::MethodNotAllowed => StatusCode::METHOD_NOT_ALLOWED,
+            ApiErrorKind::MethodNotAllowed => StatusCode::METHOD_NOT_ALLOWED,
 
-            ApiError::BadRequest => StatusCode::BAD_REQUEST,
+            ApiErrorKind::BadRequest => StatusCode::BAD_REQUEST,
 
-            ApiError::UriInvalid => StatusCode::NOT_FOUND,
+            ApiErrorKind::Unauthorized => StatusCode::UNAUTHORIZED,
 
-            ApiError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiErrorKind::UriInvalid => StatusCode::NOT_FOUND,
+
+            ApiErrorKind::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+impl ApiError {
+    pub fn with_context<T: ToString>(mut self, error: T) -> Self {
+        self.context = Some(error.to_string());
+        self
+    }
+}
+
+impl CustomError for ApiError {
+    type Kind = ApiErrorKind;
+
+    fn kind(&self) -> &ApiErrorKind {
+        &self.kind
+    }
+
+    fn new(kind: ApiErrorKind) -> Self {
+        Self {
+            kind,
+            context: None,
         }
     }
 }
 
 impl IntoResponse for ApiError {
-    fn into_response(self) -> axum::response::Response {
-        (self.code(), axum::Json(self)).into_response()
+    fn into_response(self) -> Response {
+        match serde_json::to_string(&self) {
+            Ok(v) => (self.kind.code(), v).into_response(),
+            Err(_) => (self.kind.code()).into_response(),
+        }
     }
 }
 
 impl From<ApiError> for Response {
-    #[inline(always)]
     fn from(value: ApiError) -> Self {
         value.into_response()
     }
@@ -65,33 +102,41 @@ impl From<ApiError> for Response {
 
 impl From<axum::extract::rejection::BytesRejection> for ApiError {
     fn from(_: axum::extract::rejection::BytesRejection) -> Self {
-        Self::BodyTooLarge
+        Self::new(ApiErrorKind::BodyTooLarge)
     }
 }
 
 impl From<axum::extract::rejection::QueryRejection> for ApiError {
     fn from(_: axum::extract::rejection::QueryRejection) -> Self {
-        Self::BadRequest
+        Self::new(ApiErrorKind::BadRequest)
     }
 }
 
 impl From<axum::extract::rejection::JsonRejection> for ApiError {
     fn from(_: axum::extract::rejection::JsonRejection) -> Self {
-        Self::BadRequest
+        Self::new(ApiErrorKind::BadRequest)
     }
 }
 
 impl From<axum::extract::rejection::PathRejection> for ApiError {
     fn from(_: axum::extract::rejection::PathRejection) -> Self {
-        Self::BadRequest
+        Self::new(ApiErrorKind::BadRequest)
     }
 }
 
 impl From<axum_valid::ValidRejection<ApiError>> for ApiError {
     fn from(value: axum_valid::ValidRejection<ApiError>) -> Self {
         match value {
-            axum_valid::ValidationRejection::Valid(_) => todo!(),
-            axum_valid::ValidationRejection::Inner(_) => todo!(),
+            axum_valid::ValidationRejection::Valid(e) => {
+                Self::new(ApiErrorKind::BadRequest).with_context(e)
+            }
+            axum_valid::ValidationRejection::Inner(e) => e,
         }
+    }
+}
+
+impl From<crab_vault::auth::error::AuthError> for ApiError {
+    fn from(_: crab_vault::auth::error::AuthError) -> Self {
+        Self::new(ApiErrorKind::Unauthorized)
     }
 }

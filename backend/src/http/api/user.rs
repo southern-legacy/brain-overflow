@@ -2,38 +2,52 @@ mod danger_zone;
 mod info;
 mod login;
 mod signup;
-
 use crab_vault::auth::Jwt;
+use crab_vault::auth::error::AuthError;
+use http::header;
 use std::sync::LazyLock;
 use uuid::Uuid;
 
-use crate::app_config;
-use crate::entity::user::user_info::UserInfo;
-use crate::http::middleware::auth::AuthLayer;
-use crate::server::ServerState;
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use axum::{Router, routing};
-use base64::Engine;
-use base64::prelude::BASE64_STANDARD_NO_PAD;
+use crate::app_config::AppConfig;
+use crate::app_config::utils::JwtEncoderConfig;
+use crate::{
+    entity::user::user_info::UserInfo, http::middleware::auth::AuthLayer,
+    server::ServerState,
+};
+use axum::{
+    Extension, Router,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing,
+};
+use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::default);
 
-pub(super) fn build_router() -> Router<ServerState> {
+pub(super) fn build_router(config: &AppConfig) -> Router<ServerState> {
     let router = Router::new();
+    let auth_layer = AuthLayer::new(
+        config.auth.decoder_config.decoder.clone(),
+        |_, _, _, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
+    );
+
+    async fn redirect(ident: Extension<UserIdent>) -> impl IntoResponse {
+        (
+            StatusCode::TEMPORARY_REDIRECT,
+            [(header::LOCATION, format!("/user/{}", ident.id))],
+        )
+    }
 
     router
-        .route("/", routing::delete(danger_zone::delete_account))
-        .route("/", routing::put(danger_zone::change_auth_info))
-        .layer(AuthLayer::new(
-            &app_config::auth().decoder.decoder,
-            |_, _, _, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
-        ))
-        .route("/{id}", routing::get(info::info))
-        .route("/", routing::post(signup::signup))
-        .route("/login", routing::post(login::login))
+        .route("/user", routing::delete(danger_zone::delete_account))
+        .route("/user", routing::put(danger_zone::change_auth_info))
+        .route("/user/bio", routing::get(redirect))
+        .layer(auth_layer)
+        .route("/user/{id}", routing::get(info::info))
+        .route("/user", routing::post(signup::signup))
+        .route("/user/login", routing::post(login::login))
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -58,32 +72,29 @@ impl UserIdent {
         }
     }
 
-    pub fn issue_as_jwt(self) -> Response {
-        let config = &app_config::auth().encoder;
-
-        (
-            StatusCode::OK,
-            config.encoder.encode_randomly(
-                &Jwt::new(&config.issue_as, &config.audience, self)
-                    .expires_in(config.expires_in)
-                    .not_valid_in(config.not_valid_in),
-            ),
+    pub fn into_jwt(self, config: &JwtEncoderConfig) -> Result<String, AuthError> {
+        config.encoder.encode_randomly(
+            &Jwt::new(&config.issue_as, &config.audience, self)
+                .expires_in(config.expires_in)
+                .not_valid_in(config.not_valid_in),
         )
-            .into_response()
     }
 }
 
 impl From<UserInfo> for UserIdent {
     fn from(user: UserInfo) -> Self {
         Self {
-            email: user.email,
-            phone: user.phone,
             id: user.id,
             name: user.name,
+            email: user.email,
+            phone: user.phone,
         }
     }
 }
 
+/// 检查密码是否正确
+///
+/// `val` 中是 使用 argon2 哈希过后的密码，`passwd` 是明文密码
 #[tracing::instrument(name = "[user/check password]", skip_all)]
 async fn check_passwd(val: &UserInfo, passwd: &str) -> Result<(), Response> {
     match argon2::verify_encoded(&val.passwd_hash, passwd.as_bytes()) {

@@ -8,7 +8,7 @@ use crate::{
     app_config::{
         ConfigItem,
         utils::{
-            JwtDecoderConfig, JwtEncoderConfig, RuntimeJwtDecoderConfig, RuntimeJwtEncoderConfig,
+            StaticJwtDecoderConfig, StaticJwtEncoderConfig, JwtDecoderConfig, JwtEncoderConfig,
         },
     },
     error::fatal::{FatalError, FatalResult, MultiFatalError},
@@ -16,25 +16,18 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(deny_unknown_fields, default)]
-pub(super) struct AuthConfig {
-    /// 这里使用 Vec
-    ///
-    /// 在编译规则时保证如果同一个路径下有多种公开方式时，采取最后指定的公开请求方法而非并集
+pub(super) struct StaticAuthConfig {
     #[serde(default)]
-    path_rules: Vec<PathRule>,
-
-    #[serde(default)]
-    encoder: JwtEncoderConfig,
+    encoder: StaticJwtEncoderConfig,
 
     /// jwt 鉴权相关设置
     #[serde(default)]
-    decoder: JwtDecoderConfig,
+    decoder: StaticJwtDecoderConfig,
 }
 
-pub struct RuntimeAuthConfig {
-    pub path_rules: Vec<(Pattern, HashSet<HttpMethod>)>,
-    pub encoder: RuntimeJwtEncoderConfig,
-    pub decoder: RuntimeJwtDecoderConfig,
+pub struct AuthConfig {
+    pub encoder_config: JwtEncoderConfig,
+    pub decoder_config: JwtDecoderConfig,
 }
 
 #[derive(Default, Serialize, Deserialize, Clone)]
@@ -48,16 +41,15 @@ pub struct PathRule {
     public_methods: HashSet<HttpMethod>,
 }
 
-impl ConfigItem for AuthConfig {
-    type RuntimeConfig = RuntimeAuthConfig;
+impl ConfigItem for StaticAuthConfig {
+    type RuntimeConfig = AuthConfig;
 
-    fn into_runtime(self) -> FatalResult<RuntimeAuthConfig> {
-        let AuthConfig {
-            path_rules,
+    fn into_runtime(self) -> FatalResult<AuthConfig> {
+        let StaticAuthConfig {
             encoder,
             decoder,
         } = self;
-        let (mut errors, mut compiled_path_rules) = (MultiFatalError::new(), vec![]);
+        let mut errors = MultiFatalError::new();
 
         let encoder = encoder
             .into_runtime()
@@ -66,20 +58,12 @@ impl ConfigItem for AuthConfig {
             .into_runtime()
             .map_err(|mut e| errors.append(&mut e));
 
-        for path_rule in path_rules {
-            match path_rule.compile() {
-                Ok(v) => compiled_path_rules.push(v),
-                Err(e) => errors.push(e),
-            }
-        }
-
         if let Ok(encoder) = encoder
             && let Ok(decoder) = decoder
         {
-            Ok(RuntimeAuthConfig {
-                path_rules: compiled_path_rules,
-                encoder,
-                decoder,
+            Ok(AuthConfig {
+                encoder_config: encoder,
+                decoder_config: decoder,
             })
         } else {
             Err(errors)

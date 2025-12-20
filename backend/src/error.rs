@@ -2,8 +2,6 @@ pub mod api;
 pub mod db;
 pub mod fatal;
 
-use std::error::Error;
-
 use axum::response::{IntoResponse, Response};
 
 /// ## 这个 trait 是一个 超类 trait，实现了它就相当于实现了自定义错误的的所有特性
@@ -28,7 +26,7 @@ use axum::response::{IntoResponse, Response};
 ///
 pub trait CustomError
 where
-    Self: IntoResponse + Error + Sized,
+    Self: IntoResponse + Sized,
     Response: From<Self>,
 {
     type Kind;

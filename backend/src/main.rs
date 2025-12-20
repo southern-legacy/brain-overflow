@@ -1,6 +1,6 @@
 mod app_config;
 mod cli;
-mod db;
+mod database;
 mod entity;
 mod error;
 mod http;

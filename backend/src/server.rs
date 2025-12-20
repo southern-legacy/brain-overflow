@@ -1,4 +1,4 @@
-use crate::{app_config, http::{self, services::crab_vault::{CrabVaultService, CrabVaultServiceConfig}}, logger};
+use crate::{app_config::AppConfig, database, http, logger};
 use ::http::StatusCode;
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
@@ -19,16 +19,13 @@ use tracing::info;
 
 #[derive(Clone)]
 pub struct ServerState {
-    db: Arc<PgPool>,
-}
-
-impl ServerState {
-    pub fn db(&self) -> &PgPool {
-        &self.db
-    }
+    pub database: Arc<PgPool>,
+    pub config: Arc<AppConfig>,
 }
 
 pub async fn start() {
+    let config = Arc::new(AppConfig::load("br_overflow.toml"));
+
     let logo = r"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣴⡶⠿⢶⣦⡀⠀⢰⣶⠀⣶⡆⢰⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣶⠿⠟⠁⣴⣶⣦⠈⢿⡆⢸⣿⠀⣿⣇⢸⣿⡀⢀⣴⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -55,9 +52,9 @@ pub async fn start() {
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀";
     println!("{logo}");
 
-    logger::init();
+    logger::init(&config.logger);
 
-    let conn = crate::db::init().await;
+    let database = Arc::new(database::init(&config.database).await);
 
     let tracing_layer = TraceLayer::new_for_http()
         .make_span_with(|req: &Request| {
@@ -84,21 +81,20 @@ pub async fn start() {
 
     let path_normalize_layer = NormalizePathLayer::trim_trailing_slash();
 
-    let router = http::build_router();
+    let router = http::build_router(config.as_ref());
     let router = router
         .layer(timeout_layer)
         .layer(body_limit_layer)
         .layer(tracing_layer)
         .layer(cors_layer)
-        .layer(path_normalize_layer)
-        .fallback_service(CrabVaultService::new(CrabVaultServiceConfig::default()));
+        .layer(path_normalize_layer);
 
-    let listener = if app_config::server().ipv6() {
-        TcpListener::bind((Ipv6Addr::UNSPECIFIED, app_config::server().port()))
+    let listener = if config.server.ipv6() {
+        TcpListener::bind((Ipv6Addr::UNSPECIFIED, config.server.port()))
             .await
             .unwrap()
     } else {
-        TcpListener::bind((Ipv4Addr::UNSPECIFIED, app_config::server().port()))
+        TcpListener::bind((Ipv4Addr::UNSPECIFIED, config.server.port()))
             .await
             .unwrap()
     };
@@ -107,7 +103,7 @@ pub async fn start() {
 
     axum::serve(
         listener,
-        router.with_state(ServerState { db: Arc::new(conn) }),
+        router.with_state(ServerState { database, config }),
     )
     .await
     .unwrap()

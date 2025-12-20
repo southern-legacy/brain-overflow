@@ -1,11 +1,12 @@
 use std::borrow::Cow;
 
 use crate::http::{
-    api::user::generate_passwd_hash,
+    api::{ApiResult, user::generate_passwd_hash},
     utils::{validate_email, validate_passwd, validate_phone},
 };
 use axum::{Extension, debug_handler, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
+use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
 use validator::{Validate, ValidationError};
@@ -14,7 +15,6 @@ use crate::{
     entity::user::user_info::UserInfo,
     http::{
         api::{
-            ApiResult,
             user::{UserIdent, check_passwd},
         },
         extractor::ValidJson,
@@ -29,9 +29,9 @@ pub(super) async fn delete_account(
     ident: Extension<UserIdent>,
     passwd: String,
 ) -> ApiResult {
-    let user_info = ident.retrieve_self_from_db(state.db()).await?;
+    let user_info = ident.retrieve_self_from_db(&state.database).await?;
     check_passwd(&user_info, &passwd).await?;
-    try_delete_account(state.db(), ident.id).await
+    try_delete_account(&state.database, ident.id).await
 }
 
 async fn try_delete_account(db: &PgPool, id: Uuid) -> ApiResult {
@@ -97,7 +97,7 @@ pub(super) async fn change_auth_info(
     ident: Extension<UserIdent>,
     param: ValidJson<ChangeAuthParam>,
 ) -> ApiResult {
-    let user_info = ident.retrieve_self_from_db(state.db()).await?;
+    let user_info = ident.retrieve_self_from_db(&state.database).await?;
 
     let ChangeAuthParam {
         new_email,
@@ -132,24 +132,32 @@ async fn try_change_auth_info(
 ) -> ApiResult {
     let res;
     if let Some(new_email) = new_email {
-        res = UserInfo::update_email(state.db(), id, new_email).await;
+        res = UserInfo::update_email(&state.database, id, new_email).await;
     } else if let Some(new_phone) = new_phone {
-        res = UserInfo::update_phone(state.db(), id, new_phone).await;
+        res = UserInfo::update_phone(&state.database, id, new_phone).await;
     } else if let Some(new_passwd_hash) = new_passwd_hash {
-        res = UserInfo::update_passwd_hash(state.db(), id, new_passwd_hash).await;
+        res = UserInfo::update_passwd_hash(&state.database, id, new_passwd_hash).await;
     } else {
         // 这里应该是 unreachable 的
         // return Err(StatusCode::UNPROCESSABLE_ENTITY.into_response())
+        // 因为在上面的 ChangeAuthParam 的 Validate 实现中，保证了每次只能修改一条信息
         unreachable!()
     }
 
     match res {
         Ok(res) => {
-            if res.id == id {
-                Ok(UserIdent::from(res).issue_as_jwt())
-            } else {
-                unreachable!()
-            }
+            let ident = UserIdent::from(res);
+            Ok((
+                StatusCode::OK,
+                json!({
+                    "id": ident.id,
+                    "name": ident.name,
+                    "phone": ident.phone,
+                    "email": ident.email,
+                    "token": ident.into_jwt(&state.config.auth.encoder_config)?
+                }).to_string(),
+            )
+                .into_response())
         }
         Err(e) => {
             if e.is_not_found() {

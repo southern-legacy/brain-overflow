@@ -16,7 +16,7 @@ fn meet_phone_format(phone: &str) -> bool {
 
 pub fn validate_email(email: &str) -> Result<(), ValidationError> {
     if !meet_email_format(email) {
-        let err = ValidationError::new("format").with_message(Cow::Borrowed(""));
+        let err = ValidationError::new("format").with_message(Cow::Borrowed("email address"));
         Err(err)
     } else {
         Ok(())
@@ -25,7 +25,7 @@ pub fn validate_email(email: &str) -> Result<(), ValidationError> {
 
 pub fn validate_phone(phone: &str) -> Result<(), ValidationError> {
     if !meet_phone_format(phone) {
-        let err = ValidationError::new("format");
+        let err = ValidationError::new("format").with_message(Cow::Borrowed("phone number"));
         Err(err)
     } else {
         Ok(())

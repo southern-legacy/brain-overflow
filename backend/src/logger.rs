@@ -1,10 +1,9 @@
 use crab_vault::logger::{json::JsonLogger, pretty::PrettyLogger};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::app_config;
+use crate::app_config::logger::LoggerConfig;
 
-pub fn init() {
-    let logger_config = app_config::logger();
+pub fn init(logger_config: &LoggerConfig) {
     let logger = tracing_subscriber::registry().with(
         PrettyLogger::new(logger_config.level())
             .with_ansi(logger_config.with_ansi())
