@@ -1,18 +1,24 @@
+<!--
+  * Component: AppHeader
+  * Description:  Header Component for the main layout
+-->
+
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, Edit, Monitor } from '@element-plus/icons-vue' // 引入图标
+import { Search, Edit, Monitor } from '@element-plus/icons-vue' // icons for buttons
 import UserAvatar from '@/components/UserAvatar.vue'
 
 const router = useRouter()
 
-// 状态管理
+// state managemnet
 const keyword = ref('')
 const isSearchFocused = ref(false)
-// TODO: 这里应该从 Pinia 获取真实的登录状态
+
+// todo: get real login state from pinia
 const isLoggedIn = ref(true)
 
-// 路由跳转
+// routes
 const handleCommand = (cmd) => {
   switch (cmd) {
     case 'login':
@@ -30,21 +36,21 @@ const handleCommand = (cmd) => {
   }
 }
 
-// 模拟切换登录状态
+// simulate switching the login state
 const toggleLoginState = () => (isLoggedIn.value = !isLoggedIn.value)
 </script>
 
 <template>
   <header class="app-header">
     <div class="header-inner">
-      <!-- 1. 左侧区域：Logo + 导航 -->
+      <!-- 1. left part：Logo + navs -->
       <div class="left-section">
         <div class="logo" @click="handleCommand('home')">
           <span class="logo-icon">🧠</span>
           <span class="logo-text">Brain Overflow</span>
         </div>
 
-        <!-- 预留的导航区域 -->
+        <!-- nav part -->
         <nav class="nav-links" :class="{ 'fade-out': isSearchFocused }">
           <a href="#" class="nav-item active">首页</a>
           <a href="#" class="nav-item">问答</a>
@@ -52,8 +58,8 @@ const toggleLoginState = () => (isLoggedIn.value = !isLoggedIn.value)
         </nav>
       </div>
 
-      <!-- 2. 中间区域：搜索框 -->
-      <!-- 当聚焦时，通过 flex-grow 占据更多空间 -->
+      <!-- 2. middle：search box -->
+      <!-- it will expand its width when focused -->
       <div class="center-section" :class="{ 'is-focused': isSearchFocused }">
         <el-input
           v-model="keyword"
@@ -65,9 +71,9 @@ const toggleLoginState = () => (isLoggedIn.value = !isLoggedIn.value)
         />
       </div>
 
-      <!-- 3. 右侧区域：操作按钮 + 用户信息 -->
+      <!-- 3. right part：buttons + user info -->
       <div class="right-section">
-        <!-- 创作按钮组：搜索时会收起 -->
+        <!-- buttons: display none when the search box is focused -->
         <div class="action-group" :class="{ collapsed: isSearchFocused }">
           <el-button text bg class="action-btn" @click="handleCommand('edit')">
             <el-icon class="el-icon--left"><Edit /></el-icon>
@@ -80,19 +86,18 @@ const toggleLoginState = () => (isLoggedIn.value = !isLoggedIn.value)
           </el-button>
         </div>
 
-        <!-- 用户状态区域 -->
+        <!-- user info-->
         <div class="user-area">
           <template v-if="isLoggedIn">
-            <!-- 已登录显示头像 -->
+            <!-- display avatar when login -->
             <div class="avatar-wrapper">
               <UserAvatar />
             </div>
-            <!-- 临时测试按钮 -->
+            <!-- test button -->
             <el-button link size="small" type="info" @click="toggleLoginState">退出</el-button>
           </template>
 
           <template v-else>
-            <!-- 未登录显示登录注册 -->
             <div class="auth-buttons">
               <el-button class="login-btn" text @click="handleCommand('login')">登录</el-button>
               <el-button class="register-btn" type="primary" @click="handleCommand('register')"
@@ -113,7 +118,7 @@ $text-main: #2c3e50;
 $border-color: #e4e7ed;
 
 .app-header {
-  position: sticky; /* 固定在顶部 */
+  position: sticky; /* stick at top */
   top: 0;
   z-index: 1000;
   width: 100%;
@@ -127,7 +132,7 @@ $border-color: #e4e7ed;
 
 .header-inner {
   width: 100%;
-  max-width: 1800px; /* 限制最大宽度，大屏更美观 */
+  max-width: 1800px;
   padding: 0 20px;
   display: flex;
   align-items: center;
@@ -135,7 +140,7 @@ $border-color: #e4e7ed;
   gap: 20px;
 }
 
-/* --- 左侧区域 --- */
+/* --- left part --- */
 .left-section {
   display: flex;
   align-items: center;
@@ -175,7 +180,7 @@ $border-color: #e4e7ed;
     &.fade-out {
       opacity: 0;
       transform: translateX(-10px);
-      pointer-events: none; /* 隐藏时不可点击 */
+      pointer-events: none; /* can not click when it is hidden */
     }
 
     .nav-item {
@@ -195,13 +200,12 @@ $border-color: #e4e7ed;
   }
 }
 
-/* --- 中间区域 (搜索) --- */
+/* --- middle (search box) --- */
 .center-section {
-  flex: 1; /* 占据剩余空间 */
+  flex: 1;
   max-width: 600px;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.5, 1);
 
-  /* 聚焦时，搜索框容器稍微变宽（如果布局允许） */
   &.is-focused {
     flex: 1.2;
   }
@@ -222,7 +226,7 @@ $border-color: #e4e7ed;
   }
 }
 
-/* --- 右侧区域 --- */
+/* --- right part(user info) --- */
 .right-section {
   display: flex;
   align-items: center;
@@ -240,11 +244,11 @@ $border-color: #e4e7ed;
     &.collapsed {
       max-width: 0;
       opacity: 0;
-      margin: 0; /* 去除间距 */
+      margin: 0; /* no margin */
     }
 
     .action-btn {
-      margin: 0 !important; /* 覆盖 Element Plus 可能的默认 margin */
+      margin: 0 !important;
     }
   }
 
@@ -253,7 +257,7 @@ $border-color: #e4e7ed;
     align-items: center;
     gap: 12px;
     padding-left: 12px;
-    border-left: 1px solid $border-color; /* 分割线 */
+    border-left: 1px solid $border-color; /* divider*/
 
     .avatar-wrapper {
       cursor: pointer;
@@ -282,11 +286,10 @@ $border-color: #e4e7ed;
   }
 }
 
-/* 移动端适配 */
 @media (max-width: 768px) {
   .nav-links,
   .action-group {
-    display: none !important; /* 移动端隐藏导航和操作按钮 */
+    display: none !important;
   }
 
   .center-section {
@@ -294,7 +297,7 @@ $border-color: #e4e7ed;
   }
 
   .logo-text {
-    display: none; /* 移动端只显示 Logo 图标 */
+    display: none;
   }
 }
 </style>

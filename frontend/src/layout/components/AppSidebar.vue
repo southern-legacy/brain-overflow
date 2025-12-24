@@ -1,3 +1,8 @@
+<!--
+  * Component: AppSideBar
+  * Description:  left part of the main layout. Used to display common navigation links and promotional information
+-->
+
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
@@ -12,7 +17,7 @@ const activeMenu = computed(() => route.path)
 
 <template>
   <aside class="sidebar-container">
-    <!-- 模块一：核心导航 -->
+    <!-- part 1：common  navs -->
     <PanelCard padding="8px">
       <el-menu :default-active="activeMenu" router class="custom-menu">
         <el-menu-item index="/questions">
@@ -37,7 +42,7 @@ const activeMenu = computed(() => route.path)
       </el-menu>
     </PanelCard>
 
-    <!-- 模块二：发现 -->
+    <!-- part 2：findings(navs) -->
     <PanelCard padding="8px" :marginTop="12">
       <template #header>
         <div class="card-header">发现</div>
@@ -56,7 +61,7 @@ const activeMenu = computed(() => route.path)
       </el-menu>
     </PanelCard>
 
-    <!-- 模块三：推广卡片（保持独立） -->
+    <!-- part3：promotion-->
     <div class="promo-card mt-3">
       <div class="promo-content">
         <h4>炉管挑战赛</h4>
@@ -79,7 +84,7 @@ const activeMenu = computed(() => route.path)
   margin-top: 12px;
 }
 
-/* header 文案 */
+/* header */
 .card-header {
   padding: 8px 16px;
   font-size: 12px;
@@ -89,7 +94,7 @@ const activeMenu = computed(() => route.path)
   letter-spacing: 0.05em;
 }
 
-/* --- Element Plus Menu 覆盖 --- */
+/* --- Element Plus Menu styles--- */
 .custom-menu {
   border-right: none !important;
   background: transparent !important;
@@ -121,7 +126,7 @@ const activeMenu = computed(() => route.path)
   color: inherit;
 }
 
-/* promo 卡片 */
+/* promo card */
 .promo-card {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-radius: 8px;

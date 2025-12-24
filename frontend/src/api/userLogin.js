@@ -1,5 +1,14 @@
 import request from '@/utils/request'
 
+/**
+ * send user registration request
+ *
+ * @param {*} name  username
+ * @param {*} email user email (mutually exclusive with user phone)
+ * @param {*} phone user phone (mutually exclusive with user email)
+ * @param {*} passwd user password
+ * @returns {*}
+ */
 export const userRegisService = (name, email, phone, passwd) => {
   const data = {
     name,
@@ -20,6 +29,15 @@ export const userRegisService = (name, email, phone, passwd) => {
   })
 }
 
+/**
+ * send user login request
+ *
+ * @param {*} id user id (mutually exclusive with email and phone)
+ * @param {*} email user email (mutually exclusive with id and phone)
+ * @param {*} phone user phone (mutually exclusive with id and email)
+ * @param {*} passwd user password
+ * @returns {*}
+ */
 export const userLoginService = (id, email, phone, passwd) => {
   const data = {
     passwd,

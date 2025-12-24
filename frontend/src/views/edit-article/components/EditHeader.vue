@@ -1,22 +1,25 @@
+<!--
+  * Component: EditHeader
+  * Description:  the custom header for edit page
+-->
+
 <script setup>
 import UserAvatar from '@/components/UserAvatar.vue'
 import { ref } from 'vue'
 const title = ref('')
 
-// 定义事件
+// define emits
 const emits = defineEmits(['update:modelValue', 'publish'])
 
-// 使用计算属性处理 v-model，保持单向数据流
-
 const handlePublish = () => {
-  if (!title.value.trim()) return // 简单校验
+  if (!title.value.trim()) return // simple validates
   emits('publish')
 }
 </script>
 
 <template>
   <header class="editor-header">
-    <!-- 左侧：标题输入区域 -->
+    <!-- left part：the input of the title -->
     <div class="input-wrapper">
       <el-input
         v-model="title"
@@ -26,9 +29,9 @@ const handlePublish = () => {
       />
     </div>
 
-    <!-- 右侧：功能区域 -->
+    <!-- left part：functional area -->
     <div class="actions-wrapper">
-      <!-- 添加 loading 状态，防止重复提交 -->
+      <!-- add loading state to prevent duplicate submission -->
       <el-button
         type="primary"
         class="publish-btn"
@@ -48,13 +51,13 @@ const handlePublish = () => {
 
 <style scoped lang="scss">
 .editor-header {
-  height: 64px; /* 稍微增加高度，更大气 */
+  height: 64px;
   padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   background-color: #ffffff;
-  border-bottom: 1px solid #e1e4e8; /* 增加底部边框，区分内容区 */
+  border-bottom: 1px solid #e1e4e8;
   box-sizing: border-box;
   transition: all 0.3s ease;
 }
@@ -62,9 +65,8 @@ const handlePublish = () => {
 .input-wrapper {
   flex: 1;
   margin-right: 20px;
-  max-width: 800px; /* 限制最大宽度，防止在大屏上太长 */
+  max-width: 800px;
 
-  /* 深度选择器修改 Element Plus 样式 */
   :deep(.ghost-input) {
     --el-input-border-color: transparent;
     --el-input-hover-border-color: transparent;
@@ -72,7 +74,7 @@ const handlePublish = () => {
     --el-input-bg-color: transparent;
 
     .el-input__wrapper {
-      box-shadow: none !important; /* 移除默认阴影 */
+      box-shadow: none !important;
       padding-left: 0;
       background-color: transparent;
     }
@@ -95,13 +97,12 @@ const handlePublish = () => {
 .actions-wrapper {
   display: flex;
   align-items: center;
-  gap: 16px; /* 使用 gap 代替 margin，更现代 */
+  gap: 16px;
 
   .publish-btn {
     font-weight: 500;
     padding: 8px 20px;
     border-radius: 6px;
-    /* 这里的颜色可以根据你的主题色调整 */
   }
 
   .avatar-box {

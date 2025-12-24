@@ -1,7 +1,20 @@
-<!-- PanelCard: reusable layout container for sidebar and right-panel sections -->
+<!--
+  * Component: PanelCard
+  * Description: Reusable layout container for sidebar and right-panel sections.
+  * Props:
+      - padding (String, default '16px'): custom padding for the container
+      - marginTop (Number, default 0): top margin in px
+  * Slots:
+      - header: optional header content
+      - default: main content
+-->
+
 <script setup>
 import { computed } from 'vue'
 
+/**
+ * * Padding inside the panel card (e.g., '16px', '1rem')
+ */
 const props = defineProps({
   padding: {
     type: String,
@@ -13,6 +26,10 @@ const props = defineProps({
   },
 })
 
+/**
+ * * Generates style object for the panel card
+ * * based on padding and marginTop props
+ */
 const style = computed(() => ({
   padding: props.padding,
   marginTop: props.marginTop ? `${props.marginTop}px` : undefined,
@@ -21,12 +38,12 @@ const style = computed(() => ({
 
 <template>
   <div class="panel-card" :style="style">
-    <!-- Header 插槽 -->
+    <!-- Header slot -->
     <div v-if="$slots.header" class="card-header">
       <slot name="header" />
     </div>
 
-    <!-- 默认内容 -->
+    <!-- Default Slot -->
     <slot />
   </div>
 </template>
