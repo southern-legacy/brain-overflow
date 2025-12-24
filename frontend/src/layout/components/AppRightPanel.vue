@@ -1,9 +1,12 @@
+<!--
+  * Component: AppRightPanel
+  * Description:  right part of the main layout, used to display interaction data and copyright information
+-->
 <script setup>
 import { ref } from 'vue'
 import { ArrowRight, Trophy, UserFilled } from '@element-plus/icons-vue'
 import PanelCard from '@/components/PanelCard.vue'
 
-// 模拟热门标签
 const hotTags = ref([
   { id: 1, name: 'JavaScript', count: 230 },
   { id: 2, name: 'Vue.js', count: 180 },
@@ -13,7 +16,6 @@ const hotTags = ref([
   { id: 6, name: 'React', count: 85 },
 ])
 
-// 模拟作者榜
 const topUsers = ref([
   { id: 1, name: '前端小黑', level: 6, desc: '写代码的诗人' },
   { id: 2, name: 'CodeMaster', level: 5, desc: '全栈练习生' },
@@ -23,14 +25,14 @@ const topUsers = ref([
 
 <template>
   <aside class="right-panel">
-    <!-- 欢迎卡片 -->
+    <!-- welcome card-->
     <PanelCard>
       <div class="welcome-title">下午好！</div>
       <div class="welcome-desc">点亮在社区的每一天</div>
       <el-button type="primary" plain class="w-full mt-2"> 立即签到 </el-button>
     </PanelCard>
 
-    <!-- 热门标签 -->
+    <!-- hot tags -->
     <PanelCard :marginTop="12">
       <template #header>
         <span class="title">热门标签</span>
@@ -47,7 +49,7 @@ const topUsers = ref([
       </div>
     </PanelCard>
 
-    <!-- 作者榜 -->
+    <!-- top users -->
     <PanelCard :marginTop="12">
       <template #header>
         <span class="title">
@@ -77,7 +79,7 @@ const topUsers = ref([
       </ul>
     </PanelCard>
 
-    <!-- 底部 -->
+    <!-- bottom: copyright -->
     <div class="footer-links mt-3">
       <a href="#">用户协议</a>
       <span class="divider">·</span>

@@ -1,3 +1,8 @@
+<!--
+  * Component: Login
+  * Description:  the login page
+-->
+
 <script setup>
 import LoginForm from '@/views/login/components/LoginForm.vue'
 import RegisForm from '@/views/login/components/RegisForm.vue'

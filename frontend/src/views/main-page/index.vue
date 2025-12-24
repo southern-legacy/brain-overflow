@@ -1,3 +1,8 @@
+<!--
+  * Component: main page
+  * Description: main page of the web site. Used to display articles or questions
+-->
+
 <script setup></script>
 
 <template>
