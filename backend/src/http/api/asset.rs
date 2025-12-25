@@ -60,10 +60,13 @@ async fn start_upload(
     let asset = {
         let mut tx = state.database.begin().await.map_err(DbError::from)?;
 
-        AssetHandle::from(id)
+        let asset = AssetHandle::from(id)
             .get(tx.as_mut())
             .await?
-            .ok_or(StatusCode::NOT_FOUND.into_response())?
+            .ok_or(StatusCode::NOT_FOUND.into_response())?;
+
+        tx.commit().await.map_err(DbError::from)?;
+        asset
     };
 
     let token = Jwt::new(

@@ -24,15 +24,18 @@ use crate::{
 #[debug_handler]
 #[tracing::instrument(name = "[user/info]", skip(state))]
 pub(super) async fn get(State(state): State<ServerState>, Path(id): Path<Uuid>) -> ApiResult {
-    let mut tx = state.database.begin().await.map_err(DbError::from)?;
-
-    let res = UserProfile::fetch_all_fields_by_id(tx.as_mut(), id).await?;
-    tx.commit().await.map_err(DbError::from)?;
+    let res = {
+        let mut tx = state.database.begin().await.map_err(DbError::from)?;
+        let res = UserProfile::fetch_all_fields_by_id(tx.as_mut(), id).await?;
+        tx.commit().await.map_err(DbError::from)?;
+        res
+    };
 
     Ok((StatusCode::OK, axum::Json(res)).into_response())
 }
 
-#[derive(Deserialize, Clone, Copy)]
+#[derive(Deserialize, Clone, Copy, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub(super) enum PathParam {
     Avatar,
     Banner,
@@ -40,6 +43,7 @@ pub(super) enum PathParam {
 }
 
 #[debug_handler]
+#[tracing::instrument(name = "[user/info]", skip(state))]
 pub(super) async fn put(
     State(state): State<ServerState>,
     Path(part): Path<PathParam>,
@@ -58,6 +62,7 @@ pub(super) async fn put(
         updated_at: Utc::now(),
         deleted_at: None,
     };
+    tracing::info!("genetated an asset handle, preparing for inserting");
 
     {
         let mut tx = state.database.begin().await.map_err(DbError::from)?;
@@ -68,12 +73,13 @@ pub(super) async fn put(
             PathParam::Banner => user_profile.banner = Some(handle),
             PathParam::Biography => user_profile.biography = Some(handle),
         }
-
-        new_asset.write_back(&state.database).await?;
-
+        new_asset.insert(tx.as_mut()).await?;
         if user_profile.write_back(tx.as_mut()).await?.is_some() {
+            tx.commit().await.map_err(DbError::from)?;
+            tracing::info!("insertion suceeded");
             Ok((StatusCode::CREATED, [(header::LOCATION, url)]).into_response())
         } else {
+            tracing::warn!("this guy doesn't even exsists");
             Err(ApiError::new(ApiErrorKind::Unauthorized).into_response())
         }
     }

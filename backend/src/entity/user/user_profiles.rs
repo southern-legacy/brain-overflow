@@ -37,18 +37,37 @@ impl UserProfile {
         })
     }
 
+    pub async fn insert<'c, E>(id: Uuid, db: E) -> DbResult<()>
+    where
+        E: Executor<'c, Database = Postgres>,
+    {
+        let _res = query!(
+            r#"
+                INSERT INTO "user"."user_profile"(user_id, updated_at)
+                VALUES ($1, $2);
+            "#, id, Utc::now()
+        )
+        .execute(db).await?;
+
+        Ok(())
+    }
+
     pub async fn write_back<'c, E>(self, db: E) -> DbResult<Option<()>>
     where
-        E: Executor<'c, Database = Postgres> {
-        let v = query!(
+        E: Executor<'c, Database = Postgres>,
+    {
+        let res = query!(
             r#"
                 UPDATE "user"."user_profile"
                 SET "biography" = $2, "avatar" = $3, "banner" = $4, "contact_me" = $5, "updated_at" = $6
                 WHERE "user"."user_profile"."user_id" = $1;
             "#, self.user_id, self.biography.map(|v| v.id), self.avatar.map(|v| v.id), self.banner.map(|v| v.id), self.contact_me, Utc::now()
         )
-        .fetch_optional(db).await?;
+        .execute(db).await?;
 
-        Ok(v.map(|_| ()))
+        match res.rows_affected() {
+            0 => Ok(None),
+            _ => Ok(Some(()))
+        }
     }
 }

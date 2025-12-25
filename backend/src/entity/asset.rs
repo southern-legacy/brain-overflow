@@ -52,15 +52,20 @@ pub struct Asset {
 pub struct AssetHandle {
     pub id: Uuid,
     pub allow_deleted: bool,
+    #[allow(dead_code)]
     pub owner_type: OwnerType,
 }
 
 impl Asset {
+    #[allow(dead_code)]
     pub fn deleted(&self) -> bool {
         matches!(self.deleted_at, Some(deleted) if deleted < Utc::now())
     }
 
-    pub async fn write_back(self, db: &PgPool) -> DbResult<AssetHandle> {
+    pub async fn insert<'c, E>(self, db: E) -> DbResult<AssetHandle>
+    where
+        E: Executor<'c, Database = Postgres>
+    {
         let Self {
             id,
             newest_key,
@@ -118,6 +123,7 @@ impl From<Uuid> for AssetHandle {
     }
 }
 
+#[allow(dead_code)]
 impl AssetHandle {
     pub fn generate(owner_type: OwnerType) -> Self {
         Self {

@@ -1,14 +1,17 @@
 use std::borrow::Cow;
 
 use crate::{
-    entity::user::user_info::UserInfo, error::db::DbError, http::{
+    entity::user::user_info::UserInfo,
+    error::db::DbError,
+    http::{
         api::{
             ApiResult,
             user::{UserIdent, check_passwd},
         },
         extractor::ValidJson,
         utils::{validate_email, validate_passwd, validate_phone},
-    }, server::ServerState
+    },
+    server::ServerState,
 };
 
 use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse};
@@ -43,17 +46,17 @@ pub(super) async fn login(
 ) -> ApiResult {
     let method = &param.method;
 
-    let mut tx = state.database.begin().await.map_err(DbError::from)?;
-
-    let res = match method {
-        LoginMethod::Phone(phone) => UserInfo::fetch_all_fields_by_phone(tx.as_mut(), phone).await,
-        LoginMethod::Email(email) => UserInfo::fetch_all_fields_by_email(tx.as_mut(), email).await,
-        LoginMethod::Id(id) => UserInfo::fetch_all_fields_by_id(tx.as_mut(), *id).await,
-    };
-
-    tx.commit().await.map_err(DbError::from)?;
-
-    let res = match res {
+    let res = match {
+        // 我们先查找数据库中的记录
+        let mut tx = state.database.begin().await.map_err(DbError::from)?;
+        let res = match method {
+            LoginMethod::Phone(num) => UserInfo::fetch_all_fields_by_phone(tx.as_mut(), num).await,
+            LoginMethod::Email(add) => UserInfo::fetch_all_fields_by_email(tx.as_mut(), add).await,
+            LoginMethod::Id(id) => UserInfo::fetch_all_fields_by_id(tx.as_mut(), *id).await,
+        };
+        tx.commit().await.map_err(DbError::from)?;
+        res
+    } {
         Ok(val) => val,
         Err(e) => {
             if e.is_not_found() {
@@ -76,11 +79,11 @@ pub(super) async fn login(
             "email": user.email,
             "phone": user.phone,
             "token": user.into_jwt(&state.config.auth.encoder_config)?
-        }).to_string(),
+        })
+        .to_string(),
     )
         .into_response())
 }
-
 
 impl LoginMethod {
     fn get_anyway(&self) -> Cow<'_, str> {

@@ -56,9 +56,9 @@ CREATE INDEX btree_index_phone ON "user"."user_info" USING btree (phone);
 
 CREATE TABLE "user"."user_profile" (
     "user_id"       UUID            PRIMARY KEY REFERENCES "user"."user_info"(id) ON DELETE CASCADE,
-    "biography"     UUID            REFERENCES "asset",
-    "avatar"        UUID            REFERENCES "asset",
-    "banner"        UUID            REFERENCES "asset",
+    "biography"     UUID            REFERENCES "asset" DEFAULT NULL,
+    "avatar"        UUID            REFERENCES "asset" DEFAULT NULL,
+    "banner"        UUID            REFERENCES "asset" DEFAULT NULL,
     "contact_me"    JSONB           NOT NULL DEFAULT '[]'::JSONB,
     "updated_at"    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );

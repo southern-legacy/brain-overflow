@@ -9,14 +9,20 @@ use serde_json::json;
 use validator::{Validate, ValidationErrors};
 
 use crate::{
-    entity::user::user_info::{InsertParam, UserInfo}, error::db::DbError, http::{
+    entity::user::{
+        user_info::{InsertParam, UserInfo},
+        user_profiles::UserProfile,
+    },
+    error::db::DbError,
+    http::{
         api::{
             ApiResult,
             user::{UserIdent, generate_passwd_hash},
         },
         extractor::ValidJson,
         utils::{validate_email, validate_passwd, validate_phone},
-    }, server::ServerState
+    },
+    server::ServerState,
 };
 
 #[derive(Deserialize, Clone)]
@@ -82,9 +88,15 @@ pub(super) async fn signup(
         passwd: &passwd_hash,
     };
 
-    let mut tx = state.database.begin().await.map_err(DbError::from)?;
-    let id = UserInfo::insert_and_return_id(tx.as_mut(), new_user).await?;
-    tx.commit().await.map_err(DbError::from)?;
+    let id = {
+        // 往数据库中添加 user_info 记录和 user_profile 记录
+        let mut tx = state.database.begin().await.map_err(DbError::from)?;
+        let id = UserInfo::insert_and_return_id(tx.as_mut(), new_user).await?;
+        UserProfile::insert(id, tx.as_mut()).await?;
+        tx.commit().await.map_err(DbError::from)?;
+        id
+    };
+
     tracing::info!("Successfully inserted a user into database.");
 
     let user_ident = UserIdent {
@@ -103,7 +115,8 @@ pub(super) async fn signup(
             "email": user_ident.email,
             "phone": user_ident.phone,
             "token": user_ident.into_jwt(&state.config.auth.encoder_config)?
-        }).to_string(),
+        })
+        .to_string(),
     )
         .into_response())
 }

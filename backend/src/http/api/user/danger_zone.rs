@@ -1,9 +1,12 @@
 use std::borrow::Cow;
 
-use crate::{error::db::DbError, http::{
-    api::{ApiResult, user::generate_passwd_hash},
-    utils::{validate_email, validate_passwd, validate_phone},
-}};
+use crate::{
+    error::db::DbError,
+    http::{
+        api::{ApiResult, user::generate_passwd_hash},
+        utils::{validate_email, validate_passwd, validate_phone},
+    },
+};
 use axum::{Extension, debug_handler, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
 use serde_json::json;
@@ -14,9 +17,7 @@ use validator::{Validate, ValidationError};
 use crate::{
     entity::user::user_info::UserInfo,
     http::{
-        api::{
-            user::{UserIdent, check_passwd},
-        },
+        api::user::{UserIdent, check_passwd},
         extractor::ValidJson,
     },
     server::ServerState,
@@ -130,23 +131,26 @@ async fn try_change_auth_info(
     new_phone: Option<&String>,
     new_passwd_hash: Option<&String>,
 ) -> ApiResult {
-    let mut tx = state.database.begin().await.map_err(DbError::from)?;
+    let res = {
+        let mut tx = state.database.begin().await.map_err(DbError::from)?;
 
-    let res;
-    if let Some(new_email) = new_email {
-        res = UserInfo::update_email(tx.as_mut(), id, new_email).await;
-    } else if let Some(new_phone) = new_phone {
-        res = UserInfo::update_phone(tx.as_mut(), id, new_phone).await;
-    } else if let Some(new_passwd_hash) = new_passwd_hash {
-        res = UserInfo::update_passwd_hash(tx.as_mut(), id, new_passwd_hash).await;
-    } else {
-        // 这里应该是 unreachable 的
-        // return Err(StatusCode::UNPROCESSABLE_ENTITY.into_response())
-        // 因为在上面的 ChangeAuthParam 的 Validate 实现中，保证了每次只能修改一条信息
-        unreachable!()
-    }
+        let res =
+        if let Some(new_email) = new_email {
+            UserInfo::update_email(tx.as_mut(), id, new_email).await
+        } else if let Some(new_phone) = new_phone {
+            UserInfo::update_phone(tx.as_mut(), id, new_phone).await
+        } else if let Some(new_passwd_hash) = new_passwd_hash {
+            UserInfo::update_passwd_hash(tx.as_mut(), id, new_passwd_hash).await
+        } else {
+            // 这里应该是 unreachable 的
+            // return Err(StatusCode::UNPROCESSABLE_ENTITY.into_response())
+            // 因为在上面的 ChangeAuthParam 的 Validate 实现中，保证了每次只能修改一条信息
+            unreachable!()
+        };
 
-    tx.commit().await.map_err(DbError::from)?;
+        tx.commit().await.map_err(DbError::from)?;
+        res
+    };
 
     match res {
         Ok(res) => {
@@ -159,7 +163,8 @@ async fn try_change_auth_info(
                     "phone": ident.phone,
                     "email": ident.email,
                     "token": ident.into_jwt(&state.config.auth.encoder_config)?
-                }).to_string(),
+                })
+                .to_string(),
             )
                 .into_response())
         }
