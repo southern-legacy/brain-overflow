@@ -135,6 +135,7 @@ impl AssetHandle {
         }
     }
 
+    /// 允许过期的 [`Asset`] 被查找到
     pub const fn allow_deleted(mut self) -> Self {
         self.allow_deleted = true;
         self
