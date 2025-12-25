@@ -1,3 +1,8 @@
+<!--
+  * Component: UserAvatar
+  * Description: Reusable avatar component with popover.
+-->
+
 <script setup>
 /**
  * todo:  动态数据： 头像， 用户关注，个人主页跳转，个人设置跳转，收藏页面，历史记录
@@ -8,30 +13,30 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 function jumpToProfile() {
-  router.push('/user-profile')
+  router.push('/user/profile')
 }
 
 function jumpToSetting() {
-  router.push('/user-setting')
+  router.push('/user/settings')
 }
 </script>
 
 <template>
   <el-popover trigger="click" placement="bottom" :width="250">
-    <!-- 触发器 -->
+    <!-- trigger -->
     <template #reference>
       <el-avatar class="avatar-trigger" />
     </template>
 
-    <!-- 弹出内容 -->
+    <!-- popover-->
     <div class="user-popover">
-      <!-- 顶部用户信息 -->
+      <!-- Basic User Info -->
       <el-row class="user-basic">
         <el-avatar size="large" />
         <div class="username">kenzin</div>
       </el-row>
 
-      <!-- 数据区 -->
+      <!-- User Stats -->
       <el-row class="user-stats">
         <div class="stat">
           <p class="num">0</p>
@@ -49,7 +54,7 @@ function jumpToSetting() {
         </div>
       </el-row>
 
-      <!-- 功能区 -->
+      <!-- Functions -->
       <el-row class="user-actions" justify="center">
         <el-link class="link" underline="never" @click="jumpToProfile">个人主页</el-link>
         <el-link class="link" underline="never" @click="jumpToSetting">用户设置</el-link>
@@ -57,7 +62,7 @@ function jumpToSetting() {
         <el-link class="link" underline="never">我的足迹</el-link>
       </el-row>
 
-      <!-- 底部 -->
+      <!-- Bottom -->
       <el-row class="user-footer">
         <el-link
           class="link"
@@ -70,6 +75,7 @@ function jumpToSetting() {
     </div>
   </el-popover>
 </template>
+
 <style scoped lang="scss">
 .user-popover {
   padding: 10px;

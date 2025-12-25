@@ -1,3 +1,8 @@
+<!--
+  * Component: EditArticle
+  * Description:  the page used to edit articles or questions
+-->
+
 <script setup>
 import EditHeader from './components/EditHeader.vue'
 import { ref } from 'vue'
@@ -9,7 +14,7 @@ const handleUploadImage = async (event, insertImage, files) => {
   const file = files[0]
   if (!file) return
 
-  //todo：换成你自己的上传逻辑
+  // todo：upload image
   const url = await uploadImage(file)
 
   insertImage({
@@ -19,14 +24,12 @@ const handleUploadImage = async (event, insertImage, files) => {
 }
 
 const uploadImage = async (file) => {
-  // 临时 mock
+  // mock
   return URL.createObjectURL(file)
 }
 </script>
 
 <template>
-  <!-- todo： edit-header -->
-  <!-- todo： 一个头部， -->
   <div class="app-container">
     <EditHeader></EditHeader>
     <v-md-editor

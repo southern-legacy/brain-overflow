@@ -8,5 +8,5 @@ export default pinia
 // import { useUserStore } from './modules/user'
 // export { useUserStore }
 
-// 简单语法
+// simple exports
 export * from '@/stores/modules/user'

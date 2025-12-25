@@ -2,7 +2,11 @@
 import { ref } from 'vue'
 import { userRegisService } from '@/api/userLogin'
 import { jwtDecode } from 'jwt-decode'
+
+// form ref
 const form = ref(null)
+
+// regis stats
 const formModel = ref({
   regisType: 'email',
   name: '',
@@ -13,6 +17,8 @@ const formModel = ref({
   password: '',
   rePassword: '',
 })
+
+// default regis stats
 const defaultForm = {
   regisType: 'email',
   email: '',
@@ -22,11 +28,13 @@ const defaultForm = {
   password: '',
   rePassword: '',
 }
+
 const emit = defineEmits(['changingAuth'])
 const changeAuth = () => {
   formModel.value = defaultForm
   emit('changingAuth')
 }
+
 const rules = ref({
   name: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   email: [

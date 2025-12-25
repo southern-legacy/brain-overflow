@@ -23,7 +23,7 @@ let router = useRouter()
           <el-button
             type="primary"
             class="edit-profile-button"
-            @click="router.push('/user-settings')"
+            @click="router.push('/user/settings')"
             >编辑资料</el-button
           >
         </el-card>

@@ -1,20 +1,32 @@
+<!--
+  * Component: LoginForm
+  * Description:  the login form components used for login page
+-->
+
 <script setup>
 import { ref } from 'vue'
 import { userLoginService } from '@/api/userLogin'
 import { useUserStore } from '@/stores'
+
+// stats
 const formModel = ref({
   id: '',
   phone: '',
   email: '',
   password: '',
 })
+
+// form ref
 const form = ref(null)
+
 const selectLogin = ref('id')
 const selectOptions = [
   { value: 'id', label: 'ID登录' },
   { value: 'phone', label: '手机号登录' },
   { value: 'email', label: '邮箱登录' },
 ]
+
+// validate rules
 const rules = {
   id: [
     { required: true, message: '请输入id', trigger: 'blur' },
@@ -64,6 +76,9 @@ const rules = {
   ],
 }
 
+/**
+ * login logic
+ */
 const handleLogin = async () => {
   await form.value.validate()
   let token = ''
@@ -100,7 +115,7 @@ const changeAuth = () => {
 <template>
   <div class="loginForm">
     <el-form :model="formModel" :rules="rules" ref="form">
-      <!-- 选择器 -->
+      <!-- selector -->
       <el-form-item label="请选择登陆方式" class="selectBox">
         <el-select
           v-model="selectLogin"
@@ -117,20 +132,22 @@ const changeAuth = () => {
         </el-select>
       </el-form-item>
 
-      <!-- 用户名 -->
+      <!-- username -->
       <el-form-item v-if="selectLogin === 'id'" prop="id">
         <el-input v-model="formModel.id" placeholder="请输入账户" class="username" />
       </el-form-item>
 
+      <!-- phone number -->
       <el-form-item v-else-if="selectLogin === 'phone'" prop="phone">
         <el-input v-model="formModel.phone" placeholder="请输入手机号码" class="username" />
       </el-form-item>
 
+      <!-- email -->
       <el-form-item v-else-if="selectLogin === 'email'" prop="email">
         <el-input v-model="formModel.email" placeholder="请输入邮箱" class="username" />
       </el-form-item>
 
-      <!-- 密码 -->
+      <!-- password -->
       <el-form-item prop="password">
         <el-input
           v-model="formModel.password"
@@ -140,13 +157,13 @@ const changeAuth = () => {
         />
       </el-form-item>
 
-      <!-- 登录按钮 -->
+      <!-- login button -->
       <el-form-item>
         <el-button class="submitBtn" @click="handleLogin">登录</el-button>
       </el-form-item>
     </el-form>
 
-    <!-- 注册提示 -->
+    <!-- registration -->
     <div class="loginToRegis">
       <span>not sign up yet?</span>
       <a href="#" @click.prevent="changeAuth">Sign up here</a>
@@ -155,7 +172,6 @@ const changeAuth = () => {
 </template>
 
 <style scoped lang="scss">
-// 整体loginForm的样式
 .loginForm {
   display: flex;
   flex-direction: column;
@@ -164,8 +180,6 @@ const changeAuth = () => {
   width: 100%;
 }
 
-/* 输入框基础样式 */
-// 使用 :deep 深度选择
 :deep(.el-input__wrapper) {
   height: 42px;
   background-color: #fff;
@@ -181,13 +195,13 @@ const changeAuth = () => {
   box-shadow: 0 0 6px 3px rgba(180, 112, 127, 0.18);
 }
 
-/* 输入文字样式 */
+/* text style */
 :deep(.el-input__inner) {
   color: #5f4959;
   font-size: 15px;
 }
 
-/* select 输入框样式 */
+/* select style */
 :deep(.el-select__wrapper) {
   height: 42px;
   background: #fff;
@@ -198,52 +212,58 @@ const changeAuth = () => {
   color: #5f4959;
   box-shadow: 0 2px 6px rgba(215, 175, 185, 0.1);
 }
+
 :deep(.el-select__wrapper.is-focused) {
   border-color: #b4707f;
   background-color: #fff8fa;
   box-shadow: 0 0 6px 3px rgba(180, 112, 127, 0.18);
 }
+
 :deep(.el-select__placeholder) {
   color: #5f4959;
   font-size: 15px;
 }
+
 :deep(.el-select__input) {
   color: #5f4959;
   font-size: 15px;
 }
 
-/* dropdown 样式（通过 popper-class 生效） */
+/* dropdown style */
 :deep(.loginSelectDropdown) {
   border-radius: 10px;
   box-shadow: 0 6px 16px rgba(180, 112, 127, 0.15);
   overflow: hidden;
 }
+
 :deep(.loginSelectDropdown .el-select-dropdown__item) {
   font-size: 15px;
   color: #5f4959;
   padding: 8px 14px;
 }
 
-/* 选择器整体 */
 .selectBox {
   display: flex;
   align-items: center;
   margin-bottom: 12px;
 }
+
 .selectBox .el-form-item__label {
   color: #4c3a4c;
   font-size: 15px;
   margin-right: 12px;
   min-width: max-content;
 }
+
 :deep(.el-select .el-input__wrapper) {
   height: 44px;
 }
+
 :deep(.el-select:hover .el-input__wrapper) {
   border-color: #b4707f;
 }
 
-/* 登录按钮 */
+/* login btn */
 .submitBtn {
   height: 46px;
   width: 100%;
@@ -259,31 +279,35 @@ const changeAuth = () => {
   cursor: pointer;
   margin-top: 8px;
 }
+
 .submitBtn:hover {
   background: linear-gradient(135deg, #f8dce0, #b88090);
   box-shadow: 0 8px 18px rgba(184, 144, 149, 0.3);
   transform: translateY(-2px);
 }
+
 .submitBtn:active {
   transform: translateY(1px);
 }
 
-/* 注册提示 */
 .loginToRegis {
   margin-top: 14px;
   font-size: 14px;
   text-align: center;
   color: #4c3a4c;
 }
+
 .loginToRegis span {
   margin-right: 6px;
 }
+
 .loginToRegis a {
   color: #a73758;
   text-decoration: none;
   font-weight: 600;
   cursor: pointer;
 }
+
 .loginToRegis a:hover {
   text-decoration: underline;
 }

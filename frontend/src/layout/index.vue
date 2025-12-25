@@ -1,4 +1,13 @@
-<script setup></script>
+<!--
+  * Component: Layout index
+  * Description:  Main layout for the app, contains header, sidebar, content, and right panel.
+-->
+
+<script setup>
+import AppHeader from './components/AppHeader.vue'
+import AppSidebar from './components/AppSidebar.vue'
+import AppRightPanel from './components/AppRightPanel.vue'
+</script>
 
 <template>
   <div class="layout">
@@ -15,12 +24,6 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import AppHeader from './components/AppHeader.vue'
-import AppSidebar from './components/AppSidebar.vue'
-import AppRightPanel from './components/AppRightPanel.vue'
-</script>
 
 <style scoped>
 .layout {
@@ -39,6 +42,14 @@ import AppRightPanel from './components/AppRightPanel.vue'
 .content {
   overflow-y: auto;
   padding: 24px 32px;
+  /* 隐藏所有滚动条 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 和 Edge */
+
+  /* Chrome, Safari 和 Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .sidebar {
