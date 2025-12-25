@@ -9,12 +9,17 @@ use http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
-    entity::asset::AssetHandle, error::db::DbError, http::api::{ApiResult, user::UserIdent}, server::ServerState
+    entity::asset::AssetHandle,
+    error::db::DbError,
+    http::api::{ApiResult, user::UserIdent},
+    server::ServerState,
 };
 
 pub fn build_router() -> Router<ServerState> {
-    Router::new().route("/asset/{id}", routing::get(safe))
+    Router::new()
+        .route("/asset/{id}", routing::get(safe))
         .route("/asset/{id}", routing::head(safe))
+        .route("/asset/{id}", routing::put(start_upload))
 }
 
 #[debug_handler]
@@ -40,7 +45,7 @@ async fn safe(
         &encoder_config.audience,
         permmision,
     ))?;
-    
+
     Ok(token.into_response())
 }
 
@@ -48,14 +53,28 @@ async fn safe(
 async fn start_upload(
     State(state): State<ServerState>,
     Path(id): Path<Uuid>,
-    Extension(user_ident): Extension<UserIdent>,
+    Extension(_user_ident): Extension<UserIdent>,
 ) -> ApiResult {
-    let mut tx = state.database.begin().await.map_err(DbError::from)?;
+    let encoding_config = &state.config.crab_vault.encoder_config;
 
-    let asset = AssetHandle::from(id)
-        .get(tx.as_mut())
-        .await?
-        .ok_or(StatusCode::NOT_FOUND.into_response())?;
+    let asset = {
+        let mut tx = state.database.begin().await.map_err(DbError::from)?;
 
-    todo!()
+        AssetHandle::from(id)
+            .get(tx.as_mut())
+            .await?
+            .ok_or(StatusCode::NOT_FOUND.into_response())?
+    };
+
+    let token = Jwt::new(
+        &encoding_config.issue_as,
+        &encoding_config.audience,
+        Permission::new()
+            .permit_method(vec![HttpMethod::Put])
+            .permit_resource_pattern(asset.newest_key)
+            .restrict_maximum_size_option(None)
+            .permit_content_type(vec!["*".to_string()])
+    );
+
+    Ok(encoding_config.encoder.encode_randomly(&token)?.into_response())
 }
