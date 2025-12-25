@@ -1,16 +1,14 @@
 use std::borrow::Cow;
 
 use crate::{
-    entity::user::user_info::UserInfo,
-    http::{
+    entity::user::user_info::UserInfo, error::db::DbError, http::{
         api::{
             ApiResult,
             user::{UserIdent, check_passwd},
         },
         extractor::ValidJson,
         utils::{validate_email, validate_passwd, validate_phone},
-    },
-    server::ServerState,
+    }, server::ServerState
 };
 
 use axum::{debug_handler, extract::State, http::StatusCode, response::IntoResponse};
@@ -44,11 +42,16 @@ pub(super) async fn login(
     ValidJson(param): ValidJson<LoginParam>,
 ) -> ApiResult {
     let method = &param.method;
+
+    let mut tx = state.database.begin().await.map_err(DbError::from)?;
+
     let res = match method {
-        LoginMethod::Phone(phone) => UserInfo::fetch_all_fields_by_phone(&state.database, phone).await,
-        LoginMethod::Email(email) => UserInfo::fetch_all_fields_by_email(&state.database, email).await,
-        LoginMethod::Id(id) => UserInfo::fetch_all_fields_by_id(&state.database, *id).await,
+        LoginMethod::Phone(phone) => UserInfo::fetch_all_fields_by_phone(tx.as_mut(), phone).await,
+        LoginMethod::Email(email) => UserInfo::fetch_all_fields_by_email(tx.as_mut(), email).await,
+        LoginMethod::Id(id) => UserInfo::fetch_all_fields_by_id(tx.as_mut(), *id).await,
     };
+
+    tx.commit().await.map_err(DbError::from)?;
 
     let res = match res {
         Ok(val) => val,

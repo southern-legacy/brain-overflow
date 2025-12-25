@@ -1,11 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sqlx::{PgPool, query};
+use sqlx::{Executor, Postgres, query};
 use uuid::Uuid;
 
 use crate::{entity::asset::AssetHandle, error::db::DbResult};
 
-#[allow(dead_code)]
 #[derive(Serialize)]
 pub struct UserProfile {
     pub user_id: Uuid,
@@ -17,7 +16,10 @@ pub struct UserProfile {
 }
 
 impl UserProfile {
-    pub async fn fetch_all_fields_by_id(db: &PgPool, id: Uuid) -> DbResult<Self> {
+    pub async fn fetch_all_fields_by_id<'c, E>(db: E, id: Uuid) -> DbResult<Self>
+    where
+        E: Executor<'c, Database = Postgres>,
+    {
         let v = query!(
             r#"SELECT * FROM "user"."user_profile" WHERE "user"."user_profile"."user_id" = $1;"#,
             id
@@ -33,5 +35,20 @@ impl UserProfile {
             contact_me: v.contact_me,
             updated_at: v.updated_at,
         })
+    }
+
+    pub async fn write_back<'c, E>(self, db: E) -> DbResult<Option<()>>
+    where
+        E: Executor<'c, Database = Postgres> {
+        let v = query!(
+            r#"
+                UPDATE "user"."user_profile"
+                SET "biography" = $2, "avatar" = $3, "banner" = $4, "contact_me" = $5, "updated_at" = $6
+                WHERE "user"."user_profile"."user_id" = $1;
+            "#, self.user_id, self.biography.map(|v| v.id), self.avatar.map(|v| v.id), self.banner.map(|v| v.id), self.contact_me, Utc::now()
+        )
+        .fetch_optional(db).await?;
+
+        Ok(v.map(|_| ()))
     }
 }

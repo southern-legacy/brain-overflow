@@ -9,23 +9,22 @@ use http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
-    entity::asset::AssetHandle,
-    http::api::{ApiResult, user::UserIdent},
-    server::ServerState,
+    entity::asset::AssetHandle, error::db::DbError, http::api::{ApiResult, user::UserIdent}, server::ServerState
 };
 
 pub fn build_router() -> Router<ServerState> {
-    Router::new().route("/asset/{id}", routing::get(get))
+    Router::new().route("/asset/{id}", routing::get(safe))
+        .route("/asset/{id}", routing::head(safe))
 }
 
 #[debug_handler]
-async fn get(
+async fn safe(
     State(state): State<ServerState>,
     Path(id): Path<Uuid>,
     _user_ident: Option<Extension<UserIdent>>,
 ) -> ApiResult {
     let asset = AssetHandle::from(id)
-        .get(&state.database)
+        .get(state.database.as_ref())
         .await?
         .ok_or(StatusCode::NOT_FOUND.into_response())?;
 
@@ -43,4 +42,20 @@ async fn get(
     ))?;
     
     Ok(token.into_response())
+}
+
+#[debug_handler]
+async fn start_upload(
+    State(state): State<ServerState>,
+    Path(id): Path<Uuid>,
+    Extension(user_ident): Extension<UserIdent>,
+) -> ApiResult {
+    let mut tx = state.database.begin().await.map_err(DbError::from)?;
+
+    let asset = AssetHandle::from(id)
+        .get(tx.as_mut())
+        .await?
+        .ok_or(StatusCode::NOT_FOUND.into_response())?;
+
+    todo!()
 }

@@ -1,8 +1,6 @@
-#![allow(dead_code)]
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, query, query_as};
+use sqlx::{Executor, PgPool, Postgres, query, query_as};
 use uuid::Uuid;
 
 use crate::error::db::DbResult;
@@ -52,14 +50,47 @@ pub struct Asset {
 
 #[derive(Debug, Clone, Copy)]
 pub struct AssetHandle {
-    id: Uuid,
-    allow_deleted: bool,
-    owner_type: OwnerType,
+    pub id: Uuid,
+    pub allow_deleted: bool,
+    pub owner_type: OwnerType,
 }
 
 impl Asset {
     pub fn deleted(&self) -> bool {
         matches!(self.deleted_at, Some(deleted) if deleted < Utc::now())
+    }
+
+    pub async fn write_back(self, db: &PgPool) -> DbResult<AssetHandle> {
+        let Self {
+            id,
+            newest_key,
+            status,
+            owner,
+            owner_type,
+            history,
+            created_at,
+            updated_at,
+            deleted_at,
+        } = self;
+
+        let query = query!(
+            r#"
+                INSERT INTO asset (id, newest_key, status, owner, owner_type, history, created_at, updated_at, deleted_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                RETURNING id;
+            "#,
+            id,
+            newest_key,
+            status as _,
+            owner,
+            owner_type as _,
+            &history,
+            created_at,
+            updated_at,
+            deleted_at
+        ).fetch_one(db).await?;
+
+        Ok(query.id.into())
     }
 }
 
@@ -109,10 +140,12 @@ impl AssetHandle {
         self
     }
 
-    pub async fn get(&self, db: &PgPool) -> DbResult<Option<Asset>> {
+    pub async fn get<'c, E>(&self, db: E) -> DbResult<Option<Asset>>
+    where E: Executor<'c, Database = Postgres>
+    {
         Ok(if self.allow_deleted {
             query_as!(
-                Asset, 
+                Asset,
                 r#"
                     SELECT
                         id, newest_key, owner, history, created_at, updated_at, deleted_at,
@@ -120,14 +153,14 @@ impl AssetHandle {
                         status as "status: AssetStatus"
                     FROM "asset"
                     WHERE "id" = $1;
-                "#, 
+                "#,
                 self.id
             )
-                .fetch_optional(db)
-                .await?
+            .fetch_optional(db)
+            .await?
         } else {
             query_as!(
-                Asset, 
+                Asset,
                 r#"
                     SELECT
                         id, newest_key, owner, history, created_at, updated_at, deleted_at,
@@ -143,19 +176,7 @@ impl AssetHandle {
         })
     }
 
-    pub async fn insert_to_db(&self, db: &PgPool, newest_key: String) -> DbResult<()> {
-        query!(
-            r#"INSERT INTO "asset" (id, newest_key, history) VALUES ($1, $2, ARRAY[$2]);"#,
-            self.id,
-            newest_key
-        )
-        .execute(db)
-        .await?;
-
-        Ok(())
-    }
-
-    pub async fn update_to(&self, db: &PgPool, newest_key: String) -> DbResult<Option<()>> {
+    pub async fn update_to(&self, db: &PgPool, newest_key: &str) -> DbResult<Option<()>> {
         let query = query!(
             r#"
                 UPDATE "asset"

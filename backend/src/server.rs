@@ -1,7 +1,7 @@
-use crate::{app_config::AppConfig, database, http, logger};
-use ::http::StatusCode;
+use crate::{app_config::AppConfig, cli::Cli, database, http, logger};
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
+use ::http::StatusCode;
 use sqlx::PgPool;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
@@ -23,8 +23,8 @@ pub struct ServerState {
     pub config: Arc<AppConfig>,
 }
 
-pub async fn start() {
-    let config = Arc::new(AppConfig::load("br_overflow.toml"));
+pub async fn start(cli: &Cli) {
+    let config = Arc::new(AppConfig::load(cli));
 
     let logo = r"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣴⡶⠿⢶⣦⡀⠀⢰⣶⠀⣶⡆⢰⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀

@@ -9,16 +9,14 @@ use serde_json::json;
 use validator::{Validate, ValidationErrors};
 
 use crate::{
-    entity::user::user_info::{InsertParam, UserInfo},
-    http::{
+    entity::user::user_info::{InsertParam, UserInfo}, error::db::DbError, http::{
         api::{
             ApiResult,
             user::{UserIdent, generate_passwd_hash},
         },
         extractor::ValidJson,
         utils::{validate_email, validate_passwd, validate_phone},
-    },
-    server::ServerState,
+    }, server::ServerState
 };
 
 #[derive(Deserialize, Clone)]
@@ -84,7 +82,9 @@ pub(super) async fn signup(
         passwd: &passwd_hash,
     };
 
-    let id = UserInfo::insert_and_return_id(&state.database, new_user).await?;
+    let mut tx = state.database.begin().await.map_err(DbError::from)?;
+    let id = UserInfo::insert_and_return_id(tx.as_mut(), new_user).await?;
+    tx.commit().await.map_err(DbError::from)?;
     tracing::info!("Successfully inserted a user into database.");
 
     let user_ident = UserIdent {

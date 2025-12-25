@@ -1,3 +1,7 @@
+use clap::Parser;
+
+use crate::cli::Cli;
+
 mod app_config;
 mod cli;
 mod database;
@@ -9,7 +13,9 @@ mod server;
 
 #[tokio::main]
 async fn main() {
-    server::start().await;
+    let cli = Cli::parse();
+
+    server::start(&cli).await;
 }
 
 // struct AsyncRunner<F> {

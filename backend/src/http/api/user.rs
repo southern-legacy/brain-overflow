@@ -44,8 +44,9 @@ pub(super) fn build_router(config: &AppConfig) -> Router<ServerState> {
         .route("/user", routing::delete(danger_zone::delete_account))
         .route("/user", routing::put(danger_zone::change_auth_info))
         .route("/user/bio", routing::get(redirect))
+        .route("/user/bio/{which}", routing::put(info::put))
         .layer(auth_layer)
-        .route("/user/{id}", routing::get(info::info))
+        .route("/user/{id}", routing::get(info::get))
         .route("/user", routing::post(signup::signup))
         .route("/user/login", routing::post(login::login))
 }

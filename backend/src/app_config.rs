@@ -5,20 +5,19 @@ pub mod logger;
 pub mod server;
 pub mod utils;
 
-use crate::app_config::auth::{StaticAuthConfig, AuthConfig};
-use crate::app_config::crab_vault::{StaticCrabVaultConfig, CrabVaultConfig};
+use crate::app_config::auth::{AuthConfig, StaticAuthConfig};
+use crate::app_config::crab_vault::{CrabVaultConfig, StaticCrabVaultConfig};
 use crate::app_config::db::DatabaseConfig;
-use crate::app_config::logger::{StaticLoggerConfig, LoggerConfig};
+use crate::app_config::logger::{LoggerConfig, StaticLoggerConfig};
 use crate::app_config::server::{ServerConfig, StaticServerConfig};
 use crate::cli::Cli;
 use crate::error::fatal::{FatalError, FatalResult, MultiFatalError};
 
 use self::db::StaticDatabaseConfig;
-use clap::Parser;
 use config::Config;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Default)]
 struct StaticAppConfig {
     #[serde(default)]
     server: StaticServerConfig, // server 配置字段
@@ -56,33 +55,17 @@ where
     fn into_runtime(self) -> FatalResult<Self::RuntimeConfig>;
 }
 
-impl AppConfig {
-    pub fn load(file_name: &str) -> Self {
-        let cli_conf = Cli::parse();
+impl ConfigItem for StaticAppConfig {
+    type RuntimeConfig = AppConfig;
 
-        let StaticAppConfig {
-            mut server,
+    fn into_runtime(self) -> FatalResult<Self::RuntimeConfig> {
+        let Self {
+            server,
             logger,
             database,
             auth,
             crab_vault,
-        } = Config::builder()
-            .add_source(
-                config::File::with_name(file_name)
-                    .required(true)
-                    .format(config::FileFormat::Toml),
-            )
-            .build()
-            .and_then(|v| v.try_deserialize())
-            .unwrap_or_else(|e| {
-                FatalError::from(e)
-                    .when("while reading the configuration file or deserializing it".into())
-                    .exit_now()
-            });
-
-        if let Some(port) = cli_conf.port {
-            server.port = port;
-        }
+        } = self;
 
         let (database_res, auth_res, crab_vault_res) = (
             database.into_runtime(),
@@ -96,13 +79,13 @@ impl AppConfig {
         #[allow(clippy::unnecessary_unwrap)]
         if database_res.is_ok() && auth_res.is_ok() && crab_vault_res.is_ok() {
             // unwrap safety: 全部在上面进行了 is_ok 检查
-            AppConfig {
+            Ok(AppConfig {
                 server,
                 logger,
                 database: database_res.unwrap(),
                 auth: auth_res.unwrap(),
                 crab_vault: crab_vault_res.unwrap(),
-            }
+            })
         } else {
             let _ = database_res.map_err(|mut e| errors.append(&mut e));
             let _ = auth_res.map_err(|mut e| errors.append(&mut e));
@@ -110,5 +93,45 @@ impl AppConfig {
 
             errors.exit_now()
         }
+    }
+}
+
+impl AppConfig {
+    pub fn load(cli: &Cli) -> Self {
+        let config_path = cli
+            .config_path
+            .as_ref()
+            .map(|v| v.clone())
+            .unwrap_or_else(|| {
+                std::env::home_dir()
+                    .map(|mut v| {
+                        v.push(".config/brain/brain-overflow.toml");
+                        v.to_string_lossy().to_string()
+                    })
+                    .unwrap_or("./brain-overflow.toml".to_string())
+            });
+
+        let static_config: StaticAppConfig = Config::builder()
+            .add_source(
+                config::File::with_name(cli.config_path.as_ref().unwrap_or(&config_path))
+                    .required(true)
+                    .format(config::FileFormat::Toml),
+            )
+            .build()
+            .and_then(|v| v.try_deserialize())
+            .unwrap_or_else(|e| {
+                FatalError::from(e)
+                    .when("while reading the configuration file or deserializing it".into())
+                    .exit_now()
+            });
+
+        let mut config = static_config.into_runtime().unwrap();
+        config.merge_cli(cli);
+
+        config
+    }
+
+    fn merge_cli(&mut self, cli: &Cli) {
+        self.server.port = cli.port;
     }
 }
