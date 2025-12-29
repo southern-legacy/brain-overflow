@@ -25,9 +25,9 @@ use crate::{
 #[tracing::instrument(name = "[user/info]", skip(state))]
 pub(super) async fn get(State(state): State<ServerState>, Path(id): Path<Uuid>) -> ApiResult {
     let res = {
-        let mut tx = state.database.begin().await.map_err(DbError::from)?;
-        let res = UserProfile::fetch_all_fields_by_id(tx.as_mut(), id).await?;
-        tx.commit().await.map_err(DbError::from)?;
+        let mut transacton = state.database.begin().await.map_err(DbError::from)?;
+        let res = UserProfile::fetch_all_fields_by_id(transacton.as_mut(), id).await?;
+        transacton.commit().await.map_err(DbError::from)?;
         res
     };
 
@@ -65,17 +65,17 @@ pub(super) async fn put(
     tracing::info!("genetated an asset handle, preparing for inserting");
 
     {
-        let mut tx = state.database.begin().await.map_err(DbError::from)?;
+        let mut transacton = state.database.begin().await.map_err(DbError::from)?;
 
-        let mut user_profile = UserProfile::fetch_all_fields_by_id(tx.as_mut(), ident.id).await?;
+        let mut user_profile = UserProfile::fetch_all_fields_by_id(transacton.as_mut(), ident.id).await?;
         match part {
             PathParam::Avatar => user_profile.avatar = Some(handle),
             PathParam::Banner => user_profile.banner = Some(handle),
             PathParam::Biography => user_profile.biography = Some(handle),
         }
-        new_asset.insert(tx.as_mut()).await?;
-        if user_profile.write_back(tx.as_mut()).await?.is_some() {
-            tx.commit().await.map_err(DbError::from)?;
+        new_asset.insert(transacton.as_mut()).await?;
+        if user_profile.write_back(transacton.as_mut()).await?.is_some() {
+            transacton.commit().await.map_err(DbError::from)?;
             tracing::info!("insertion suceeded");
             Ok((StatusCode::CREATED, [(header::LOCATION, url)]).into_response())
         } else {

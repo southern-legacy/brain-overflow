@@ -132,15 +132,15 @@ async fn try_change_auth_info(
     new_passwd_hash: Option<&String>,
 ) -> ApiResult {
     let res = {
-        let mut tx = state.database.begin().await.map_err(DbError::from)?;
+        let mut transacton = state.database.begin().await.map_err(DbError::from)?;
 
         let res =
         if let Some(new_email) = new_email {
-            UserInfo::update_email(tx.as_mut(), id, new_email).await
+            UserInfo::update_email(transacton.as_mut(), id, new_email).await
         } else if let Some(new_phone) = new_phone {
-            UserInfo::update_phone(tx.as_mut(), id, new_phone).await
+            UserInfo::update_phone(transacton.as_mut(), id, new_phone).await
         } else if let Some(new_passwd_hash) = new_passwd_hash {
-            UserInfo::update_passwd_hash(tx.as_mut(), id, new_passwd_hash).await
+            UserInfo::update_passwd_hash(transacton.as_mut(), id, new_passwd_hash).await
         } else {
             // 这里应该是 unreachable 的
             // return Err(StatusCode::UNPROCESSABLE_ENTITY.into_response())
@@ -148,7 +148,7 @@ async fn try_change_auth_info(
             unreachable!()
         };
 
-        tx.commit().await.map_err(DbError::from)?;
+        transacton.commit().await.map_err(DbError::from)?;
         res
     };
 

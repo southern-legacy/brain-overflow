@@ -90,10 +90,10 @@ pub(super) async fn signup(
 
     let id = {
         // 往数据库中添加 user_info 记录和 user_profile 记录
-        let mut tx = state.database.begin().await.map_err(DbError::from)?;
-        let id = UserInfo::insert_and_return_id(tx.as_mut(), new_user).await?;
-        UserProfile::insert(id, tx.as_mut()).await?;
-        tx.commit().await.map_err(DbError::from)?;
+        let mut transacton = state.database.begin().await.map_err(DbError::from)?;
+        let id = UserInfo::insert_and_return_id(transacton.as_mut(), new_user).await?;
+        UserProfile::insert(id, transacton.as_mut()).await?;
+        transacton.commit().await.map_err(DbError::from)?;
         id
     };
 

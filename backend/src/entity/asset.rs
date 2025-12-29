@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{Executor, PgPool, Postgres, query, query_as};
+use sqlx::{Executor, Postgres, query, query_as};
 use uuid::Uuid;
 
 use crate::error::db::DbResult;
@@ -17,6 +17,7 @@ pub enum OwnerType {
 
 #[derive(sqlx::Type, Serialize, Deserialize, Clone, Copy, Debug)]
 #[sqlx(rename_all = "snake_case", type_name = "asset_status")]
+#[derive(PartialEq)]
 pub enum AssetStatus {
     Init,
     Uploading,
@@ -62,9 +63,19 @@ impl Asset {
         matches!(self.deleted_at, Some(deleted) if deleted < Utc::now())
     }
 
-    pub async fn insert<'c, E>(self, db: E) -> DbResult<AssetHandle>
+    /// [`Asset::insert`] 函数的别名，只是抹去了返回值，更加符合语义
+    pub async fn write_back<'c, E>(&self, db: E) -> DbResult<()>
     where
-        E: Executor<'c, Database = Postgres>
+        E: Executor<'c, Database = Postgres>,
+    {
+        self.insert(db).await?;
+        Ok(())
+    }
+
+    /// 将一个新的 [`Asset`] 记录添加到数据库中
+    pub async fn insert<'c, E>(&self, db: E) -> DbResult<AssetHandle>
+    where
+        E: Executor<'c, Database = Postgres>,
     {
         let Self {
             id,
@@ -92,7 +103,7 @@ impl Asset {
             &history,
             created_at,
             updated_at,
-            deleted_at
+            deleted_at.as_ref()
         ).fetch_one(db).await?;
 
         Ok(query.id.into())
@@ -148,7 +159,8 @@ impl AssetHandle {
     }
 
     pub async fn get<'c, E>(&self, db: E) -> DbResult<Option<Asset>>
-    where E: Executor<'c, Database = Postgres>
+    where
+        E: Executor<'c, Database = Postgres>,
     {
         Ok(if self.allow_deleted {
             query_as!(
@@ -183,7 +195,10 @@ impl AssetHandle {
         })
     }
 
-    pub async fn update_to(&self, db: &PgPool, newest_key: &str) -> DbResult<Option<()>> {
+    pub async fn update_to<'c, E>(&self, db: E, newest_key: &str) -> DbResult<Option<()>>
+    where
+        E: Executor<'c, Database = Postgres>,
+    {
         let query = query!(
             r#"
                 UPDATE "asset"
@@ -202,7 +217,20 @@ impl AssetHandle {
         Ok(query.map(|_| ()))
     }
 
-    pub async fn logically_delete(&self, db: &PgPool) -> DbResult<Option<()>> {
+    /// ### **逻辑删除**
+    ///
+    /// 同所有的方法一样，这个函数的 `db` 也是一个执行器类型，可以是一个
+    /// [`sqlx::Transaction`]，也可以是一个
+    /// [`sqlx::Pool<Postgres>`]，
+    ///
+    /// 返回值说明：
+    /// - Ok(Some())：确确实实有一个 [`Asset`] 被标记为了删除
+    /// - Ok(None)：没找到这个 [`AssetHandle`] 指定的 [`Asset`]
+    /// - Err([`DbError`](crate::error::db::DbError))：发生了各种各样的错误
+    pub async fn logically_delete<'c, E>(&self, db: E) -> DbResult<Option<()>>
+    where
+        E: Executor<'c, Database = Postgres>,
+    {
         let query = query!(
             r#"UPDATE "asset" SET "deleted_at" = now() WHERE "id" = $1;"#,
             self.id
@@ -213,7 +241,10 @@ impl AssetHandle {
         Ok(query.map(|_| ()))
     }
 
-    pub async fn hard_delete(&self, db: &PgPool) -> DbResult<Option<()>> {
+    pub async fn hard_delete<'c, E>(&self, db: E) -> DbResult<Option<()>>
+    where
+        E: Executor<'c, Database = Postgres>,
+    {
         let query = query!(r#"DELETE FROM "asset" WHERE "id" = $1;"#, self.id)
             .fetch_optional(db)
             .await?;
