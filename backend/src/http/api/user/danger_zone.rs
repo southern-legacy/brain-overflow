@@ -3,8 +3,8 @@ use std::borrow::Cow;
 use crate::{
     error::db::DbError,
     http::{
-        api::{ApiResult, user::generate_passwd_hash},
-        utils::{validate_email, validate_passwd, validate_phone},
+        api::{ApiResult, user::generate_password_hash},
+        utils::{validate_email, validate_password, validate_phone},
     },
 };
 use axum::{Extension, debug_handler, extract::State, http::StatusCode, response::IntoResponse};
@@ -17,7 +17,7 @@ use validator::{Validate, ValidationError};
 use crate::{
     entity::user::user_info::UserInfo,
     http::{
-        api::user::{UserIdent, check_passwd},
+        api::user::{UserIdent, check_password},
         extractor::ValidJson,
     },
     server::ServerState,
@@ -28,10 +28,10 @@ use crate::{
 pub(super) async fn delete_account(
     state: State<ServerState>,
     ident: Extension<UserIdent>,
-    passwd: String,
+    password: String,
 ) -> ApiResult {
     let user_info = ident.retrieve_self_from_db(state.database.as_ref()).await?;
-    check_passwd(&user_info, &passwd).await?;
+    check_password(&user_info, &password).await?;
     try_delete_account(&state.database, ident.id).await
 }
 
@@ -64,10 +64,10 @@ pub(super) struct ChangeAuthParam {
     new_email: Option<String>,
     #[validate(custom(function = "validate_phone"))]
     new_phone: Option<String>,
-    #[validate(custom(function = "validate_passwd"))]
-    new_passwd: Option<String>,
+    #[validate(custom(function = "validate_password"))]
+    new_password: Option<String>,
 
-    passwd: String,
+    password: String,
 }
 
 impl ChangeAuthParam {
@@ -79,7 +79,7 @@ impl ChangeAuthParam {
         if self.new_phone.is_some() {
             count += 1;
         }
-        if self.new_passwd.is_some() {
+        if self.new_password.is_some() {
             count += 1;
         }
         if count == 1 {
@@ -92,7 +92,7 @@ impl ChangeAuthParam {
 }
 
 #[debug_handler]
-#[tracing::instrument(name = "[user/delete_account]", skip_all, fields(user_id = %ident.id))]
+#[tracing::instrument(name = "[user/change auth info]", skip_all, fields(user_id = %ident.id))]
 pub(super) async fn change_auth_info(
     state: State<ServerState>,
     ident: Extension<UserIdent>,
@@ -103,14 +103,14 @@ pub(super) async fn change_auth_info(
     let ChangeAuthParam {
         new_email,
         new_phone,
-        new_passwd,
-        passwd,
+        new_password,
+        password,
     } = param.unwrap();
 
-    check_passwd(&user_info, &passwd).await?;
+    check_password(&user_info, &password).await?;
 
-    let new_passwd_hash = match &new_passwd {
-        Some(val) => Some(generate_passwd_hash(val).await?),
+    let new_password_hash = match &new_password {
+        Some(val) => Some(generate_password_hash(val).await?),
         None => None,
     };
 
@@ -119,7 +119,7 @@ pub(super) async fn change_auth_info(
         ident.id,
         new_email.as_ref(),
         new_phone.as_ref(),
-        new_passwd_hash.as_ref(),
+        new_password_hash.as_ref(),
     )
     .await
 }
@@ -129,18 +129,17 @@ async fn try_change_auth_info(
     id: Uuid,
     new_email: Option<&String>,
     new_phone: Option<&String>,
-    new_passwd_hash: Option<&String>,
+    new_password_hash: Option<&String>,
 ) -> ApiResult {
     let res = {
         let mut transacton = state.database.begin().await.map_err(DbError::from)?;
 
-        let res =
-        if let Some(new_email) = new_email {
+        let res = if let Some(new_email) = new_email {
             UserInfo::update_email(transacton.as_mut(), id, new_email).await
         } else if let Some(new_phone) = new_phone {
             UserInfo::update_phone(transacton.as_mut(), id, new_phone).await
-        } else if let Some(new_passwd_hash) = new_passwd_hash {
-            UserInfo::update_passwd_hash(transacton.as_mut(), id, new_passwd_hash).await
+        } else if let Some(new_password_hash) = new_password_hash {
+            UserInfo::update_password_hash(transacton.as_mut(), id, new_password_hash).await
         } else {
             // 这里应该是 unreachable 的
             // return Err(StatusCode::UNPROCESSABLE_ENTITY.into_response())

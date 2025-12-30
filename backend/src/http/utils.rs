@@ -45,7 +45,7 @@ pub fn validate_phone(phone: &str) -> Result<(), ValidationError> {
 ///
 /// 同时注意：密码使用 Unicode 字符集，所以基本所有的字符都能作为密码的一部分
 ///
-pub fn validate_passwd(val: &str) -> Result<(), ValidationError> {
+pub fn validate_password(val: &str) -> Result<(), ValidationError> {
     let mut alphas = 0;
     let mut numerics = 0;
     let mut specials = 0;

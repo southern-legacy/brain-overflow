@@ -42,7 +42,7 @@ CREATE TABLE "user"."user_info" (
     "name"          VARCHAR(32)     NOT NULL,
     "email"         VARCHAR(256)    UNIQUE CHECK ("email" ~* '^[\w._%+-]+@[\w.-]+\.\w{2,}$'),
     "phone"         VARCHAR(16)     UNIQUE CHECK ("phone" ~* '^\+\d{1,15}$'),
-    "passwd_hash"   TEXT            NOT NULL,
+    "password_hash"   TEXT            NOT NULL,
 
     CONSTRAINT login_method CHECK (("email" IS NOT NULL) OR ("phone" IS NOT NULL))
 );

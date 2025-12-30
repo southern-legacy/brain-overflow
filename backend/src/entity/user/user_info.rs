@@ -11,14 +11,14 @@ pub struct UserInfo {
     pub phone: Option<String>,
 
     #[serde(skip)]
-    pub passwd_hash: String,
+    pub password_hash: String,
 }
 
 pub struct InsertParam<'a> {
     pub name: &'a str,
     pub email: Option<&'a String>,
     pub phone: Option<&'a String>,
-    pub passwd: &'a str,
+    pub password: &'a str,
 }
 
 impl UserInfo {
@@ -65,7 +65,7 @@ impl UserInfo {
             name,
             email,
             phone,
-            passwd,
+            password,
         }: InsertParam<'a>,
     ) -> DbResult<Uuid>
     where
@@ -73,7 +73,7 @@ impl UserInfo {
     {
         let res = sqlx::query!(
             r#"
-                INSERT INTO "user"."user_info" (id, name, email, phone, passwd_hash)
+                INSERT INTO "user"."user_info" (id, name, email, phone, password_hash)
                 VALUES ($1, $2, $3, $4, $5)
                 RETURNING "id";
             "#,
@@ -81,7 +81,7 @@ impl UserInfo {
             name,
             email,
             phone,
-            passwd
+            password
         ).fetch_one(db).await?;
 
         Ok(res.id)
@@ -141,10 +141,10 @@ impl UserInfo {
         Ok(statement.fetch_one(db).await?)
     }
 
-    pub async fn update_passwd_hash<'c, E>(
+    pub async fn update_password_hash<'c, E>(
         db: E,
         id: Uuid,
-        new_passwd_hash: &str,
+        new_password_hash: &str,
     ) -> DbResult<UserInfo>
     where
         E: Executor<'c, Database = Postgres>,
@@ -153,11 +153,11 @@ impl UserInfo {
             UserInfo,
             r#"
                 UPDATE "user"."user_info"
-                SET "passwd_hash" = $1
+                SET "password_hash" = $1
                 WHERE "id" = $2
                 RETURNING *;
             "#,
-            new_passwd_hash,
+            new_password_hash,
             id,
         );
         Ok(statement.fetch_one(db).await?)

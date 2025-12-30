@@ -17,10 +17,10 @@ use crate::{
     http::{
         api::{
             ApiResult,
-            user::{UserIdent, generate_passwd_hash},
+            user::{UserIdent, generate_password_hash},
         },
         extractor::ValidJson,
-        utils::{validate_email, validate_passwd, validate_phone},
+        utils::{validate_email, validate_password, validate_phone},
     },
     server::ServerState,
 };
@@ -61,8 +61,8 @@ pub struct SignUpParam {
     #[serde(flatten)]
     method: SignUpMethod,
 
-    #[validate(custom(function = "validate_passwd"))]
-    passwd: String,
+    #[validate(custom(function = "validate_password"))]
+    password: String,
 }
 
 #[debug_handler]
@@ -74,18 +74,18 @@ pub(super) async fn signup(
     let SignUpParam {
         name,
         method,
-        passwd,
+        password,
     } = param;
 
     let (phone, email) = method.get_tup_phone_email();
 
-    let passwd_hash = generate_passwd_hash(&passwd).await?;
+    let password_hash = generate_password_hash(&password).await?;
 
     let new_user = InsertParam {
         email: email.as_ref(),
         phone: phone.as_ref(),
         name: &name,
-        passwd: &passwd_hash,
+        password: &password_hash,
     };
 
     let id = {

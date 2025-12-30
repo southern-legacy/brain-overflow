@@ -97,10 +97,10 @@ impl From<UserInfo> for UserIdent {
 
 /// 检查密码是否正确
 ///
-/// `val` 中是 使用 argon2 哈希过后的密码，`passwd` 是明文密码
+/// `val` 中是 使用 argon2 哈希过后的密码，`password` 是明文密码
 #[tracing::instrument(name = "[user/check password]", skip_all)]
-async fn check_passwd(val: &UserInfo, passwd: &str) -> Result<(), Response> {
-    match argon2::verify_encoded(&val.passwd_hash, passwd.as_bytes()) {
+async fn check_password(val: &UserInfo, password: &str) -> Result<(), Response> {
+    match argon2::verify_encoded(&val.password_hash, password.as_bytes()) {
         Ok(true) => {
             tracing::info!("Authorization of user (id: {}) successfully.", val.id);
             Ok(())
@@ -120,9 +120,9 @@ async fn check_passwd(val: &UserInfo, passwd: &str) -> Result<(), Response> {
 }
 
 #[tracing::instrument(name = "[user/generate password]", skip_all)]
-async fn generate_passwd_hash(passwd: &str) -> Result<String, Response> {
+async fn generate_password_hash(password: &str) -> Result<String, Response> {
     let salt = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::now_v7().into_bytes());
-    match argon2::hash_encoded(passwd.as_bytes(), salt.as_bytes(), &ARGON2_CONFIG) {
+    match argon2::hash_encoded(password.as_bytes(), salt.as_bytes(), &ARGON2_CONFIG) {
         Ok(val) => Ok(val),
         Err(e) => {
             tracing::error!("Error occurred while hashing the password! Details: {e}");

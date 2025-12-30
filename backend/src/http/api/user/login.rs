@@ -6,10 +6,10 @@ use crate::{
     http::{
         api::{
             ApiResult,
-            user::{UserIdent, check_passwd},
+            user::{UserIdent, check_password},
         },
         extractor::ValidJson,
-        utils::{validate_email, validate_passwd, validate_phone},
+        utils::{validate_email, validate_password, validate_phone},
     },
     server::ServerState,
 };
@@ -34,8 +34,8 @@ pub(super) struct LoginParam {
     #[validate(nested)]
     method: LoginMethod,
 
-    #[validate(custom(function = "validate_passwd"))]
-    passwd: String,
+    #[validate(custom(function = "validate_password"))]
+    password: String,
 }
 
 #[debug_handler]
@@ -67,7 +67,7 @@ pub(super) async fn login(
         }
     };
 
-    check_passwd(&res, &param.passwd).await?;
+    check_password(&res, &param.password).await?;
 
     let user = UserIdent::from(res);
 

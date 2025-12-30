@@ -25,9 +25,7 @@ use crate::{
 #[tracing::instrument(name = "[user/info]", skip(state))]
 pub(super) async fn get(State(state): State<ServerState>, Path(id): Path<Uuid>) -> ApiResult {
     let res = {
-        let mut transacton = state.database.begin().await.map_err(DbError::from)?;
-        let res = UserProfile::fetch_all_fields_by_id(transacton.as_mut(), id).await?;
-        transacton.commit().await.map_err(DbError::from)?;
+        let res = UserProfile::fetch_all_fields_by_id(state.database.as_ref(), id).await?;
         res
     };
 

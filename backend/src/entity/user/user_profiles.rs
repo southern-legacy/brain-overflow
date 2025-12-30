@@ -6,6 +6,7 @@ use uuid::Uuid;
 use crate::{entity::asset::AssetHandle, error::db::DbResult};
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserProfile {
     pub user_id: Uuid,
     pub biography: Option<AssetHandle>,
