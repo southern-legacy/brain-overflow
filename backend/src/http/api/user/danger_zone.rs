@@ -30,7 +30,7 @@ pub(super) async fn delete_account(
     ident: Extension<UserIdent>,
     passwd: String,
 ) -> ApiResult {
-    let user_info = ident.retrieve_self_from_db(&state.database).await?;
+    let user_info = ident.retrieve_self_from_db(state.database.as_ref()).await?;
     check_passwd(&user_info, &passwd).await?;
     try_delete_account(&state.database, ident.id).await
 }
@@ -98,7 +98,7 @@ pub(super) async fn change_auth_info(
     ident: Extension<UserIdent>,
     param: ValidJson<ChangeAuthParam>,
 ) -> ApiResult {
-    let user_info = ident.retrieve_self_from_db(&state.database).await?;
+    let user_info = ident.retrieve_self_from_db(state.database.as_ref()).await?;
 
     let ChangeAuthParam {
         new_email,

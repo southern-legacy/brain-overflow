@@ -11,19 +11,22 @@ use crate::{
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub(super) struct StaticCrabVaultConfig {
     encoder: StaticJwtEncoderConfig,
+    location: String,
 }
 
 pub struct CrabVaultConfig {
     pub encoder_config: JwtEncoderConfig,
+    pub location: String,
 }
 
 impl ConfigItem for StaticCrabVaultConfig {
     type RuntimeConfig = CrabVaultConfig;
 
     fn into_runtime(self) -> FatalResult<CrabVaultConfig> {
-        let StaticCrabVaultConfig { encoder } = self;
+        let StaticCrabVaultConfig { encoder, location } = self;
         Ok(CrabVaultConfig {
             encoder_config: encoder.into_runtime()?,
+            location
         })
     }
 }

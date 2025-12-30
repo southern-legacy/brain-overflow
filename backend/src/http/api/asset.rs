@@ -44,17 +44,26 @@ async fn safe(
     let permmision = Permission::new_minimum()
         .permit_method(vec![HttpMethod::Safe])
         .permit_content_type(vec!["*".to_string()])
-        .permit_resource_pattern(asset.newest_key)
+        .permit_resource_pattern(&asset.newest_key)
         .restrict_maximum_size_option(None);
 
     let encoder_config = &state.config.crab_vault.encoder_config;
-    let token = encoder_config.encoder.encode_randomly(&Jwt::new(
+    let token = Jwt::new(
         &encoder_config.issue_as,
         &encoder_config.audience,
         permmision,
-    ))?;
+    );
 
-    Ok(token.into_response())
+    Ok((
+        StatusCode::OK,
+        // asset 结构体中的 newest_key 字段，就是客户端需要访问的地方（不带域名）
+        [(header::LOCATION, format!("{}/{}", state.config.crab_vault.location, asset.newest_key))],
+        json!({
+            "token": encoder_config.encoder.encode_randomly(&token)?
+        })
+        .to_string(),
+    )
+        .into_response())
 }
 
 #[debug_handler]
@@ -63,7 +72,7 @@ async fn start_upload(
     Path(id): Path<Uuid>,
     Extension(_user_ident): Extension<UserIdent>,
 ) -> ApiResult {
-    let encoding_config = &state.config.crab_vault.encoder_config;
+    let encoder_config = &state.config.crab_vault.encoder_config;
 
     let asset = {
         let mut transaction = state.database.begin().await.map_err(DbError::from)?;
@@ -81,8 +90,8 @@ async fn start_upload(
     };
 
     let token = Jwt::new(
-        &encoding_config.issue_as,
-        &encoding_config.audience,
+        &encoder_config.issue_as,
+        &encoder_config.audience,
         Permission::new()
             .permit_method(vec![HttpMethod::Put])
             .permit_resource_pattern(&asset.newest_key)
@@ -92,10 +101,10 @@ async fn start_upload(
 
     Ok((
         StatusCode::OK,
-        // asset 结构体中的 newest_key 字段，就是客户端需要访问的地方（带域名）
-        [(header::LOCATION, asset.newest_key)],
+        // asset 结构体中的 newest_key 字段，就是客户端需要访问的地方（不带域名）
+        [(header::LOCATION, format!("{}/{}", state.config.crab_vault.location, asset.newest_key))],
         json!({
-            "token": encoding_config.encoder.encode_randomly(&token)?
+            "token": encoder_config.encoder.encode_randomly(&token)?
         })
         .to_string(),
     )
@@ -132,12 +141,10 @@ async fn delete(
     Extension(_user_ident): Extension<UserIdent>,
 ) -> ApiResult {
     {
-        let mut transaction = state.database.begin().await.map_err(DbError::from)?;
-
         AssetHandle::from(id)
-            .logically_delete(transaction.as_mut())
+            .logically_delete(state.database.as_ref())
             .await?;
     }
 
-    todo!()
+    Ok(StatusCode::NO_CONTENT.into_response())
 }
