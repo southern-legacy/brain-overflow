@@ -59,10 +59,3 @@ CREATE TABLE "user"."user_profile" (
     "contact_me"    JSONB           NOT NULL DEFAULT '[]'::JSONB,
     "updated_at"    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
-
-CREATE TRIGGER "auto_insert_userprofile"
-AFTER INSERT ON "user"."user_info"
-FOR EACH ROW
-BEGIN
-    INSERT INTO "user"."user_profile" ("user_id") VALUE NEW."id";
-END

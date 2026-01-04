@@ -63,13 +63,42 @@ impl Asset {
         matches!(self.deleted_at, Some(deleted) if deleted < Utc::now())
     }
 
-    /// [`Asset::insert`] 函数的别名，只是抹去了返回值，更加符合语义
-    pub async fn write_back<'c, E>(&self, db: E) -> DbResult<()>
+    /// 更新 [`Asset`] 记录
+    pub async fn write_back<'c, E>(&self, db: E) -> DbResult<Option<()>>
     where
         E: Executor<'c, Database = Postgres>,
     {
-        self.insert(db).await?;
-        Ok(())
+        let Self {
+            id,
+            newest_key,
+            status,
+            owner,
+            owner_type,
+            history,
+            created_at,
+            updated_at,
+            deleted_at,
+        } = self;
+
+        let query = query!(
+            r#"
+                UPDATE asset
+                SET newest_key = $2, status = $3, owner = $4, owner_type = $5, history = $6, created_at = $7, updated_at = $8, deleted_at = $9
+                WHERE id = $1
+                RETURNING id;
+            "#,
+            id,
+            newest_key,
+            status as _,
+            owner,
+            owner_type as _,
+            &history,
+            created_at,
+            updated_at,
+            deleted_at.as_ref()
+        ).fetch_optional(db).await?;
+
+        Ok(query.map(|_| ()))
     }
 
     /// 将一个新的 [`Asset`] 记录添加到数据库中

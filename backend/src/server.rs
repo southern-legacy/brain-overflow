@@ -1,7 +1,7 @@
 use crate::{app_config::AppConfig, cli::Cli, database, http, logger};
+use ::http::StatusCode;
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
-use ::http::StatusCode;
 use sqlx::PgPool;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
@@ -24,7 +24,20 @@ pub struct ServerState {
 }
 
 pub async fn start(cli: &Cli) {
-    let config = Arc::new(AppConfig::load(cli));
+    let config_path = cli
+        .config_path
+        .as_ref()
+        .map(|v| v.clone())
+        .unwrap_or_else(|| {
+            std::env::home_dir()
+                .map(|mut v| {
+                    v.push(".config/brain/brain-overflow.toml");
+                    v.to_string_lossy().to_string()
+                })
+                .unwrap_or("./brain-overflow.toml".to_string())
+        });
+
+    let config = Arc::new(AppConfig::load(&config_path).merge_cli(cli));
 
     let logo = r"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣴⡶⠿⢶⣦⡀⠀⢰⣶⠀⣶⡆⢰⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀

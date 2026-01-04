@@ -10,19 +10,21 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
-    entity::asset::{AssetHandle, AssetStatus},
-    error::db::DbError,
-    http::api::{ApiResult, user::UserIdent},
-    server::ServerState,
+    app_config::AppConfig, entity::asset::{AssetHandle, AssetStatus}, error::db::DbError, http::{api::{ApiResult, user::UserIdent}, middleware::auth::AuthLayer}, server::ServerState
 };
 
-pub fn build_router() -> Router<ServerState> {
+pub fn build_router(config: &AppConfig) -> Router<ServerState> {
+    let auth_layer = AuthLayer::new(
+        config.auth.decoder_config.decoder.clone(),
+        |_, _, _, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
+    );
     Router::new()
-        .route("/asset/{id}", routing::get(safe))
-        .route("/asset/{id}", routing::head(safe))
         .route("/asset/{id}", routing::delete(delete))
         .route("/asset/{id}", routing::put(start_upload))
         .route("/asset/{id}/end", routing::any(end_upload))
+        .route_layer(auth_layer)
+        .route("/asset/{id}", routing::get(safe))
+        .route("/asset/{id}", routing::head(safe))
 }
 
 #[debug_handler]
@@ -56,8 +58,10 @@ async fn safe(
 
     Ok((
         StatusCode::OK,
-        // asset 结构体中的 newest_key 字段，就是客户端需要访问的地方（不带域名）
-        [(header::LOCATION, format!("{}/{}", state.config.crab_vault.location, asset.newest_key))],
+        [(
+            header::LOCATION,
+            state.config.crab_vault.location_of_asset(&asset.newest_key),
+        )],
         json!({
             "token": encoder_config.encoder.encode_randomly(&token)?
         })
@@ -101,8 +105,10 @@ async fn start_upload(
 
     Ok((
         StatusCode::OK,
-        // asset 结构体中的 newest_key 字段，就是客户端需要访问的地方（不带域名）
-        [(header::LOCATION, format!("{}/{}", state.config.crab_vault.location, asset.newest_key))],
+        [(
+            header::LOCATION,
+            state.config.crab_vault.location_of_asset(&asset.newest_key),
+        )],
         json!({
             "token": encoder_config.encoder.encode_randomly(&token)?
         })

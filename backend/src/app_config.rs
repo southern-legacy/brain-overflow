@@ -97,23 +97,10 @@ impl ConfigItem for StaticAppConfig {
 }
 
 impl AppConfig {
-    pub fn load(cli: &Cli) -> Self {
-        let config_path = cli
-            .config_path
-            .as_ref()
-            .map(|v| v.clone())
-            .unwrap_or_else(|| {
-                std::env::home_dir()
-                    .map(|mut v| {
-                        v.push(".config/brain/brain-overflow.toml");
-                        v.to_string_lossy().to_string()
-                    })
-                    .unwrap_or("./brain-overflow.toml".to_string())
-            });
-
+    pub fn load(path: &str) -> Self {
         let static_config: StaticAppConfig = Config::builder()
             .add_source(
-                config::File::with_name(cli.config_path.as_ref().unwrap_or(&config_path))
+                config::File::with_name(path)
                     .required(true)
                     .format(config::FileFormat::Toml),
             )
@@ -125,13 +112,14 @@ impl AppConfig {
                     .exit_now()
             });
 
-        let mut config = static_config.into_runtime().unwrap();
-        config.merge_cli(cli);
-
-        config
+        static_config
+            .into_runtime()
+            .map_err(|e| e.exit_now())
+            .unwrap()
     }
 
-    fn merge_cli(&mut self, cli: &Cli) {
+    pub fn merge_cli(mut self, cli: &Cli) -> Self {
         self.server.port = cli.port;
+        self
     }
 }

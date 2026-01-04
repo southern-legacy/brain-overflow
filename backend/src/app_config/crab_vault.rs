@@ -30,3 +30,11 @@ impl ConfigItem for StaticCrabVaultConfig {
         })
     }
 }
+
+impl CrabVaultConfig {
+    /// # 获取 key 对应的 url（包含域名）
+    /// 实现非常简单，就是一个 `format`
+    pub fn location_of_asset(&self, key: &str) -> String {
+        format!("{}{}", self.location, key)
+    }
+}
