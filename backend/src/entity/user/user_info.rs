@@ -82,7 +82,9 @@ impl UserInfo {
             email,
             phone,
             password
-        ).fetch_one(db).await?;
+        )
+        .fetch_one(db)
+        .await?;
 
         Ok(res.id)
     }

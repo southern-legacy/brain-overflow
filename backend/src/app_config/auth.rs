@@ -8,7 +8,7 @@ use crate::{
     app_config::{
         ConfigItem,
         utils::{
-            StaticJwtDecoderConfig, StaticJwtEncoderConfig, JwtDecoderConfig, JwtEncoderConfig,
+            JwtDecoderConfig, JwtEncoderConfig, StaticJwtDecoderConfig, StaticJwtEncoderConfig,
         },
     },
     error::fatal::{FatalError, FatalResult, MultiFatalError},
@@ -45,10 +45,7 @@ impl ConfigItem for StaticAuthConfig {
     type RuntimeConfig = AuthConfig;
 
     fn into_runtime(self) -> FatalResult<AuthConfig> {
-        let StaticAuthConfig {
-            encoder,
-            decoder,
-        } = self;
+        let StaticAuthConfig { encoder, decoder } = self;
         let mut errors = MultiFatalError::new();
 
         let encoder = encoder

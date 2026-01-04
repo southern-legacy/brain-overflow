@@ -11,5 +11,5 @@ pub struct Cli {
 
     /// Which configuration file to read, default to ~/.config/brain/brain-overflow.toml
     #[arg(long = "config-path")]
-    pub config_path: Option<String>
+    pub config_path: Option<String>,
 }

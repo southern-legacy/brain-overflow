@@ -46,17 +46,23 @@ pub(super) async fn login(
 ) -> ApiResult {
     let method = &param.method;
 
-    let res = match {
+    let res = {
         // 我们先查找数据库中的记录
         let mut transacton = state.database.begin().await.map_err(DbError::from)?;
         let res = match method {
-            LoginMethod::Phone(num) => UserInfo::fetch_all_fields_by_phone(transacton.as_mut(), num).await,
-            LoginMethod::Email(add) => UserInfo::fetch_all_fields_by_email(transacton.as_mut(), add).await,
+            LoginMethod::Phone(num) => {
+                UserInfo::fetch_all_fields_by_phone(transacton.as_mut(), num).await
+            }
+            LoginMethod::Email(add) => {
+                UserInfo::fetch_all_fields_by_email(transacton.as_mut(), add).await
+            }
             LoginMethod::Id(id) => UserInfo::fetch_all_fields_by_id(transacton.as_mut(), *id).await,
         };
         transacton.commit().await.map_err(DbError::from)?;
         res
-    } {
+    };
+
+    let res = match res {
         Ok(val) => val,
         Err(e) => {
             if e.is_not_found() {

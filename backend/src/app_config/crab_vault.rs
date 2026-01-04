@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     app_config::{
         ConfigItem,
-        utils::{StaticJwtEncoderConfig, JwtEncoderConfig},
+        utils::{JwtEncoderConfig, StaticJwtEncoderConfig},
     },
     error::fatal::FatalResult,
 };
@@ -26,7 +26,7 @@ impl ConfigItem for StaticCrabVaultConfig {
         let StaticCrabVaultConfig { encoder, location } = self;
         Ok(CrabVaultConfig {
             encoder_config: encoder.into_runtime()?,
-            location
+            location,
         })
     }
 }

@@ -24,18 +24,14 @@ pub struct ServerState {
 }
 
 pub async fn start(cli: &Cli) {
-    let config_path = cli
-        .config_path
-        .as_ref()
-        .map(|v| v.clone())
-        .unwrap_or_else(|| {
-            std::env::home_dir()
-                .map(|mut v| {
-                    v.push(".config/brain/brain-overflow.toml");
-                    v.to_string_lossy().to_string()
-                })
-                .unwrap_or("./brain-overflow.toml".to_string())
-        });
+    let config_path = cli.config_path.clone().unwrap_or_else(|| {
+        std::env::home_dir()
+            .map(|mut v| {
+                v.push(".config/brain/brain-overflow.toml");
+                v.to_string_lossy().to_string()
+            })
+            .unwrap_or("./brain-overflow.toml".to_string())
+    });
 
     let config = Arc::new(AppConfig::load(&config_path).merge_cli(cli));
 

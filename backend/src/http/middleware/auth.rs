@@ -1,12 +1,15 @@
 use std::{
-    convert::Infallible, marker::PhantomData, pin::Pin, sync::Arc, task::{Context, Poll}
+    convert::Infallible,
+    marker::PhantomData,
+    pin::Pin,
+    sync::Arc,
+    task::{Context, Poll},
 };
 
 use axum::{
-    extract::Request, http::{
-        HeaderMap,
-        header::AUTHORIZATION,
-    }, response::{IntoResponse, Response}
+    extract::Request,
+    http::{HeaderMap, header::AUTHORIZATION},
+    response::{IntoResponse, Response},
 };
 use crab_vault::auth::{HttpMethod, Jwt, JwtDecoder, error::AuthError};
 use serde::Deserialize;
@@ -124,12 +127,12 @@ where
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     /// ## 此函数将在堆上创建一个 [`JwtConfig`] 结构作为这个中间件的配置
-    /// 
+    ///
     /// ### 参数说明
-    /// 
+    ///
     /// - `decoder`：解码 Jwt 的结构
     /// - `validator`：验证 token 上下文的
-    /// 
+    ///
     /// > `validator` 接受 (&HeaderMap, HttpMethod, &str, Jwt<T>) 返回一个 [`Pin`] 住的 [`Box`]<[`Future`]>，
     /// >
     /// > 这个 [`Future`] 可以返回一个 [`Result`]

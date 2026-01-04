@@ -37,6 +37,6 @@ async fn main() {
 //     let runner = AsyncRunner {
 //         handler: async |s: &str| s.len(),
 //     };
-    
+
 //     runner.run("Hello Rust 1.85").await;
 // }

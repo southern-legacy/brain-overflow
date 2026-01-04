@@ -10,7 +10,14 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
-    app_config::AppConfig, entity::asset::{AssetHandle, AssetStatus}, error::db::DbError, http::{api::{ApiResult, user::UserIdent}, middleware::auth::AuthLayer}, server::ServerState
+    app_config::AppConfig,
+    entity::asset::{AssetHandle, AssetStatus},
+    error::db::DbError,
+    http::{
+        api::{ApiResult, user::UserIdent},
+        middleware::auth::AuthLayer,
+    },
+    server::ServerState,
 };
 
 pub fn build_router(config: &AppConfig) -> Router<ServerState> {

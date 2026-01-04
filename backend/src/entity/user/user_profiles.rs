@@ -46,9 +46,12 @@ impl UserProfile {
             r#"
                 INSERT INTO "user"."user_profile"(user_id, updated_at)
                 VALUES ($1, $2);
-            "#, id, Utc::now()
+            "#,
+            id,
+            Utc::now()
         )
-        .execute(db).await?;
+        .execute(db)
+        .await?;
 
         Ok(())
     }
@@ -68,7 +71,7 @@ impl UserProfile {
 
         match res.rows_affected() {
             0 => Ok(None),
-            _ => Ok(Some(()))
+            _ => Ok(Some(())),
         }
     }
 }
