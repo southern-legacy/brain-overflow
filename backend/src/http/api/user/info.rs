@@ -48,7 +48,7 @@ pub(super) async fn put(
     Extension(ident): Extension<UserIdent>,
 ) -> ApiResult {
     let handle = AssetHandle::generate(OwnerType::User);
-    let url = format!("/assets/{}", handle.id);
+    let url = format!("/asset/{}", handle.id);
     let new_asset = Asset {
         id: handle.id,
         newest_key: url.clone(),
