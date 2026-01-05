@@ -3,7 +3,7 @@ pub mod crab_vault;
 pub mod db;
 pub mod logger;
 pub mod server;
-pub mod utils;
+pub mod util;
 
 use crate::app_config::auth::{AuthConfig, StaticAuthConfig};
 use crate::app_config::crab_vault::{CrabVaultConfig, StaticCrabVaultConfig};

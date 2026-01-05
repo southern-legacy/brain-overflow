@@ -9,7 +9,7 @@ use std::sync::LazyLock;
 use uuid::Uuid;
 
 use crate::app_config::AppConfig;
-use crate::app_config::utils::JwtEncoderConfig;
+use crate::app_config::util::JwtEncoderConfig;
 use crate::{
     entity::user::user_info::UserInfo, http::middleware::auth::AuthLayer, server::ServerState,
 };

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     app_config::{
         ConfigItem,
-        utils::{
+        util::{
             JwtDecoderConfig, JwtEncoderConfig, StaticJwtDecoderConfig, StaticJwtEncoderConfig,
         },
     },
