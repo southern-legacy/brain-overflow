@@ -16,7 +16,7 @@ use crate::{
     },
     http::{
         api::{ApiResult, user::UserIdent},
-        extractor::Path,
+        extractor::prelude::Path,
     },
     server::ServerState,
 };
