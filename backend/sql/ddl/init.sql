@@ -1,5 +1,3 @@
---------------------------------------------------
--- asset schema 全局 asset 资源表
 CREATE TYPE asset_status AS ENUM (
     'init',
     'uploading',
@@ -24,7 +22,7 @@ CREATE TABLE asset(
     "status"        asset_status    NOT NULL        DEFAULT 'init',
 
     "owner"         uuid            NOT NULL,
-    "owner_type"    owner_type     NOT NULL,
+    "owner_type"    owner_type      NOT NULL,
 
     "history"       TEXT[]          NOT NULL        DEFAULT ARRAY[]::TEXT[],
 
@@ -33,8 +31,7 @@ CREATE TABLE asset(
     "deleted_at"    timestamptz                     DEFAULT NULL
 );
 
----------------------------------------------------
--- user schema，USER 的一切信息都在这个 schema 里面
+-- USER
 CREATE SCHEMA "user" AUTHORIZATION postgres;
 
 CREATE TABLE "user"."user_info" (
@@ -52,10 +49,10 @@ CREATE INDEX btree_index_email ON "user"."user_info" USING btree (LOWER(email));
 CREATE INDEX btree_index_phone ON "user"."user_info" USING btree (phone);
 
 CREATE TABLE "user"."user_profile" (
-    "user_id"       UUID          PRIMARY KEY REFERENCES "user"."user_info"(id) ON DELETE CASCADE,
-    "biography"     UUID            NOT NULL REFERENCES "asset",
-    "avatar"        UUID            NOT NULL REFERENCES "asset",
-    "banner"        UUID            NOT NULL REFERENCES "asset",
+    "user_id"       UUID            PRIMARY KEY REFERENCES "user"."user_info"(id) ON DELETE CASCADE,
+    "biography"     UUID            REFERENCES "asset" DEFAULT NULL,
+    "avatar"        UUID            REFERENCES "asset" DEFAULT NULL,
+    "banner"        UUID            REFERENCES "asset" DEFAULT NULL,
     "contact_me"    JSONB           NOT NULL DEFAULT '[]'::JSONB,
     "updated_at"    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );

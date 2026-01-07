@@ -28,7 +28,7 @@ CREATE TABLE asset(
     "status"        asset_status    NOT NULL        DEFAULT 'init',
 
     "owner"         uuid            NOT NULL,
-    "owner_type"    owner_type     NOT NULL,
+    "owner_type"    owner_type      NOT NULL,
 
     "history"       TEXT[]          NOT NULL        DEFAULT ARRAY[]::TEXT[],
 
