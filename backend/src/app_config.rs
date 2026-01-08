@@ -105,10 +105,15 @@ impl AppConfig {
                     .format(config::FileFormat::Toml),
             )
             .build()
-            .and_then(|v| v.try_deserialize())
             .unwrap_or_else(|e| {
                 FatalError::from(e)
-                    .when("while reading the configuration file or deserializing it".into())
+                    .when("while reading the configuration file".into())
+                    .exit_now()
+            })
+            .try_deserialize()
+            .unwrap_or_else(|e| {
+                FatalError::from(e)
+                    .when("while deserializing the configuration file".into())
                     .exit_now()
             });
 

@@ -77,11 +77,11 @@ impl FatalError {
 
     pub fn into_message(self) -> String {
         if self.source.is_empty() {
-            format!("    - {}", self.general_message)
+            format!("    * {}", self.general_message)
         } else {
-            let mut message = format!("    - {}", self.general_message);
+            let mut message = format!("    * {}", self.general_message);
             for src in self.source.into_iter().rev() {
-                message.push_str(&format!("\n    | {src}"))
+                message.push_str(&format!("\n      {src}"))
             }
             message
         }
