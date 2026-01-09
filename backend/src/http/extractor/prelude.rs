@@ -19,15 +19,22 @@ pub struct ValidJson<T>(pub T);
 #[from_request(via(axum_valid::Valid), rejection(ApiError))]
 pub struct Valid<T>(pub T);
 
+/// Basically same as [`Query`](axum::extract::Query),
+/// but the rejection type casted into [`ApiError`]
 #[allow(dead_code)]
 #[derive(FromRequestParts)]
 #[from_request(via(axum::extract::Query), rejection(ApiError))]
 pub struct Query<T>(pub T);
 
+/// Basically same as [`Path`](axum::extract::Path),
+/// but the rejection type casted into [`ApiError`]
 #[derive(FromRequestParts)]
 #[from_request(via(axum::extract::Path), rejection(ApiError))]
 pub struct Path<T>(pub T);
 
+/// Basically same as [`Json`](axum::extract::Json), 
+///
+/// but the rejection type casted into [`ApiError`]
 #[derive(FromRequest)]
 #[from_request(via(axum::extract::Json), rejection(ApiError))]
 pub struct Json<T>(pub T);
@@ -53,27 +60,6 @@ impl<T> HasValidate for Json<T> {
 
     fn get_validate(&self) -> &Self::Validate {
         &self.0
-    }
-}
-
-impl<T> ValidJson<T>
-where
-    T: Validate + for<'de> Deserialize<'de>,
-{
-    pub fn unwrap(self) -> T {
-        self.0
-    }
-}
-
-impl<S, T> FromRequest<S> for ValidJson<T>
-where
-    S: Send + Sync,
-    T: Validate + for<'de> Deserialize<'de>,
-    Valid<Json<T>>: FromRequest<S, Rejection = ApiError>,
-{
-    type Rejection = ApiError;
-    async fn from_request(parts: Request, state: &S) -> Result<Self, Self::Rejection> {
-        Ok(ValidJson(Valid::from_request(parts, state).await?.0.0))
     }
 }
 
@@ -103,3 +89,14 @@ where
     }
 }
 
+impl<S, T> FromRequest<S> for ValidJson<T>
+where
+    S: Send + Sync,
+    T: Validate + for<'de> Deserialize<'de>,
+    Valid<Json<T>>: FromRequest<S, Rejection = ApiError>,
+{
+    type Rejection = ApiError;
+    async fn from_request(parts: Request, state: &S) -> Result<Self, Self::Rejection> {
+        Ok(ValidJson(Valid::from_request(parts, state).await?.0.0))
+    }
+}
