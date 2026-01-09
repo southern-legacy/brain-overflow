@@ -3,13 +3,14 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
+use validator::ValidationErrors;
 
 use crate::error::CustomError;
 
 #[derive(Serialize, Debug)]
 pub struct ApiError {
     kind: ApiErrorKind,
-    context: Option<String>,
+    context: Vec<serde_json::Value>,
 }
 
 #[derive(Serialize, Clone, Copy, Debug)]
@@ -64,8 +65,8 @@ impl ApiErrorKind {
 }
 
 impl ApiError {
-    pub fn with_context<T: ToString>(mut self, error: T) -> Self {
-        self.context = Some(error.to_string());
+    pub fn with_context<T: Serialize>(mut self, error: T) -> Self {
+        self.context.insert(0, serde_json::json!(error));
         self
     }
 }
@@ -80,7 +81,7 @@ impl CustomError for ApiError {
     fn new(kind: ApiErrorKind) -> Self {
         Self {
             kind,
-            context: None,
+            context: vec![],
         }
     }
 }
@@ -127,9 +128,13 @@ impl From<axum::extract::rejection::PathRejection> for ApiError {
 impl From<axum_valid::ValidRejection<ApiError>> for ApiError {
     fn from(value: axum_valid::ValidRejection<ApiError>) -> Self {
         match value {
-            axum_valid::ValidationRejection::Valid(e) => {
-                Self::new(ApiErrorKind::BadRequest).with_context(e)
-            }
+            axum_valid::ValidationRejection::Valid(ValidationErrors(e)) => Self {
+                kind: ApiErrorKind::BadRequest,
+                context: e
+                    .into_iter()
+                    .map(|(v, e)| serde_json::json!({ v: e }))
+                    .collect(),
+            },
             axum_valid::ValidationRejection::Inner(e) => e,
         }
     }
