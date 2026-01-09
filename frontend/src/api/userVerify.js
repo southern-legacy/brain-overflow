@@ -9,10 +9,10 @@ import request from '@/utils/request'
  * @param {*} passwd user password
  * @returns {*}
  */
-export const userRegisService = (name, email, phone, passwd) => {
+export const userRegisService = (name, email, phone, password) => {
   const data = {
     name,
-    passwd,
+    password,
   }
 
   if (email) {
@@ -23,7 +23,7 @@ export const userRegisService = (name, email, phone, passwd) => {
   }
 
   return request({
-    url: '/usr',
+    url: '/user',
     method: 'post',
     data,
   })
@@ -38,9 +38,9 @@ export const userRegisService = (name, email, phone, passwd) => {
  * @param {*} passwd user password
  * @returns {*}
  */
-export const userLoginService = (id, email, phone, passwd) => {
+export const userLoginService = (id, email, phone, password) => {
   const data = {
-    passwd,
+    password,
   }
   if (id) {
     data.id = id
@@ -53,7 +53,7 @@ export const userLoginService = (id, email, phone, passwd) => {
   }
 
   return request({
-    url: '/usr/login',
+    url: '/user/login',
     method: 'post',
     data,
   })

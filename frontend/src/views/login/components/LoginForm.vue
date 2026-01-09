@@ -5,9 +5,12 @@
 
 <script setup>
 import { ref } from 'vue'
-import { userLoginService } from '@/api/userLogin'
+import { userLoginService } from '@/api/userVerify'
 import { useUserStore } from '@/stores'
+import { useRouter } from 'vue-router'
 
+const userStore = useUserStore()
+const router = useRouter()
 // stats
 const formModel = ref({
   id: '',
@@ -29,8 +32,12 @@ const selectOptions = [
 // validate rules
 const rules = {
   id: [
-    { required: true, message: '请输入id', trigger: 'blur' },
-    { pattern: /^\d+$/, message: '请输入正确格式的id', trigger: 'blur' },
+    { required: true, message: '请输入用户ID（UUID）', trigger: 'blur' },
+    {
+      pattern: /^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$/,
+      message: '请输入正确格式的 UUID',
+      trigger: 'blur',
+    },
   ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
@@ -81,14 +88,14 @@ const rules = {
  */
 const handleLogin = async () => {
   await form.value.validate()
-  let token = ''
+  let res = ''
   try {
     if (selectLogin.value === 'id') {
-      token = await userLoginService(+formModel.value.id, '', '', formModel.value.password)
+      res = await userLoginService(formModel.value.id, '', '', formModel.value.password)
     } else if (selectLogin.value === 'email') {
-      token = await userLoginService('', formModel.value.email, '', formModel.value.password)
+      res = await userLoginService('', formModel.value.email, '', formModel.value.password)
     } else if (selectLogin.value === 'phone') {
-      token = await userLoginService(
+      res = await userLoginService(
         '',
         '',
         formModel.value.phone.replace(/\s/g, ''),
@@ -102,8 +109,11 @@ const handleLogin = async () => {
     type: 'success',
     message: '恭喜您，登录成功',
   })
-  const userStore = useUserStore()
-  userStore.setToken(token)
+  console.log(res)
+
+  userStore.setUserInfo({ id: res.id, name: res.name, email: res.email, phone: res.phone })
+  userStore.setToken(res.token)
+  router.push('/')
 }
 
 const emit = defineEmits(['changingAuth'])

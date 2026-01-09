@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue'
-import { userRegisService } from '@/api/userLogin'
+import { userRegisService } from '@/api/userVerify'
 import { jwtDecode } from 'jwt-decode'
+import { ElMessage } from 'element-plus'
 
 // form ref
 const form = ref(null)
@@ -29,7 +30,7 @@ const defaultForm = {
   rePassword: '',
 }
 
-const emit = defineEmits(['changingAuth'])
+const emit = defineEmits(['changingAuth', 'regisSuccess'])
 const changeAuth = () => {
   formModel.value = defaultForm
   emit('changingAuth')
@@ -95,24 +96,24 @@ const rules = ref({
 })
 const handleRegis = async () => {
   await form.value.validate()
-  let decodedToken = ''
+  let res = null
   try {
     if (formModel.value.regisType === 'phone') {
-      const res = await userRegisService(
+      res = await userRegisService(
         formModel.value.name,
         '',
         formModel.value.phone.replace(/\s/g, ''),
         formModel.value.password,
       )
-      decodedToken = jwtDecode(res)
+      console.log(res)
     } else {
-      const res = await userRegisService(
+      res = await userRegisService(
         formModel.value.name,
         formModel.value.email,
         '',
         formModel.value.password,
       )
-      decodedToken = jwtDecode(res)
+      console.log(res)
     }
   } catch (err) {
     if (err.status === 422 && err.code === 'unique') {
@@ -121,16 +122,12 @@ const handleRegis = async () => {
         message: '当前账号已被人注册，请修改你的用户名或注册方式',
       })
     }
+    return ElMessage({
+      type: 'error',
+      message: '注册错误',
+    })
   }
-  console.log(decodedToken)
-
-  ElMessage({
-    type: 'success',
-    duration: 0,
-    message: `注册成功, 您的id为: ${decodedToken.id}`,
-    showClose: true,
-  })
-
+  emit('regisSuccess', res.id)
   emit('changingAuth')
 }
 </script>
