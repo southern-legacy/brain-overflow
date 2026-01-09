@@ -13,7 +13,11 @@ export const useUserStore = defineStore(
     const setUserInfo = (payload) => {
       userInfo.value = payload
     }
-    return { token, setToken, userInfo, setUserInfo }
+    const logout = () => {
+      setToken('')
+      setUserInfo({})
+    }
+    return { token, setToken, userInfo, setUserInfo, logout }
   },
   {
     persist: true,

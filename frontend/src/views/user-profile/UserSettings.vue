@@ -1,8 +1,9 @@
 <script setup>
 import { Tickets, User, Setting, Message, Back } from '@element-plus/icons-vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 let router = useRouter()
+let route = useRoute()
 </script>
 
 <template>
@@ -19,22 +20,26 @@ let router = useRouter()
         <!-- 分割线，视觉上区分操作和导航 -->
         <div class="nav-divider"></div>
 
-        <el-menu-item index="2" class="nav-item">
+        <el-menu-item index="2" class="nav-item" @click="router.push('/user/settings/profile')">
           <el-icon><Tickets /></el-icon>
           <span>资料设置</span>
         </el-menu-item>
 
-        <el-menu-item index="3" class="nav-item">
+        <el-menu-item index="3" class="nav-item" @click="router.push('/user/settings/account')">
           <el-icon><User /></el-icon>
           <span>账号设置</span>
         </el-menu-item>
 
-        <el-menu-item index="4" class="nav-item">
+        <el-menu-item index="4" class="nav-item" @click="router.push('/user/settings/general')">
           <el-icon><Setting /></el-icon>
           <span>通用设置</span>
         </el-menu-item>
 
-        <el-menu-item index="5" class="nav-item">
+        <el-menu-item
+          index="5"
+          class="nav-item"
+          @click="router.push('/user/settings/notification')"
+        >
           <el-icon><Message /></el-icon>
           <span>消息设置</span>
         </el-menu-item>
@@ -45,8 +50,8 @@ let router = useRouter()
     <el-card class="setting-content" shadow="never">
       <template #header>
         <div class="content-header">
-          <span class="title">个人资料</span>
-          <span class="subtitle">管理您的个人信息和偏好设置</span>
+          <span class="title">{{ route.meta.title ?? '设置' }}</span>
+          <span class="subtitle">{{ route.meta.subTitle ?? '欢迎来到设置界面' }}</span>
         </div>
       </template>
       <div class="content-body">

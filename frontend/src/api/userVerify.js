@@ -58,3 +58,34 @@ export const userLoginService = (id, email, phone, password) => {
     data,
   })
 }
+
+/**
+ * change user verification
+ *
+ * @param {*} password password before
+ * @param {*} newPassword new password, change one at a time
+ * @param {*} newEmail new email, change one at a time
+ * @param {*} newPhone new phone, change one at a time
+ * @returns {*}
+ */
+export const changeUserVerification = (password, newPassword, newEmail, newPhone) => {
+  const data = {
+    password,
+  }
+  if (newPassword) data.newPassword = newPassword
+  if (newEmail) data.newEmail = newEmail
+  if (newPhone) data.newPhone = newPhone
+  return request({
+    url: '/user',
+    method: 'put',
+    data,
+  })
+}
+
+export const deleteUserAccount = (password) => {
+  return request({
+    url: '/user',
+    method: 'delete',
+    data: password,
+  })
+}

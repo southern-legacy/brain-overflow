@@ -9,8 +9,9 @@
  */
 
 import { useRouter } from 'vue-router'
-
+import { useUserStore } from '@/stores'
 const router = useRouter()
+const userStore = useUserStore()
 
 function jumpToProfile() {
   router.push('/user/profile')
@@ -18,6 +19,14 @@ function jumpToProfile() {
 
 function jumpToSetting() {
   router.push('/user/settings')
+}
+
+function handleLogOut() {
+  userStore.logout()
+  ElMessage({
+    type: 'success',
+    message: '退出登陆成功',
+  })
 }
 </script>
 
@@ -70,7 +79,7 @@ function jumpToSetting() {
           href="https://github.com/southern-legacy/brain-overflow"
           >GitHub</el-link
         >
-        <el-link class="link" underline="never">退出登录</el-link>
+        <el-link class="link" underline="never" @click="handleLogOut">退出登录</el-link>
       </el-row>
     </div>
   </el-popover>

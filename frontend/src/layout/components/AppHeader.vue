@@ -4,19 +4,21 @@
 -->
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores'
 import { Search, Edit, Monitor } from '@element-plus/icons-vue' // icons for buttons
 import UserAvatar from '@/components/UserAvatar.vue'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 // state managemnet
 const keyword = ref('')
 const isSearchFocused = ref(false)
 
-// todo: get real login state from pinia
-const isLoggedIn = ref(true)
+// login state
+const isLoggedIn = computed(() => !!userStore.token)
 
 // routes
 const handleCommand = (cmd) => {
@@ -35,9 +37,6 @@ const handleCommand = (cmd) => {
       break
   }
 }
-
-// simulate switching the login state
-const toggleLoginState = () => (isLoggedIn.value = !isLoggedIn.value)
 </script>
 
 <template>
@@ -93,8 +92,6 @@ const toggleLoginState = () => (isLoggedIn.value = !isLoggedIn.value)
             <div class="avatar-wrapper">
               <UserAvatar />
             </div>
-            <!-- test button -->
-            <el-button link size="small" type="info" @click="toggleLoginState">退出</el-button>
           </template>
 
           <template v-else>
