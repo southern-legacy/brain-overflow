@@ -1,5 +1,4 @@
 mod api;
-mod auth;
 mod extractor;
 mod middleware;
 mod utils;

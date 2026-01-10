@@ -8,23 +8,6 @@ use validator::Validate;
 
 pub mod utils;
 
-#[allow(dead_code)]
-/// Validated [query](axum::extract::Query), rejection casted into [`ApiError`]
-pub struct ValidQuery<T>(pub T)
-where
-    T: Validate + for<'de> Deserialize<'de> + Send;
-
-#[allow(dead_code)]
-/// Validated [path](axum::extract::Path), rejection casted into [`ApiError`]
-pub struct ValidPath<T>(pub T)
-where
-    T: Validate + for<'de> Deserialize<'de> + Send;
-
-/// Validated [json](axum::extract::Json), rejection casted into [`ApiError`]
-pub struct ValidJson<T>(pub T)
-where
-    T: Validate + DeserializeOwned;
-
 /// Basically same as [`Query`](axum::extract::Query),
 /// but rejection casted into [`ApiError`]
 #[allow(dead_code)]
@@ -45,6 +28,23 @@ pub struct Path<T>(pub T);
 #[derive(FromRequest)]
 #[from_request(via(axum::extract::Json), rejection(ApiError))]
 pub struct Json<T>(pub T);
+
+#[allow(dead_code)]
+/// Validated [query](axum::extract::Query), rejection casted into [`ApiError`]
+pub struct ValidQuery<T>(pub T)
+where
+    T: Validate + for<'de> Deserialize<'de> + Send;
+
+#[allow(dead_code)]
+/// Validated [path](axum::extract::Path), rejection casted into [`ApiError`]
+pub struct ValidPath<T>(pub T)
+where
+    T: Validate + for<'de> Deserialize<'de> + Send;
+
+/// Validated [json](axum::extract::Json), rejection casted into [`ApiError`]
+pub struct ValidJson<T>(pub T)
+where
+    T: Validate + DeserializeOwned;
 
 impl<S, T> FromRequestParts<S> for ValidPath<T>
 where

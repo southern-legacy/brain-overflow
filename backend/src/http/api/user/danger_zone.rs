@@ -4,7 +4,7 @@ use crate::{
     error::db::DbError,
     http::{
         api::{ApiResult, user::generate_password_hash},
-        utils::{validate_email, validate_password, validate_phone},
+        utils::{validate_email, validate_password_length, validate_phone},
     },
 };
 use axum::{Extension, debug_handler, extract::State, http::StatusCode, response::IntoResponse};
@@ -64,7 +64,7 @@ pub(super) struct ChangeAuthParam {
     new_email: Option<String>,
     #[validate(custom(function = "validate_phone"))]
     new_phone: Option<String>,
-    #[validate(custom(function = "validate_password"))]
+    #[validate(custom(function = "validate_password_length"))]
     new_password: Option<String>,
 
     password: String,

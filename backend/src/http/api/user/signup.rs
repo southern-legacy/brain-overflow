@@ -6,7 +6,7 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::json;
-use validator::{Validate, ValidationErrors};
+use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::{
     entity::user::{
@@ -20,7 +20,9 @@ use crate::{
             user::{UserIdent, generate_password_hash},
         },
         extractor::ValidJson,
-        utils::{validate_email, validate_password, validate_phone},
+        utils::{
+            validate_email, validate_password_complexity, validate_password_length, validate_phone,
+        },
     },
     server::ServerState,
 };
@@ -34,34 +36,13 @@ enum SignUpMethod {
 
 type Email = Option<String>;
 type Phone = Option<String>;
-impl SignUpMethod {
-    fn get_tup_phone_email(self) -> (Phone, Email) {
-        use SignUpMethod::*;
-        match self {
-            Phone(phone) => (Some(phone), None),
-            Email(email) => (None, Some(email)),
-        }
-    }
 
-    fn get_anyway(&self) -> &str {
-        use SignUpMethod::*;
-        match self {
-            Phone(v) => v,
-            Email(v) => v,
-        }
-    }
-}
-
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SignUpParam {
-    #[validate(length(max = 32))]
     name: String,
-
-    #[validate(nested)]
     #[serde(flatten)]
     method: SignUpMethod,
-
-    #[validate(custom(function = "validate_password"))]
     password: String,
 }
 
@@ -121,25 +102,62 @@ pub(super) async fn signup(
         .into_response())
 }
 
-impl Validate for SignUpMethod {
+impl SignUpMethod {
+    fn get_tup_phone_email(self) -> (Phone, Email) {
+        use SignUpMethod::*;
+        match self {
+            Phone(phone) => (Some(phone), None),
+            Email(email) => (None, Some(email)),
+        }
+    }
+
+    fn get_anyway(&self) -> &str {
+        use SignUpMethod::*;
+        match self {
+            Phone(v) => v,
+            Email(v) => v,
+        }
+    }
+}
+
+impl Validate for SignUpParam {
     fn validate(&self) -> Result<(), validator::ValidationErrors> {
         use SignUpMethod::*;
+        use std::borrow::Cow::*;
         let mut errors = ValidationErrors::new();
-        match self {
-            Email(email) => match validate_email(email) {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    errors.add("email", e);
-                    Err(errors)
-                }
-            },
-            Phone(phone) => match validate_phone(phone) {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    errors.add("phone", e);
-                    Err(errors)
-                }
-            },
+
+        if self.name.chars().count() > 32 {
+            let mut e =
+                ValidationError::new("length").with_message(Borrowed("your name is too long"));
+            e.add_param(Borrowed("name"), &self.name);
+            errors.add("name", e)
+        }
+
+        let _ = match &self.method {
+            Email(email) => validate_email(email).map_err(|mut e| {
+                e.add_param(Borrowed("email"), email);
+                errors.add("email", e);
+            }),
+            Phone(phone) => validate_phone(phone).map_err(|mut e| {
+                e.add_param(Borrowed("phone"), phone);
+                errors.add("phone", e);
+            }),
+        };
+
+        let _ = validate_password_length(&self.password).map_err(|mut e| {
+            e.add_param(Borrowed("password"), &"it'a secret");
+            errors.add("length", e);
+        });
+
+        let _ = validate_password_complexity(&self.password).map_err(|mut e| {
+            e.add_param(Borrowed("password"), &"it'a secret");
+            errors.add("complexity", e);
+        });
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
         }
     }
 }
