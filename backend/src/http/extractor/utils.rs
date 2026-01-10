@@ -2,6 +2,7 @@
 use std::sync::LazyLock;
 
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::error::{
@@ -9,20 +10,21 @@ use crate::error::{
     api::{ApiError, ApiErrorKind},
 };
 
-pub struct Email(String);
-pub struct Phone(String);
-pub struct Password(String);
-
-pub struct SignUpParam {
-    name: String,
-    email: Option<Email>,
-    phone: Option<Phone>,
-    password: Password,
-}
-
 pub static EMAIL_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[\w._%+-]+@[\w.-]+\.\w{2,}$").unwrap());
 pub static PHONE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+\d{1,15}$").unwrap());
+
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct Email(String);
+
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct Phone(String);
+
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct Password(String);
 
 impl TryFrom<&str> for Email {
     type Error = ApiError;

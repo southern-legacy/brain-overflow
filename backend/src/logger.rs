@@ -1,4 +1,4 @@
-use crab_vault::logger::{json::JsonLogger, pretty::PrettyLogger};
+use crab_vault_logger::{json::JsonLogger, pretty::PrettyLogger};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::app_config::logger::LoggerConfig;

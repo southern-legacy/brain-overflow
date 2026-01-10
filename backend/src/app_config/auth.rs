@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crab_vault::auth::HttpMethod;
+use crab_vault_auth::HttpMethod;
 use glob::Pattern;
 use serde::{Deserialize, Serialize};
 

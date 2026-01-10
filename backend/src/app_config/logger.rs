@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crab_vault::logger::LogLevel;
+use crab_vault_logger::LogLevel;
 
 use crate::{app_config::ConfigItem, error::fatal::FatalResult};
 

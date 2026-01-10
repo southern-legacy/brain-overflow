@@ -18,7 +18,7 @@ use crate::{
     entity::user::user_info::UserInfo,
     http::{
         api::user::{UserIdent, check_password},
-        extractor::prelude::ValidJson,
+        extractor::ValidJson,
     },
     server::ServerState,
 };

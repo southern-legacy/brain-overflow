@@ -8,7 +8,7 @@ use crate::{
             ApiResult,
             user::{UserIdent, check_password},
         },
-        extractor::prelude::ValidJson,
+        extractor::ValidJson,
         utils::{validate_email, validate_password, validate_phone},
     },
     server::ServerState,

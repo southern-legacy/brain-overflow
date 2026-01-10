@@ -19,7 +19,7 @@ use crate::{
             ApiResult,
             user::{UserIdent, generate_password_hash},
         },
-        extractor::prelude::ValidJson,
+        extractor::ValidJson,
         utils::{validate_email, validate_password, validate_phone},
     },
     server::ServerState,
