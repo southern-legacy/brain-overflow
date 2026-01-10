@@ -4,6 +4,8 @@ import { useUserStore } from '@/stores'
 import { useRouter } from 'vue-router'
 import { changeUserVerification, deleteUserAccount } from '@/api/userVerify'
 import { Warning } from '@element-plus/icons-vue'
+defineOptions({ name: 'AccountSetting' })
+
 const userStore = useUserStore()
 
 const typeMap = {
@@ -147,25 +149,26 @@ const handleChange = (type) => {
 // submit change
 const submitChange = async () => {
   if (!changeFormRef.value) return
+
+  const valid = await changeFormRef.value.validate()
+  if (!valid) return
+
   const cleanedPhone = changeFormData.value.newPhone
     ? changeFormData.value.newPhone.replace(/\s+/g, '')
     : null
 
-  await changeFormRef.value.validate(async (valid) => {
-    if (valid) {
-      await changeUserVerification(
-        changeFormData.value.password,
-        changeFormData.value.newPassword ?? null,
-        changeFormData.value.newEmail ?? null,
-        cleanedPhone ?? null,
-      )
-      if (changeType.value === 'phone') userStore.userInfo.phone = cleanedPhone
-      if (changeType.value === 'email') userStore.userInfo.email = changeFormData.value.newEmail
+  await changeUserVerification(
+    changeFormData.value.password,
+    changeFormData.value.newPassword || null,
+    changeFormData.value.newEmail || null,
+    cleanedPhone || null,
+  )
 
-      ElMessage.success('修改成功')
-      isChangeDialogVisible.value = false
-    }
-  })
+  if (changeType.value === 'phone') userStore.userInfo.phone = cleanedPhone
+  if (changeType.value === 'email') userStore.userInfo.email = changeFormData.value.newEmail
+
+  ElMessage.success('修改成功')
+  isChangeDialogVisible.value = false
 }
 
 // delete account

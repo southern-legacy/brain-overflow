@@ -14,25 +14,25 @@ export default [
         children: [
           {
             path: 'profile',
-            name: 'SettingProfile',
+            name: 'ProfileSetting',
             component: () => import('@/views/user-profile/settings/ProfileSetting.vue'),
             meta: { title: '资料设置', subTitle: '更改您的个人资料信息' },
           },
           {
             path: 'account',
-            name: 'SettingAccount',
+            name: 'AccountSetting',
             component: () => import('@/views/user-profile/settings/AccountSetting.vue'),
             meta: { title: '账号设置', subTitle: '更改账号相关设置，进行密码修改，账户删除等' },
           },
           {
             path: 'general',
-            name: 'SettingGeneral',
+            name: 'GeneralSetting',
             component: () => import('@/views/user-profile/settings/GeneralSetting.vue'),
             meta: { title: '通用设置', subTitle: '更改网站的通用设置' },
           },
           {
             path: 'notification',
-            name: 'SettingNotification',
+            name: 'NotificationSetting',
             component: () => import('@/views/user-profile/settings/NotificationSetting.vue'),
             meta: { title: '消息设置', subTitle: '更改网站的消息设置' },
           },

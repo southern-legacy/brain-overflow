@@ -1,3 +1,7 @@
-<script setup></script>
+<script setup>
+defineOptions({ name: 'GeneralSetting' })
+</script>
 
-<template>111</template>
+<template>
+  <div class="general-setting-container">111</div>
+</template>
