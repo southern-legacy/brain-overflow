@@ -4,17 +4,19 @@ import router from '@/router'
 // 创建统一实例
 
 const instance = axios.create({
-  baseURL: 'http://localhost:10086',
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
 })
 
 // 请求拦截器
 instance.interceptors.request.use(
   (config) => {
-    // 自动附加 Bearer token（如果存在）
+    // 自动附加 Bearer token（如果存在），除非请求已经手动指定了 token
     const userStore = useUserStore()
     const token = userStore.token
-    if (token) {
+
+    // 如果请求 headers 里已经有 Authorization，就不要覆盖
+    if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`
     }
 

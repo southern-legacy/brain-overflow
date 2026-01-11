@@ -3,6 +3,7 @@ import { onActivated, ref } from 'vue'
 import { useUserStore } from '@/stores'
 import { Plus } from '@element-plus/icons-vue'
 import { startUploadUserProfileAssets } from '@/api/userProfiles'
+import { abortUploadAsset, startUploadAssetWithFullURL, uploadAsset } from '@/api/crab-vault'
 
 defineOptions({ name: 'ProfileSetting' })
 const userStore = useUserStore()
@@ -22,12 +23,42 @@ const userProfileForm = ref({
   userAvatar: userStore.userProfile.avatar ?? '',
 })
 const avatarUrl = ref('')
+const bannerFileList = ref([])
 
+/**
+ * * the submit of aseets(banner) with crab-vault
+ * * workflow:
+ * - 1. request banner upload (brain-overflow) to get a Location(needed to add)
+ * - 2. using the location to start uploading asset(brain-overflow), it will return a token and the crab-vault request url(full)
+ * - 3. with the token and url, upload the asset you want(crab-vault)
+ * - 4. send end info to the brainoverflow(using assetId which you get in the step 2 url)
+ *
+ */
 async function submitBannerUpload() {
-  const res = await startUploadUserProfileAssets('banner')
+  if (!bannerFileList.value || bannerFileList.value.length === 0) {
+    return ElMessage({
+      type: 'warning',
+      message: '请选择文件',
+    })
+  }
 
-  const location = res.headers
-  console.log(location)
+  try {
+    const res = await startUploadUserProfileAssets('banner')
+
+    const location = res.headers.location
+    const url = new URL(location, import.meta.env.VITE_API_BASE_URL).toString()
+
+    const crabVault = await startUploadAssetWithFullURL(url)
+    const crabVaultToken = crabVault.data.token
+
+    const crabVaultUrl = crabVault.headers.location
+    const assetId = new URL(crabVaultUrl).pathname.split('/').pop()
+
+    await uploadAsset(bannerFileList.value[0].raw, crabVaultToken, crabVaultUrl)
+    await abortUploadAsset(assetId)
+  } catch (error) {
+    console.warn('[submitBannerUpload] upload failed:', error)
+  }
 }
 </script>
 
@@ -55,7 +86,12 @@ async function submitBannerUpload() {
         </el-form-item>
 
         <el-form-item class="user-banner-upload" label="个人主页背景">
-          <el-upload class="banner-upload" :limit="1" :auto-upload="false">
+          <el-upload
+            class="banner-upload"
+            :limit="1"
+            :auto-upload="false"
+            v-model:file-list="bannerFileList"
+          >
             <template #trigger>
               <el-button type="primary">选择文件</el-button>
             </template>
@@ -67,7 +103,7 @@ async function submitBannerUpload() {
             </div>
 
             <template #tip>
-              <div class="el-upload__tip text-red">仅支持上传一个文件，多余的会被覆盖</div>
+              <div class="el-upload__tip text-red">仅支持上传一个文件，多余的会被忽略</div>
             </template>
           </el-upload>
         </el-form-item>
