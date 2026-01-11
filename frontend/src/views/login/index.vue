@@ -9,8 +9,21 @@ import RegisForm from '@/views/login/components/RegisForm.vue'
 import { ref } from 'vue'
 
 const isLogin = ref(true)
+const showUuidDialog = ref(false)
+const userUuid = ref('')
+
 const handleChangingAuth = () => {
   isLogin.value = !isLogin.value
+}
+
+const copyUuid = async () => {
+  await navigator.clipboard.writeText(userUuid.value)
+  ElMessage.success('已复制到剪贴板')
+}
+
+const handleRegisSuccess = (id) => {
+  userUuid.value = id
+  showUuidDialog.value = true
 }
 </script>
 
@@ -25,7 +38,11 @@ const handleChangingAuth = () => {
           </div>
 
           <LoginForm v-if="isLogin" @changingAuth="handleChangingAuth"></LoginForm>
-          <RegisForm v-else @changingAuth="handleChangingAuth"></RegisForm>
+          <RegisForm
+            v-else
+            @changingAuth="handleChangingAuth"
+            @regisSuccess="handleRegisSuccess"
+          ></RegisForm>
         </div>
         <div class="right">
           <img src="@/assets/login-test-pic.jpg" alt="图片加载错误" />
@@ -33,6 +50,20 @@ const handleChangingAuth = () => {
       </div>
     </el-col>
   </el-row>
+
+  <el-dialog v-model="showUuidDialog" title="注册成功 🎉" width="600px">
+    <p style="margin-bottom: 8px">这是你的用户 ID（UUID），请妥善保存，可用于登录：</p>
+
+    <el-input v-model="userUuid" readonly size="large">
+      <template #append>
+        <el-button @click="copyUuid">复制</el-button>
+      </template>
+    </el-input>
+
+    <template #footer>
+      <el-button type="primary" @click="showUuidDialog = false"> 我已保存 </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped lang="scss">

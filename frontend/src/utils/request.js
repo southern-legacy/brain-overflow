@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useUserStore } from '@/stores'
+import router from '@/router'
 // 创建统一实例
 
 const instance = axios.create({
@@ -71,9 +72,13 @@ instance.interceptors.response.use(
         if (errCode === 'token_expired' || errCode === 'token_invalid') {
           ElMessage.error('登录状态已过期，请重新登录')
           // window.location.href = "/login";
+          const userStore = useUserStore()
+          userStore.logout()
+          router.push('/login')
         } else {
           ElMessage.error('登录验证失败，请检查账户和密码并重新登陆')
         }
+
         break
 
       case 405:
