@@ -30,7 +30,15 @@ instance.interceptors.request.use(
 
 // 响应拦截器
 instance.interceptors.response.use(
-  (response) => response.data, //如果成功，直接剥离一层后再返回
+  (response) => {
+    const { config } = response
+    // if we add raw mode to the config, return data directly
+    if (config.raw) {
+      return response
+    }
+    // 默认只返回 data
+    return response.data
+  }, //如果成功，直接剥离一层后再返回
   (error) => {
     let errMessage = 'Unknown Error' // 错误信息
     let errCode = null // 服务器返回的code
