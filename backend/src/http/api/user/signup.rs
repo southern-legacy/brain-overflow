@@ -89,7 +89,7 @@ pub(super) async fn signup(
 
     Ok((
         StatusCode::CREATED,
-        [(header::LOCATION, format!("/user/{}", id))],
+        [(header::LOCATION, format!("{}/user/{}", &state.config.server.location, id))],
         json!({
             "id": user_ident.id,
             "name": user_ident.name,

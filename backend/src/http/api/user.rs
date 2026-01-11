@@ -2,6 +2,7 @@ mod danger_zone;
 mod info;
 mod login;
 mod signup;
+use axum::extract::State;
 use crab_vault_auth::Jwt;
 use crab_vault_auth::error::AuthError;
 use http::header;
@@ -32,10 +33,10 @@ pub(super) fn build_router(config: &AppConfig) -> Router<ServerState> {
         |_, _, _, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
     );
 
-    async fn redirect(ident: Extension<UserIdent>) -> impl IntoResponse {
+    async fn redirect(state: State<ServerState>, ident: Extension<UserIdent>) -> impl IntoResponse {
         (
             StatusCode::TEMPORARY_REDIRECT,
-            [(header::LOCATION, format!("/user/{}", ident.id))],
+            [(header::LOCATION, format!("{}/user/{}", state.config.server.location, ident.id))],
         )
     }
 

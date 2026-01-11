@@ -63,14 +63,17 @@ async fn safe(
         permmision,
     );
 
+    let url = state.config.crab_vault.location_of_asset(&asset.newest_key);
     Ok((
         StatusCode::OK,
         [(
             header::LOCATION,
-            state.config.crab_vault.location_of_asset(&asset.newest_key),
+            &url,
         )],
         json!({
-            "token": encoder_config.encoder.encode_randomly(&token)?
+            "token": encoder_config.encoder.encode_randomly(&token)?,
+            "url": &url,
+            "id": asset.id
         })
         .to_string(),
     )
@@ -110,14 +113,15 @@ async fn start_upload(
             .permit_content_type(vec!["*".to_string()]),
     );
 
+    let url = state.config.crab_vault.location_of_asset(&asset.newest_key);
+
     Ok((
         StatusCode::OK,
-        [(
-            header::LOCATION,
-            state.config.crab_vault.location_of_asset(&asset.newest_key),
-        )],
+        [(header::LOCATION, &url)],
         json!({
-            "token": encoder_config.encoder.encode_randomly(&token)?
+            "token": encoder_config.encoder.encode_randomly(&token)?,
+            "url": &url,
+            "id": asset.id
         })
         .to_string(),
     )
