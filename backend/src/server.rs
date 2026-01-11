@@ -99,12 +99,12 @@ pub async fn start(cli: &Cli) {
         .layer(cors_layer)
         .layer(path_normalize_layer);
 
-    let listener = if config.server.ipv6() {
-        TcpListener::bind((Ipv6Addr::UNSPECIFIED, config.server.port()))
+    let listener = if config.server.ipv6 {
+        TcpListener::bind((Ipv6Addr::UNSPECIFIED, config.server.port))
             .await
             .unwrap()
     } else {
-        TcpListener::bind((Ipv4Addr::UNSPECIFIED, config.server.port()))
+        TcpListener::bind((Ipv4Addr::UNSPECIFIED, config.server.port))
             .await
             .unwrap()
     };

@@ -2,6 +2,7 @@ use axum::{Extension, debug_handler, extract::State, http::StatusCode, response:
 use chrono::Utc;
 use http::header;
 use serde::Deserialize;
+use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
@@ -77,7 +78,15 @@ pub(super) async fn put(
         {
             transacton.commit().await.map_err(DbError::from)?;
             tracing::info!("insertion suceeded");
-            Ok((StatusCode::CREATED, [(header::LOCATION, url)]).into_response())
+            Ok((
+                StatusCode::CREATED,
+                [(header::LOCATION, &url)],
+                axum::Json(json!({
+                    "id": new_asset.id,
+                    "url": &url
+                })),
+            )
+                .into_response())
         } else {
             tracing::warn!("this guy doesn't even exsists");
             Err(ApiError::new(ApiErrorKind::Unauthorized).into_response())
