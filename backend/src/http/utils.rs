@@ -49,13 +49,10 @@ pub fn validate_password_complexity(val: &str) -> Result<(), ValidationError> {
     for c in val.chars() {
         if c.is_alphabetic() {
             alphas += 1;
-            break;
         } else if c.is_numeric() {
             numerics += 1;
-            break;
         } else {
             specials += 1;
-            break;
         }
     }
 
