@@ -1,37 +1,57 @@
 <script setup>
 import { onActivated, ref } from 'vue'
-import { getUserProfile } from '@/api/userProfiles'
 import { useUserStore } from '@/stores'
 import { Plus } from '@element-plus/icons-vue'
+import { startUploadUserProfileAssets } from '@/api/userProfiles'
+
 defineOptions({ name: 'ProfileSetting' })
 const userStore = useUserStore()
 
+/**
+ * todo : remove the getProfile function to pinia
+ */
 onActivated(() => {
-  getProfile(userStore.userInfo.id)
+  userStore.getUserProfilePinia(userStore.userInfo.id)
 })
 
-const userBiographyMarkdown = ref('')
+const userProfileForm = ref({
+  name: userStore.userInfo.name ?? '',
+  userBiographyMarkdown: userStore.userProfile.biography ?? '',
+  userBanner: userStore.userProfile.banner ?? '',
+  contactMe: userStore.userProfile.contactMe ?? '',
+  userAvatar: userStore.userProfile.avatar ?? '',
+})
+const avatarUrl = ref('')
 
-async function getProfile(id) {
-  const res = await getUserProfile(id)
-  console.log(res)
+async function submitBannerUpload() {
+  const res = await startUploadUserProfileAssets('banner')
+
+  const location = res.headers
+  console.log(location)
 }
 </script>
 
 <template>
   <div class="profile-setting-container">
     <div class="container-left">
-      <el-form label-width="130px" size="large">
+      <el-form label-width="130px" size="large" :model="userProfileForm">
         <el-form-item label="用户名">
-          <el-input></el-input>
+          <el-input v-model="userProfileForm.name"></el-input>
         </el-form-item>
 
         <el-form-item label="个人简介">
-          <el-input v-model="userBiographyMarkdown" type="textarea"></el-input>
+          <el-input
+            v-model="userProfileForm.userBiographyMarkdown"
+            type="textarea"
+            :rows="5"
+          ></el-input>
         </el-form-item>
 
         <el-form-item class="user-biography-preview" label="效果预览">
-          <v-md-editor mode="preview" :model-value="userBiographyMarkdown"></v-md-editor>
+          <v-md-editor
+            mode="preview"
+            :model-value="userProfileForm.userBiographyMarkdown"
+          ></v-md-editor>
         </el-form-item>
 
         <el-form-item class="user-banner-upload" label="个人主页背景">
@@ -63,7 +83,7 @@ async function getProfile(id) {
     </div>
     <div class="container-right">
       <el-upload class="user-avatar-upload" :limit="1" :auto-upload="false">
-        <img v-if="imageUrl" :src="imageUrl" class="avatar" />
+        <img v-if="avatarUrl" :src="avatarUrl" class="avatar" />
         <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
 
         <template #tip>
@@ -109,7 +129,7 @@ async function getProfile(id) {
     }
 
     ::v-deep(.user-avatar-upload .el-upload) {
-      border: 1px dashed var(--el-border-color);
+      border: 3px dashed var(--el-border-color);
       border-radius: 89px;
       cursor: pointer;
       position: relative;
