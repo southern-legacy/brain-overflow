@@ -86,6 +86,7 @@ pub async fn start(cli: &Cli) {
         .allow_headers(cors::Any)
         .allow_origin(cors::Any)
         .allow_credentials(false)
+        .expose_headers(cors::Any)
         .max_age(Duration::from_secs(3600 * 24));
 
     let path_normalize_layer = NormalizePathLayer::trim_trailing_slash();
