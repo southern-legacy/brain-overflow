@@ -8,8 +8,7 @@ use crate::{
             ApiResult,
             user::{UserIdent, check_password},
         },
-        extractor::prelude::ValidJson,
-        utils::{validate_email, validate_password, validate_phone},
+        extractor::Json,
     },
     server::ServerState,
 };
@@ -18,7 +17,6 @@ use axum::{debug_handler, extract::State, http::StatusCode, response::IntoRespon
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
-use validator::{Validate, ValidationErrors};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -28,13 +26,11 @@ pub(super) enum LoginMethod {
     Phone(String),
 }
 
-#[derive(Validate, Deserialize)]
+#[derive(Deserialize)]
 pub(super) struct LoginParam {
     #[serde(flatten)]
-    #[validate(nested)]
     method: LoginMethod,
 
-    #[validate(custom(function = "validate_password"))]
     password: String,
 }
 
@@ -42,7 +38,7 @@ pub(super) struct LoginParam {
 #[tracing::instrument(name = "[user/login]", skip_all, fields(login_method = %param.method.get_anyway()))]
 pub(super) async fn login(
     State(state): State<ServerState>,
-    ValidJson(param): ValidJson<LoginParam>,
+    Json(param): Json<LoginParam>,
 ) -> ApiResult {
     let method = &param.method;
 
@@ -96,33 +92,6 @@ impl LoginMethod {
         match self {
             LoginMethod::Id(id) => Cow::Owned(id.to_string()),
             LoginMethod::Email(val) | LoginMethod::Phone(val) => Cow::Borrowed(val),
-        }
-    }
-}
-
-impl Validate for LoginMethod {
-    fn validate(&self) -> Result<(), validator::ValidationErrors> {
-        use LoginMethod::*;
-        if let Id(_) = self {
-            return Ok(());
-        }
-        let mut errors = ValidationErrors::new();
-        match self {
-            Email(email) => match validate_email(email) {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    errors.add("email", e);
-                    Err(errors)
-                }
-            },
-            Phone(phone) => match validate_phone(phone) {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    errors.add("phone", e);
-                    Err(errors)
-                }
-            },
-            Id(_) => unreachable!(),
         }
     }
 }

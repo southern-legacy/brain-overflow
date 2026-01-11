@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::{CommandFactory, error::ErrorKind};
-use crab_vault::auth::error::AuthError;
+use crab_vault_auth::error::AuthError;
 
 use crate::cli::Cli;
 

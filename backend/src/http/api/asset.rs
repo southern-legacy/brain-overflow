@@ -4,7 +4,7 @@ use axum::{
     response::IntoResponse,
     routing,
 };
-use crab_vault::auth::{HttpMethod, Jwt, Permission};
+use crab_vault_auth::{HttpMethod, Jwt, Permission};
 use http::{StatusCode, header};
 use serde_json::json;
 use uuid::Uuid;

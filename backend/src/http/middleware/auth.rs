@@ -11,7 +11,7 @@ use axum::{
     http::{HeaderMap, header::AUTHORIZATION},
     response::{IntoResponse, Response},
 };
-use crab_vault::auth::{HttpMethod, Jwt, JwtDecoder, error::AuthError};
+use crab_vault_auth::{HttpMethod, Jwt, JwtDecoder, error::AuthError};
 use serde::Deserialize;
 use tower::{Layer, Service};
 

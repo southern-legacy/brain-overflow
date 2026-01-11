@@ -4,7 +4,7 @@ use crate::{
     error::db::DbError,
     http::{
         api::{ApiResult, user::generate_password_hash},
-        utils::{validate_email, validate_password, validate_phone},
+        utils::{validate_email, validate_password_length, validate_phone},
     },
 };
 use axum::{Extension, debug_handler, extract::State, http::StatusCode, response::IntoResponse};
@@ -18,7 +18,7 @@ use crate::{
     entity::user::user_info::UserInfo,
     http::{
         api::user::{UserIdent, check_password},
-        extractor::prelude::ValidJson,
+        extractor::ValidJson,
     },
     server::ServerState,
 };
@@ -64,7 +64,7 @@ pub(super) struct ChangeAuthParam {
     new_email: Option<String>,
     #[validate(custom(function = "validate_phone"))]
     new_phone: Option<String>,
-    #[validate(custom(function = "validate_password"))]
+    #[validate(custom(function = "validate_password_length"))]
     new_password: Option<String>,
 
     password: String,
@@ -96,7 +96,7 @@ impl ChangeAuthParam {
 pub(super) async fn change_auth_info(
     state: State<ServerState>,
     ident: Extension<UserIdent>,
-    param: ValidJson<ChangeAuthParam>,
+    ValidJson(param): ValidJson<ChangeAuthParam>,
 ) -> ApiResult {
     let user_info = ident.retrieve_self_from_db(state.database.as_ref()).await?;
 
@@ -105,7 +105,7 @@ pub(super) async fn change_auth_info(
         new_phone,
         new_password,
         password,
-    } = param.unwrap();
+    } = param;
 
     check_password(&user_info, &password).await?;
 
