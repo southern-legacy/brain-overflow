@@ -6,3 +6,11 @@ export const getUserProfile = (id) => {
     method: 'get',
   })
 }
+
+export const startUploadUserProfileAssets = (type) => {
+  return request({
+    url: `/user/bio/${type}`,
+    method: 'put',
+    raw: true,
+  })
+}
