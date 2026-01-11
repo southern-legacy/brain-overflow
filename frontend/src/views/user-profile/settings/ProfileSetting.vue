@@ -27,7 +27,7 @@ async function getProfile(id) {
         </el-form-item>
 
         <el-form-item label="个人简介">
-          <el-input v-model="userBiographyMarkdown" type="textarea"></el-input>
+          <el-input v-model="userBiographyMarkdown" type="textarea" :rows="5"></el-input>
         </el-form-item>
 
         <el-form-item class="user-biography-preview" label="效果预览">
@@ -109,7 +109,7 @@ async function getProfile(id) {
     }
 
     ::v-deep(.user-avatar-upload .el-upload) {
-      border: 1px dashed var(--el-border-color);
+      border: 3px dashed var(--el-border-color);
       border-radius: 89px;
       cursor: pointer;
       position: relative;

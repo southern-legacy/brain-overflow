@@ -18,13 +18,13 @@ const tableData = computed(() => [
   { name: '账户ID', current: userStore.userInfo.id ?? '', operation: 'copy', type: 'id' },
   {
     name: '手机号码',
-    current: userStore.userInfo.phone ?? '未绑定',
+    current: phoneNumberHash(userStore.userInfo.phone) ?? '未绑定',
     operation: userStore.userInfo.phone ? 'change' : 'bind',
     type: 'phone',
   },
   {
     name: '邮箱',
-    current: userStore.userInfo.email ?? '未绑定',
+    current: emailHash(userStore.userInfo.email) ?? '未绑定',
     operation: userStore.userInfo.email ? 'change' : 'bind',
     type: 'email',
   },
@@ -164,8 +164,9 @@ const submitChange = async () => {
     cleanedPhone || null,
   )
 
-  if (changeType.value === 'phone') userStore.userInfo.phone = cleanedPhone
-  if (changeType.value === 'email') userStore.userInfo.email = changeFormData.value.newEmail
+  if (changeType.value === 'phone') userStore.userInfo.phone = phoneNumberHash(cleanedPhone)
+  if (changeType.value === 'email')
+    userStore.userInfo.email = emailHash(changeFormData.value.newEmail)
 
   ElMessage.success('修改成功')
   isChangeDialogVisible.value = false
@@ -197,6 +198,27 @@ const handleDelete = () => {
       router.push('/')
     })
     .catch(() => {})
+}
+
+const phoneNumberHash = (phone) => {
+  let arr = phone.split('')
+  let length = phone.length
+  if (length <= 11) throw TypeError('wrong phone number, too short')
+  for (let i = 6; i < length - 2; i++) {
+    arr[i] = '*'
+  }
+  return arr.join('')
+}
+
+const emailHash = (email) => {
+  let index = email.indexOf('@')
+  let arr = email.split('')
+  if (index === -1) throw TypeError('wrong email format')
+  for (let i = 2; i < index - 2; i++) {
+    arr[i] = '*'
+  }
+
+  return arr.join('')
 }
 </script>
 
