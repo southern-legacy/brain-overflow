@@ -103,7 +103,7 @@ const handleLogin = async () => {
       )
     }
   } catch (err) {
-    return err
+    console.warn('[login]: login failed', err)
   }
   ElMessage({
     type: 'success',
