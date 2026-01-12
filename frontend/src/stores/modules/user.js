@@ -16,7 +16,7 @@ export const useUserStore = defineStore(
       userInfo.value = payload
     }
 
-    const getUserProfilePinia = async (id) => {
+    const getUserNewProfilePinia = async (id) => {
       const profile = await getUserProfile(id)
       setUserProfile(profile)
     }
@@ -29,6 +29,7 @@ export const useUserStore = defineStore(
       setToken('')
       setUserInfo({})
     }
+
     return {
       token,
       setToken,
@@ -36,7 +37,7 @@ export const useUserStore = defineStore(
       setUserInfo,
       logout,
       setUserProfile,
-      getUserProfilePinia,
+      getUserNewProfilePinia,
       userProfile,
     }
   },

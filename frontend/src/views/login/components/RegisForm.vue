@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { userRegisService } from '@/api/userVerify'
-import { jwtDecode } from 'jwt-decode'
+
 import { ElMessage } from 'element-plus'
 
 // form ref
@@ -105,7 +105,6 @@ const handleRegis = async () => {
         formModel.value.phone.replace(/\s/g, ''),
         formModel.value.password,
       )
-      console.log(res)
     } else {
       res = await userRegisService(
         formModel.value.name,
@@ -113,7 +112,6 @@ const handleRegis = async () => {
         '',
         formModel.value.password,
       )
-      console.log(res)
     }
   } catch (err) {
     if (err.status === 422 && err.code === 'unique') {
@@ -122,6 +120,7 @@ const handleRegis = async () => {
         message: '当前账号已被人注册，请修改你的用户名或注册方式',
       })
     }
+    console.warn('[register]: register failed', err)
     return ElMessage({
       type: 'error',
       message: '注册错误',

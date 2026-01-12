@@ -103,13 +103,12 @@ const handleLogin = async () => {
       )
     }
   } catch (err) {
-    return err
+    console.warn('[login]: login failed', err)
   }
   ElMessage({
     type: 'success',
     message: '恭喜您，登录成功',
   })
-  console.log(res)
 
   userStore.setUserInfo({ id: res.id, name: res.name, email: res.email, phone: res.phone })
   userStore.setToken(res.token)

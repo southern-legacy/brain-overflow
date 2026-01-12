@@ -201,6 +201,7 @@ const handleDelete = () => {
 }
 
 const phoneNumberHash = (phone) => {
+  if (!phone) return '未绑定'
   let arr = phone.split('')
   let length = phone.length
   if (length <= 11) throw TypeError('wrong phone number, too short')
@@ -211,6 +212,7 @@ const phoneNumberHash = (phone) => {
 }
 
 const emailHash = (email) => {
+  if (!email) return '未绑定' // 空值直接返回
   let index = email.indexOf('@')
   let arr = email.split('')
   if (index === -1) throw TypeError('wrong email format')
