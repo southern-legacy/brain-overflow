@@ -109,7 +109,6 @@ const handleLogin = async () => {
     type: 'success',
     message: '恭喜您，登录成功',
   })
-  console.log(res)
 
   userStore.setUserInfo({ id: res.id, name: res.name, email: res.email, phone: res.phone })
   userStore.setToken(res.token)

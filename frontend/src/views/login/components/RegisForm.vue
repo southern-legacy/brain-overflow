@@ -105,7 +105,6 @@ const handleRegis = async () => {
         formModel.value.phone.replace(/\s/g, ''),
         formModel.value.password,
       )
-      console.log(res)
     } else {
       res = await userRegisService(
         formModel.value.name,
@@ -113,7 +112,6 @@ const handleRegis = async () => {
         '',
         formModel.value.password,
       )
-      console.log(res)
     }
   } catch (err) {
     if (err.status === 422 && err.code === 'unique') {
