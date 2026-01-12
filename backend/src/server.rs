@@ -27,7 +27,7 @@ pub async fn start(cli: &Cli) {
     let config_path = cli.config_path.clone().unwrap_or_else(|| {
         std::env::home_dir()
             .map(|mut v| {
-                v.push(".config/brain/brain-overflow.toml");
+                v.push(".config/brain-overflow/config.toml");
                 v.to_string_lossy().to_string()
             })
             .unwrap_or("./brain-overflow.toml".to_string())
