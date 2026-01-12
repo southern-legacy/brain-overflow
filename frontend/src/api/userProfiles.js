@@ -14,3 +14,14 @@ export const startUploadUserProfileAssets = (type) => {
     raw: true,
   })
 }
+
+export const getUserProfileAsset = (url, token) => {
+  return request({
+    url: url,
+    method: 'get',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    responseType: 'blob',
+  })
+}
