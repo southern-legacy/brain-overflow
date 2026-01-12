@@ -7,12 +7,24 @@
 /**
  * todo:  动态数据： 头像， 用户关注，个人主页跳转，个人设置跳转，收藏页面，历史记录
  */
-
+import { watch, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores'
+import { getAsset } from '@/api/crab-vault'
+import { getUserProfileAsset } from '@/api/userProfiles'
 const router = useRouter()
 const userStore = useUserStore()
+const avatarSrc = ref('')
+watch(
+  () => userStore.userProfile.avatar,
+  async (newVal) => {
+    const { url, token } = await getAsset(newVal)
+    const res = await getUserProfileAsset(url, token)
 
+    avatarSrc.value = URL.createObjectURL(res)
+  },
+  { immediate: true },
+)
 function jumpToProfile() {
   router.push('/user/profile')
 }
@@ -34,14 +46,14 @@ function handleLogOut() {
   <el-popover trigger="click" placement="bottom" :width="250">
     <!-- trigger -->
     <template #reference>
-      <el-avatar class="avatar-trigger" />
+      <el-avatar class="avatar-trigger" :src="avatarSrc" />
     </template>
 
     <!-- popover-->
     <div class="user-popover">
       <!-- Basic User Info -->
       <el-row class="user-basic">
-        <el-avatar size="large" />
+        <el-avatar size="large" :src="avatarSrc" />
         <div class="username">kenzin</div>
       </el-row>
 

@@ -1,7 +1,25 @@
 <script setup>
 // 这里先不接真实数据，只做 layout 骨架
+import { watch, ref } from 'vue'
 import { useRouter } from 'vue-router'
-let router = useRouter()
+import { useUserStore } from '@/stores'
+import { getAsset } from '@/api/crab-vault'
+import { getUserProfileAsset } from '@/api/userProfiles'
+
+const router = useRouter()
+const userStore = useUserStore()
+
+const avatarSrc = ref('')
+watch(
+  () => userStore.userProfile.avatar,
+  async (newVal) => {
+    const { url, token } = await getAsset(newVal)
+    const res = await getUserProfileAsset(url, token)
+
+    avatarSrc.value = URL.createObjectURL(res)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -12,10 +30,10 @@ let router = useRouter()
         <!-- Header：头像 + 基本信息 + 设置 -->
         <el-card class="profile-header">
           <div class="user-basic">
-            <el-avatar :size="80" />
+            <el-avatar :size="80" :src="avatarSrc" />
 
             <div class="info">
-              <h2 class="username">用户名</h2>
+              <h2 class="username">{{ userStore.userInfo.name }}</h2>
               <p class="desc">这里是个人简介，可以写一句话</p>
             </div>
           </div>
