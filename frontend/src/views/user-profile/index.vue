@@ -6,7 +6,11 @@ import { useUserAssetStore, useUserStore } from '@/stores'
 const router = useRouter()
 const userStore = useUserStore()
 const userAssetStore = useUserAssetStore()
+
+// avatar show src
 const avatarSrc = ref('')
+
+// if avatar assetid changes， try to get a new URL
 watch(
   () => userStore.userProfile.avatar,
   async (newVal) => {
@@ -17,6 +21,7 @@ watch(
   { immediate: true },
 )
 
+// revoke the blob url
 onUnmounted(() => {
   if (avatarSrc.value) {
     URL.revokeObjectURL(avatarSrc.value)
