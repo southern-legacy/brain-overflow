@@ -27,7 +27,7 @@ const handleCommand = (cmd) => {
       router.push('/login')
       break
     case 'register':
-      router.push('/register')
+      router.push('/login')
       break
     case 'edit':
       router.push('/edit-article')

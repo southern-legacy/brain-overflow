@@ -156,13 +156,17 @@ const submitChange = async () => {
   const cleanedPhone = changeFormData.value.newPhone
     ? changeFormData.value.newPhone.replace(/\s+/g, '')
     : null
-
-  await changeUserVerification(
-    changeFormData.value.password,
-    changeFormData.value.newPassword || null,
-    changeFormData.value.newEmail || null,
-    cleanedPhone || null,
-  )
+  try {
+    await changeUserVerification(
+      changeFormData.value.password,
+      changeFormData.value.newPassword || null,
+      changeFormData.value.newEmail || null,
+      cleanedPhone || null,
+    )
+  } catch (error) {
+    console.warn('[AccountSettingChangeSubmit]: submit failed: ', error)
+    return
+  }
 
   if (changeType.value === 'phone') userStore.userInfo.phone = phoneNumberHash(cleanedPhone)
   if (changeType.value === 'email')
