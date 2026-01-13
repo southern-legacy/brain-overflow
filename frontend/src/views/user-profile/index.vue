@@ -9,14 +9,26 @@ const userAssetStore = useUserAssetStore()
 
 // avatar show src
 const avatarSrc = ref('')
-
+const userBiographyMarkdown = ref('')
 // if avatar assetid changes， try to get a new URL
 watch(
   () => userStore.userProfile.avatar,
   async (newVal) => {
+    if (!newVal) return
     const blob = await userAssetStore.getAssetBlob(newVal)
     const url = URL.createObjectURL(blob)
     avatarSrc.value = url
+  },
+  { immediate: true },
+)
+
+watch(
+  () => userStore.userProfile.biography,
+  async (newVal) => {
+    if (!newVal) return
+    const blob = await userAssetStore.getAssetBlob(newVal)
+    const text = await blob.text()
+    userBiographyMarkdown.value = text
   },
   { immediate: true },
 )
@@ -27,95 +39,152 @@ onUnmounted(() => {
     URL.revokeObjectURL(avatarSrc.value)
   }
 })
+
+// --- 处理 ContactMe 显示逻辑 ---
+// 映射类型到显示的 Label 或 图标名
+const formatContactType = (type) => {
+  const map = {
+    github: 'GitHub',
+    email: '邮箱',
+    wechat: '微信',
+    qq: 'QQ',
+    blog: '博客',
+    twitter: 'Twitter',
+  }
+  return map[type.toLowerCase()] || type.toUpperCase()
+}
+
+// 根据类型返回不同的 Tag 颜色
+const getContactTagType = (type) => {
+  const t = type.toLowerCase()
+  if (['github', 'blog'].includes(t)) return 'info'
+  if (['email'].includes(t)) return 'warning'
+  if (['wechat'].includes(t)) return 'success'
+  return '' // default primary
+}
+
+// 处理点击复制或跳转 (可选功能)
+const handleContactClick = (type, val) => {
+  if (type === 'github' || type === 'blog' || val.startsWith('http')) {
+    window.open(val.startsWith('http') ? val : `https://${val}`, '_blank')
+  } else {
+    // simple copy logic
+    navigator.clipboard.writeText(val).then(() => {
+      ElMessage({
+        type: 'success',
+        message: '成功复制',
+      })
+    })
+  }
+}
 </script>
 
 <template>
   <div class="profile-page">
     <div class="profile-layout">
-      <!-- 左侧：Header + 内容区 -->
+      <!-- 左侧主区域 -->
       <main class="profile-main">
-        <!-- Header：头像 + 基本信息 + 设置 -->
+        <!-- 1. 头部卡片：纯粹的身份展示 -->
         <el-card class="profile-header">
-          <div class="user-basic">
-            <el-avatar :size="80" :src="avatarSrc" />
+          <div class="user-identity">
+            <el-avatar :size="80" :src="avatarSrc" class="avatar" />
+            <div class="names">
+              <h1 class="nickname">{{ userStore.userInfo.name }}</h1>
+              <span class="uid">UID: {{ userStore.userInfo.id || 'Unknown' }}</span>
+            </div>
+          </div>
+          <el-button plain round @click="router.push('/user/settings')"> 编辑资料 </el-button>
+        </el-card>
 
-            <div class="info">
-              <h2 class="username">{{ userStore.userInfo.name }}</h2>
-              <div v-if="userStore.userProfile.contactMe.length !== 0">
-                <p
-                  class="desc"
-                  v-for="(item, index) in userStore.userProfile.contactMe"
-                  :key="index"
-                >
-                  {{ item }}
-                </p>
-              </div>
+        <!-- 2. 新增：个人简介 + 联系方式模块 -->
+        <el-card class="bio-card">
+          <template #header>
+            <div class="card-header">
+              <span>个人简介</span>
+            </div>
+          </template>
 
-              <p class="desc" v-else>这里是联系方式，请前往设置</p>
+          <!-- 这里放置你的 Markdown 组件 -->
+          <div class="md-content">
+            <p v-if="!userStore.userProfile.biography" class="empty-text">
+              这个人很懒，什么都没写...
+            </p>
+            <!-- 示例占位符 -->
+            <div v-else class="markdown-placeholder">
+              <v-md-editor mode="preview" :model-value="userBiographyMarkdown"></v-md-editor>
             </div>
           </div>
 
-          <el-button
-            type="primary"
-            class="edit-profile-button"
-            @click="router.push('/user/settings')"
-            >编辑资料</el-button
-          >
+          <el-divider border-style="dashed" />
+
+          <!-- 联系方式列表 -->
+          <div class="contact-section">
+            <div class="section-title">联系我</div>
+
+            <div v-if="userStore.userProfile.contactMe.length > 0" class="contact-list">
+              <!-- 循环渲染 contactMe: [type, str] -->
+              <div
+                v-for="([type, val], index) in userStore.userProfile.contactMe"
+                :key="index"
+                class="contact-item"
+                @click="handleContactClick(type, val)"
+              >
+                <el-tag :type="getContactTagType(type)" effect="light" round>
+                  {{ formatContactType(type) }}
+                </el-tag>
+                <span class="contact-value">{{ val }}</span>
+              </div>
+            </div>
+
+            <div v-else class="empty-text">暂未设置联系方式</div>
+          </div>
         </el-card>
 
-        <!-- 内容区：文章 / 关注 / 收藏 -->
+        <!-- 3. 内容区：文章/Tabs -->
         <el-card class="profile-content">
           <el-tabs>
-            <el-tab-pane label="文章">
+            <el-tab-pane label="文章" name="articles">
               <div class="placeholder">文章列表区域</div>
             </el-tab-pane>
-
-            <el-tab-pane label="关注">
+            <el-tab-pane label="关注" name="following">
               <div class="placeholder">关注列表区域</div>
             </el-tab-pane>
-
-            <el-tab-pane label="收藏">
+            <el-tab-pane label="收藏" name="favorites">
               <div class="placeholder">收藏列表区域</div>
             </el-tab-pane>
           </el-tabs>
         </el-card>
       </main>
 
-      <!-- 右侧：用户数据栏 -->
+      <!-- 右侧：数据栏 (保持原样或微调) -->
       <aside class="profile-sidebar">
-        <el-card class="user-stats-card">
-          <div class="follower">
-            <div>关注了</div>
-            <div>1</div>
+        <el-card class="user-stats-card" shadow="hover">
+          <div class="stat-box">
+            <div class="label">关注了</div>
+            <div class="value">12</div>
           </div>
-
-          <el-divider direction="vertical" class="user-stats-card-divider" />
-
-          <div class="fans">
-            <div>关注者</div>
-            <div>1</div>
+          <el-divider direction="vertical" class="stats-divider" />
+          <div class="stat-box">
+            <div class="label">关注者</div>
+            <div class="value">345</div>
           </div>
         </el-card>
 
-        <div class="stat-item">
-          <span class="label">关注</span>
-          <span class="num">12</span>
-        </div>
-
-        <div class="stat-item">
-          <span class="label">收藏</span>
-          <span class="num">8</span>
-        </div>
-
-        <div class="stat-item">
-          <span class="label">点赞</span>
-          <span class="num">56</span>
-        </div>
-
-        <div class="stat-item">
-          <span class="label">加入时间</span>
-          <span class="value">2024-05</span>
-        </div>
+        <!-- 详细数据面板 -->
+        <el-card class="info-card" shadow="hover">
+          <div class="info-row">
+            <span class="label">获赞数</span>
+            <span class="num">1,024</span>
+          </div>
+          <div class="info-row">
+            <span class="label">文章数</span>
+            <span class="num">8</span>
+          </div>
+          <div class="info-row">
+            <span class="label">加入时间</span>
+            <span class="time">2024-05-20</span>
+          </div>
+        </el-card>
       </aside>
     </div>
   </div>
@@ -123,23 +192,22 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .profile-page {
-  max-width: 1200px;
+  max-width: 1250px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 20px;
 }
 
-/* 外层两列布局 */
 .profile-layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
-  gap: 24px;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
   align-items: start;
 }
 
 .profile-main {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .profile-header {
@@ -147,83 +215,183 @@ onUnmounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 30px;
   }
-  .user-basic {
+
+  .user-identity {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 20px;
 
-    .username {
-      margin: 0;
+    .names {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .nickname {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        color: #1d2129;
+      }
+      .uid {
+        font-size: 12px;
+        color: #86909c;
+        background: #f2f3f5;
+        padding: 2px 6px;
+        border-radius: 4px;
+        width: fit-content;
+      }
     }
+  }
+}
 
-    .desc {
-      font-size: 14px;
-      color: #86909c;
+.bio-card {
+  .card-header {
+    font-weight: 600;
+  }
+
+  .md-content {
+    min-height: 60px;
+    color: #4e5969;
+    line-height: 1.6;
+    font-size: 15px;
+
+    .empty-text {
+      color: #c9cdd4;
+      font-style: italic;
     }
   }
 
-  .edit-profile-button {
-    align-self: flex-end;
+  .contact-section {
+    .section-title {
+      font-size: 14px;
+      color: #86909c;
+      margin-bottom: 12px;
+    }
+
+    .contact-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f7f8fa;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+
+      &:hover {
+        background: #fff;
+        border-color: var(--el-color-primary-light-5);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+        .contact-value {
+          color: var(--el-color-primary);
+        }
+      }
+
+      .contact-value {
+        font-size: 14px;
+        color: #4e5969;
+        font-family: monospace;
+      }
+    }
   }
 }
 
 .profile-content {
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
+  min-height: 400px;
+  .placeholder {
+    padding: 40px;
+    text-align: center;
+    color: #c9cdd4;
+  }
 }
 
-.placeholder {
-  padding: 24px;
-  color: #86909c;
-}
-
-/* 右侧用户数据栏 */
 .profile-sidebar {
-  background: #fff;
-
-  border-radius: 8px;
-
   display: flex;
   flex-direction: column;
   gap: 16px;
 
   .user-stats-card {
-    margin-bottom: 20px;
     :deep(.el-card__body) {
       display: flex;
-      justify-content: space-around;
+      justify-content: space-evenly;
       align-items: center;
+      padding: 20px 0;
     }
 
-    .follower {
-      display: flex;
-      flex-direction: column;
+    .stat-box {
       text-align: center;
+      cursor: pointer;
+      &:hover .value {
+        color: var(--el-color-primary);
+      }
+
+      .label {
+        font-size: 13px;
+        color: #86909c;
+        margin-bottom: 4px;
+      }
+      .value {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1d2129;
+        transition: color 0.2s;
+      }
     }
-    .fans {
-      display: flex;
-      flex-direction: column;
-      text-align: center;
-    }
-    .user-stats-card-divider {
-      height: 3em;
-      border-left: 2px var(--el-border-color) var(--el-border-style);
+
+    .stats-divider {
+      height: 24px;
     }
   }
 
-  .stat-item {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
+  .info-card {
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #f2f3f5;
+      font-size: 14px;
 
-    .num {
-      font-weight: 600;
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .label {
+        color: #86909c;
+      }
+      .num {
+        font-weight: 600;
+        color: #1d2129;
+      }
+      .time {
+        color: #4e5969;
+      }
     }
+  }
+}
 
-    .label {
-      color: #86909c;
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+  .profile-header :deep(.el-card__body) {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+
+    .el-button {
+      width: 100%;
     }
   }
 }
