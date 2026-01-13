@@ -1,25 +1,27 @@
 <script setup>
-// 这里先不接真实数据，只做 layout 骨架
-import { watch, ref } from 'vue'
+import { watch, ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores'
-import { getAsset } from '@/api/crab-vault'
-import { getUserProfileAsset } from '@/api/userProfiles'
+import { useUserAssetStore, useUserStore } from '@/stores'
 
 const router = useRouter()
 const userStore = useUserStore()
-
+const userAssetStore = useUserAssetStore()
 const avatarSrc = ref('')
 watch(
   () => userStore.userProfile.avatar,
   async (newVal) => {
-    const { url, token } = await getAsset(newVal)
-    const res = await getUserProfileAsset(url, token)
-
-    avatarSrc.value = URL.createObjectURL(res)
+    const blob = await userAssetStore.getAssetBlob(newVal)
+    const url = URL.createObjectURL(blob)
+    avatarSrc.value = url
   },
   { immediate: true },
 )
+
+onUnmounted(() => {
+  if (avatarSrc.value) {
+    URL.revokeObjectURL(avatarSrc.value)
+  }
+})
 </script>
 
 <template>
@@ -34,7 +36,17 @@ watch(
 
             <div class="info">
               <h2 class="username">{{ userStore.userInfo.name }}</h2>
-              <p class="desc">这里是个人简介，可以写一句话</p>
+              <div v-if="userStore.userProfile.contactMe.length !== 0">
+                <p
+                  class="desc"
+                  v-for="(item, index) in userStore.userProfile.contactMe"
+                  :key="index"
+                >
+                  {{ item }}
+                </p>
+              </div>
+
+              <p class="desc" v-else>这里是联系方式，请前往设置</p>
             </div>
           </div>
 
