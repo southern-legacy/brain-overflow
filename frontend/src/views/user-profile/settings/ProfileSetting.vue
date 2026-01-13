@@ -1,17 +1,13 @@
 <script setup>
-import { onActivated, ref, watch } from 'vue'
-import { useUserStore } from '@/stores'
+import { onActivated, ref, watch, onUnmounted } from 'vue'
+import { useUserStore, useUserAssetStore } from '@/stores'
 import { Plus } from '@element-plus/icons-vue'
-import { startUploadUserProfileAssets, getUserProfileAsset } from '@/api/userProfiles'
-import {
-  abortUploadAsset,
-  startUploadAssetWithFullURL,
-  uploadAsset,
-  getAsset,
-} from '@/api/crab-vault'
+import { startUploadUserProfileAssets } from '@/api/userProfiles'
+import { abortUploadAsset, startUploadAssetWithFullURL, uploadAsset } from '@/api/crab-vault'
 
 defineOptions({ name: 'ProfileSetting' })
 const userStore = useUserStore()
+const userAssetStore = useUserAssetStore()
 
 onActivated(async () => {
   // when activated:  get user profile(update)
@@ -19,6 +15,12 @@ onActivated(async () => {
   // bug fixed: must await the user profile data, otherwise it may use the old data
   await userStore.getUserNewProfilePinia(userStore.userInfo.id)
   await getProfileSettingAssets()
+})
+
+onUnmounted(() => {
+  if (avatarUrl.value) {
+    URL.revokeObjectURL(avatarUrl.value)
+  }
 })
 
 const userProfileForm = ref({
@@ -29,6 +31,7 @@ const userProfileForm = ref({
   userAvatar: userStore.userProfile.avatar ?? '',
 })
 
+// when userProfile changes, update userProfileForm
 watch(
   () => userStore.userProfile,
   (newProfile) => {
@@ -77,6 +80,9 @@ async function submitBannerUpload() {
   }
 
   try {
+    // save the old assetid
+    const oldAssetId = userProfileForm.value.userBiography
+
     // starting to upload asset, get a location
     const res = await startUploadUserProfileAssets('banner')
 
@@ -97,6 +103,11 @@ async function submitBannerUpload() {
 
     // inform brain-overflow that the upload is over
     await abortUploadAsset(assetId)
+
+    // if we have the old asset id, try to invalidate it
+    if (oldAssetId) {
+      userAssetStore.invalidate(oldAssetId)
+    }
 
     // save the asset id
     userProfileForm.value.userBanner = assetId
@@ -161,6 +172,8 @@ const submitAvatarUpload = async () => {
   }
 
   try {
+    const oldAssetId = userProfileForm.value.userBiography
+
     // starting to upload asset, get a location
     const res = await startUploadUserProfileAssets('avatar')
 
@@ -181,6 +194,10 @@ const submitAvatarUpload = async () => {
 
     // inform brain-overflow that the upload is over
     await abortUploadAsset(assetId)
+
+    if (oldAssetId) {
+      userAssetStore.invalidate(oldAssetId)
+    }
 
     // save the asset id
     userProfileForm.value.userAvatar = assetId
@@ -204,10 +221,9 @@ const submitAvatarUpload = async () => {
  * 2. get blob value(from crab vault) with token and URL
  */
 const getProfileAvatar = async () => {
-  const avatar = await getAsset(userStore.userProfile.avatar)
-  const res = await getUserProfileAsset(avatar.url, avatar.token)
-  if (avatarUrl.value) URL.revokeObjectURL(avatarUrl.value)
-  avatarUrl.value = URL.createObjectURL(res)
+  const blob = await userAssetStore.getAssetBlob(userStore.userProfile.avatar)
+  const url = URL.createObjectURL(blob)
+  avatarUrl.value = url
 }
 
 /**
@@ -215,9 +231,8 @@ const getProfileAvatar = async () => {
  * * workflow: same as "getProfileAvatar" function
  */
 const getProfileBiography = async () => {
-  const biography = await getAsset(userStore.userProfile.biography)
-  const res = await getUserProfileAsset(biography.url, biography.token)
-  const text = await res.text()
+  const blob = await userAssetStore.getAssetBlob(userStore.userProfile.biography)
+  const text = await blob.text()
   userBiographyMarkdown.value = text
 }
 
@@ -249,6 +264,8 @@ const submitBiographyUpload = async () => {
   }
 
   try {
+    const oldAssetId = userProfileForm.value.userBiography
+
     // starting to upload asset, get a location
     const res = await startUploadUserProfileAssets('biography')
 
@@ -269,6 +286,10 @@ const submitBiographyUpload = async () => {
 
     // inform brain-overflow that the upload is over
     await abortUploadAsset(assetId)
+
+    if (oldAssetId) {
+      userAssetStore.invalidate(oldAssetId)
+    }
 
     // save the asset id
     userProfileForm.value.userBiography = assetId
