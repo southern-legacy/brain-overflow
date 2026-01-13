@@ -28,6 +28,14 @@ export const startUploadAssetWithFullURL = (url) => {
   })
 }
 
+/**
+ * real upload logic
+ *
+ * @param {*} file file object
+ * @param {*} token token to validate
+ * @param {*} url request url
+ * @returns {*}
+ */
 export const uploadAsset = (file, token, url) => {
   return request({
     url: url,

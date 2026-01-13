@@ -17,6 +17,7 @@ onActivated(async () => {
   await getProfileSettingAssets()
 })
 
+// revoke the url when unmounted
 onUnmounted(() => {
   if (avatarUrl.value) {
     URL.revokeObjectURL(avatarUrl.value)
@@ -129,8 +130,6 @@ async function submitBannerUpload() {
  *
  * * it only supports ten contact ways
  * * and its length is [1, 100]
- *
- *
  */
 const addContact = () => {
   if (userProfileForm.value.contactMe.length > 10) {
@@ -216,9 +215,6 @@ const submitAvatarUpload = async () => {
 
 /**
  * * get the avatar with asset id
- * * workflow
- * 1. get token and URL(from Brain-Overflow) with asset id
- * 2. get blob value(from crab vault) with token and URL
  */
 const getProfileAvatar = async () => {
   const blob = await userAssetStore.getAssetBlob(userStore.userProfile.avatar)
@@ -228,7 +224,6 @@ const getProfileAvatar = async () => {
 
 /**
  * * get the biography with asset id
- * * workflow: same as "getProfileAvatar" function
  */
 const getProfileBiography = async () => {
   const blob = await userAssetStore.getAssetBlob(userStore.userProfile.biography)
@@ -255,6 +250,10 @@ const getProfileSettingAssets = async () => {
   await Promise.all(promises)
 }
 
+/**
+ * * the submit of aseets(biography) with crab-vault
+ * * workflow: same as "submitBannerUpload" function
+ */
 const submitBiographyUpload = async () => {
   if (!userBiographyMarkdown.value || userBiographyMarkdown.value.length === 0) {
     return ElMessage({

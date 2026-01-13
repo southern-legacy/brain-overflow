@@ -5,7 +5,7 @@
 
 <script setup>
 /**
- * todo:  动态数据： 头像， 用户关注，个人主页跳转，个人设置跳转，收藏页面，历史记录
+ * todo:  动态数据： 头像， 用户关注，收藏页面，历史记录
  */
 import { watch, ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'

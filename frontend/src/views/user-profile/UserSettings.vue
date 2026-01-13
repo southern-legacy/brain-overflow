@@ -195,7 +195,7 @@ $border-radius: 8px;
       color: var(--el-text-color-regular);
       font-weight: 500;
       transition: all 0.3s;
-      user-select: none; /* 防止快速点击时选中文本 */
+      user-select: none; /* prevent click too fast to select the text  */
 
       .el-icon {
         font-size: 18px;

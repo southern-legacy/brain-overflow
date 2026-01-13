@@ -114,7 +114,8 @@ const handleRegis = async () => {
       )
     }
   } catch (err) {
-    if (err.status === 422 && err.code === 'unique') {
+    if (err.status === 422 && err.data.code === 'unique') {
+      console.warn('[register]: register failed', err)
       return ElMessage({
         type: 'error',
         message: '当前账号已被人注册，请修改你的用户名或注册方式',
