@@ -1,46 +1,58 @@
 import { defineStore } from 'pinia'
+
 import { getAsset } from '@/api/crab-vault'
 import { getUserProfileAsset } from '@/api/userProfiles'
 
 export const useUserAssetStore = defineStore('userAsset', () => {
-  // assetId -> objectUrl
-  const assetMap = new Map()
-
-  // assetId -> in-flight promise
+  const assetCache = new Map()
   const loadingMap = new Map()
 
+  /**
+   * get Asset Blob from crab vault
+   *
+   * @async
+   * @param {string} assetId asset id
+   * @returns {blob}
+   */
   async function getAssetBlob(assetId) {
     if (!assetId) return null
 
-    if (assetMap.has(assetId)) {
-      return assetMap.get(assetId)
-    }
+    // if cache has
+    if (assetCache.has(assetId)) return assetCache.get(assetId)
 
-    if (loadingMap.has(assetId)) {
-      return loadingMap.get(assetId)
-    }
+    // if it is requesting
+    if (loadingMap.has(assetId)) return loadingMap.get(assetId)
 
     const task = (async () => {
-      const { url, token } = await getAsset(assetId)
-      const blob = await getUserProfileAsset(url, token)
+      try {
+        const { url, token } = await getAsset(assetId)
+        const blob = await getUserProfileAsset(url, token)
 
-      assetMap.set(assetId, blob)
-      loadingMap.delete(assetId)
-      return blob
+        // save in  cache
+        assetCache.set(assetId, blob)
+
+        return blob
+      } finally {
+        // delete from loading map
+        loadingMap.delete(assetId)
+      }
     })()
 
     loadingMap.set(assetId, task)
     return task
   }
 
+  /**
+   * invalidate an asset
+   */
   function invalidate(assetId) {
     if (!assetId) return
-    if (assetMap.has(assetId)) assetMap.delete(assetId)
-    if (loadingMap.has(assetId)) loadingMap.delete(assetId)
+    assetCache.delete(assetId)
+    loadingMap.delete(assetId)
   }
 
   function clearAll() {
-    assetMap.clear()
+    assetCache.clear()
     loadingMap.clear()
   }
 
