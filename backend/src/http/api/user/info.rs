@@ -1,14 +1,15 @@
 use axum::{Extension, debug_handler, extract::State, http::StatusCode, response::IntoResponse};
 use chrono::Utc;
 use http::header;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::{
     entity::{
         asset::{Asset, AssetHandle, AssetStatus, OwnerType},
-        user::user_profiles::UserProfile,
+        user::{user_info::UserInfo, user_profiles::UserProfile},
     },
     error::{
         CustomError,
@@ -17,7 +18,7 @@ use crate::{
     },
     http::{
         api::{ApiResult, user::UserIdent},
-        extractor::Path,
+        extractor::{Path, ValidJson},
     },
     server::ServerState,
 };
@@ -36,16 +37,30 @@ pub(super) enum PathParam {
     Avatar,
     Banner,
     Biography,
+    Other,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, Validate)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct JsonBody {
+    name: Option<String>,
+    contact_me: Option<serde_json::Value>,
 }
 
 #[debug_handler]
-#[tracing::instrument(name = "[user/info]", skip(state))]
+#[tracing::instrument(name = "[user/info]", skip(state, info))]
 pub(super) async fn put(
     State(state): State<ServerState>,
     Path(part): Path<PathParam>,
     Extension(ident): Extension<UserIdent>,
+    info: Option<ValidJson<JsonBody>>,
 ) -> ApiResult {
+    if let PathParam::Other = part {
+        return update_name_or_contact_method(state, ident.id, info).await;
+    }
+
     let handle = AssetHandle::generate(OwnerType::User);
+
     let url = format!("/asset/{}", handle.id);
     let new_asset = Asset {
         id: handle.id,
@@ -58,17 +73,18 @@ pub(super) async fn put(
         updated_at: Utc::now(),
         deleted_at: None,
     };
-    tracing::info!("genetated an asset handle, preparing for inserting");
 
     {
         let mut transacton = state.database.begin().await.map_err(DbError::from)?;
 
         let mut user_profile =
             UserProfile::fetch_all_fields_by_id(transacton.as_mut(), ident.id).await?;
+
         match part {
             PathParam::Avatar => user_profile.avatar = Some(handle),
             PathParam::Banner => user_profile.banner = Some(handle),
             PathParam::Biography => user_profile.biography = Some(handle),
+            PathParam::Other => unreachable!(),
         }
         new_asset.insert(transacton.as_mut()).await?;
         if user_profile
@@ -91,5 +107,27 @@ pub(super) async fn put(
             tracing::warn!("this guy doesn't even exsists");
             Err(ApiError::new(ApiErrorKind::Unauthorized).into_response())
         }
+    }
+}
+
+async fn update_name_or_contact_method(
+    state: ServerState,
+    id: Uuid,
+    info: Option<ValidJson<JsonBody>>,
+) -> ApiResult {
+    if let Some(ValidJson(info)) = info {
+        if let Some(name) = info.name {
+            UserInfo::update_name(state.database.as_ref(), id, &name).await?;
+        }
+        if let Some(contact_me) = info.contact_me {
+            let mut user_profile =
+                UserProfile::fetch_all_fields_by_id(state.database.as_ref(), id).await?;
+            user_profile.contact_me = contact_me;
+            user_profile.write_back(state.database.as_ref()).await?;
+        }
+
+        Ok(StatusCode::NO_CONTENT.into_response())
+    } else {
+        Ok((StatusCode::NO_CONTENT).into_response())
     }
 }

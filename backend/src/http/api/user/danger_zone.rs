@@ -96,16 +96,14 @@ impl ChangeAuthParam {
 pub(super) async fn change_auth_info(
     state: State<ServerState>,
     ident: Extension<UserIdent>,
-    ValidJson(param): ValidJson<ChangeAuthParam>,
-) -> ApiResult {
-    let user_info = ident.retrieve_self_from_db(state.database.as_ref()).await?;
-
-    let ChangeAuthParam {
+    ValidJson(ChangeAuthParam {
         new_email,
         new_phone,
         new_password,
         password,
-    } = param;
+    }): ValidJson<ChangeAuthParam>,
+) -> ApiResult {
+    let user_info = ident.retrieve_self_from_db(state.database.as_ref()).await?;
 
     check_password(&user_info, &password).await?;
 

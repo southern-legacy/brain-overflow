@@ -107,6 +107,24 @@ impl UserInfo {
         Ok(statement.fetch_one(db).await?.id)
     }
 
+    pub async fn update_name<'c, E>(db: E, id: Uuid, new_name: &str) -> DbResult<UserInfo>
+    where
+        E: Executor<'c, Database = Postgres>,
+    {
+        let statement = sqlx::query_as!(
+            UserInfo,
+            r#"
+                UPDATE "user"."user_info"
+                SET "name" = $1
+                WHERE "id" = $2
+                RETURNING *;
+            "#,
+            new_name,
+            id
+        );
+        Ok(statement.fetch_one(db).await?)
+    }
+
     pub async fn update_email<'c, E>(db: E, id: Uuid, new_email: &str) -> DbResult<UserInfo>
     where
         E: Executor<'c, Database = Postgres>,
