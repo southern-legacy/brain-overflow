@@ -10,3 +10,4 @@ export default pinia
 
 // simple exports
 export * from '@/stores/modules/user'
+export * from '@/stores/modules/userAsset'

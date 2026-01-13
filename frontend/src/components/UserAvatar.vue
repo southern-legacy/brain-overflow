@@ -7,24 +7,30 @@
 /**
  * todo:  动态数据： 头像， 用户关注，个人主页跳转，个人设置跳转，收藏页面，历史记录
  */
-import { watch, ref } from 'vue'
+import { watch, ref, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores'
-import { getAsset } from '@/api/crab-vault'
-import { getUserProfileAsset } from '@/api/userProfiles'
+import { useUserStore, useUserAssetStore } from '@/stores'
+
 const router = useRouter()
 const userStore = useUserStore()
+const userAssetStore = useUserAssetStore()
 const avatarSrc = ref('')
 watch(
   () => userStore.userProfile.avatar,
   async (newVal) => {
-    const { url, token } = await getAsset(newVal)
-    const res = await getUserProfileAsset(url, token)
-
-    avatarSrc.value = URL.createObjectURL(res)
+    const blob = await userAssetStore.getAssetBlob(newVal)
+    const url = URL.createObjectURL(blob)
+    avatarSrc.value = url
   },
   { immediate: true },
 )
+
+onUnmounted(() => {
+  if (avatarSrc.value) {
+    URL.revokeObjectURL(avatarSrc.value)
+  }
+})
+
 function jumpToProfile() {
   router.push('/user/profile')
 }
