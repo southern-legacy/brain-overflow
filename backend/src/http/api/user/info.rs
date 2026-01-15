@@ -4,7 +4,6 @@ use http::header;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
-use validator::Validate;
 
 use crate::{
     entity::{
@@ -18,7 +17,7 @@ use crate::{
     },
     http::{
         api::{ApiResult, user::UserIdent},
-        extractor::{Path, ValidJson},
+        extractor::{Json, Path},
     },
     server::ServerState,
 };
@@ -40,7 +39,7 @@ pub(super) enum PathParam {
     Other,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, Validate)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct JsonBody {
     name: Option<String>,
@@ -53,7 +52,7 @@ pub(super) async fn put(
     State(state): State<ServerState>,
     Path(part): Path<PathParam>,
     Extension(ident): Extension<UserIdent>,
-    info: Option<ValidJson<JsonBody>>,
+    info: Option<Json<JsonBody>>,
 ) -> ApiResult {
     if let PathParam::Other = part {
         return update_name_or_contact_method(state, ident.id, info).await;
@@ -113,9 +112,9 @@ pub(super) async fn put(
 async fn update_name_or_contact_method(
     state: ServerState,
     id: Uuid,
-    info: Option<ValidJson<JsonBody>>,
+    info: Option<Json<JsonBody>>,
 ) -> ApiResult {
-    if let Some(ValidJson(info)) = info {
+    if let Some(Json(info)) = info {
         if let Some(name) = info.name {
             UserInfo::update_name(state.database.as_ref(), id, &name).await?;
         }

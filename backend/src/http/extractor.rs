@@ -42,17 +42,31 @@ where
     T: Validate + for<'de> Deserialize<'de>;
 
 /// Validated [`json`](axum::extract::Json), rejection casted into [`ApiError`].
-/// Can be also wrapped with [`Option`], behavior: 
+/// Can be also wrapped with [`Option`], behavior:
 /// - If no content in http request body, then [`None`]
 /// - If there is content:
 ///     - Failed in deserialization: [`Err`]
-///     - Failed in validation: [`Err`] 
+///     - Failed in validation: [`Err`]
 ///     - Suceeded finally: [`Ok`]
 ///
 ///     > wrapped in [`Some`] of course
 pub struct ValidJson<T>(pub T)
 where
     T: Validate + DeserializeOwned;
+
+impl<S, T> extract::OptionalFromRequest<S> for Json<T>
+where
+    S: Send + Sync,
+    T: DeserializeOwned,
+{
+    type Rejection = ApiError;
+    async fn from_request(req: Request, state: &S) -> Result<Option<Self>, Self::Rejection> {
+        axum::Json::from_request(req, state)
+            .await
+            .map_err(ApiError::from)
+            .map(|opt| opt.map(|axum::Json(v)| Json(v)))
+    }
+}
 
 impl<S, T> extract::FromRequestParts<S> for ValidPath<T>
 where
