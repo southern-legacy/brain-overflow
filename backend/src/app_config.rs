@@ -1,17 +1,21 @@
 pub mod auth;
-pub mod crab_vault;
 pub mod db;
 pub mod logger;
+pub mod s3;
 pub mod server;
 pub mod util;
 
-use crate::app_config::auth::{AuthConfig, StaticAuthConfig};
-use crate::app_config::crab_vault::{CrabVaultConfig, StaticCrabVaultConfig};
-use crate::app_config::db::DatabaseConfig;
-use crate::app_config::logger::{LoggerConfig, StaticLoggerConfig};
-use crate::app_config::server::{ServerConfig, StaticServerConfig};
-use crate::cli::Cli;
-use crate::error::fatal::{FatalError, FatalResult, MultiFatalError};
+use crate::{
+    app_config::{
+        auth::{AuthConfig, StaticAuthConfig},
+        db::DatabaseConfig,
+        logger::{LoggerConfig, StaticLoggerConfig},
+        s3::{S3Config, StaticS3Config},
+        server::{ServerConfig, StaticServerConfig},
+    },
+    cli::Cli,
+    error::fatal::{FatalError, FatalResult, MultiFatalError},
+};
 
 use self::db::StaticDatabaseConfig;
 use config::Config;
@@ -29,7 +33,7 @@ struct StaticAppConfig {
 
     auth: StaticAuthConfig,
 
-    crab_vault: StaticCrabVaultConfig,
+    s3: StaticS3Config,
 }
 
 pub struct AppConfig {
@@ -37,7 +41,7 @@ pub struct AppConfig {
     pub logger: LoggerConfig,
     pub database: DatabaseConfig,
     pub auth: AuthConfig,
-    pub crab_vault: CrabVaultConfig,
+    pub s3: S3Config,
 }
 
 /// [`ConfigItem`] 表示一个配置项，实现了这个 trait 的结构就是一个配置项
@@ -64,32 +68,32 @@ impl ConfigItem for StaticAppConfig {
             logger,
             database,
             auth,
-            crab_vault,
+            s3,
         } = self;
 
-        let (database_res, auth_res, crab_vault_res) = (
+        let (database_res, auth_res, s3_res) = (
             database.into_runtime(),
             auth.into_runtime(),
-            crab_vault.into_runtime(),
+            s3.into_runtime(),
         );
 
         let mut errors = MultiFatalError::new();
 
         // 这里这么写好看一些
         #[allow(clippy::unnecessary_unwrap)]
-        if database_res.is_ok() && auth_res.is_ok() && crab_vault_res.is_ok() {
+        if database_res.is_ok() && auth_res.is_ok() && s3_res.is_ok() {
             // unwrap safety: 全部在上面进行了 is_ok 检查
             Ok(AppConfig {
                 server,
                 logger,
                 database: database_res.unwrap(),
                 auth: auth_res.unwrap(),
-                crab_vault: crab_vault_res.unwrap(),
+                s3: s3_res.unwrap(),
             })
         } else {
             let _ = database_res.map_err(|mut e| errors.append(&mut e));
             let _ = auth_res.map_err(|mut e| errors.append(&mut e));
-            let _ = crab_vault_res.map_err(|mut e| errors.append(&mut e));
+            let _ = s3_res.map_err(|mut e| errors.append(&mut e));
 
             errors.exit_now()
         }

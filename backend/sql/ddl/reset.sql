@@ -1,7 +1,10 @@
-DROP TABLE asset CASCADE;
-DROP TYPE asset_status CASCADE;
-DROP TYPE owner_type CASCADE;
-DROP SCHEMA "user" CASCADE;
+DROP TYPE IF EXISTS "asset_status" CASCADE;
+DROP TABLE IF EXISTS "asset" CASCADE;
+DROP SCHEMA IF EXISTS "user" CASCADE;
+DROP TABLE IF EXISTS "article" CASCADE;
+DROP TABLE IF EXISTS "article_asset" CASCADE;
+DROP TYPE IF EXISTS "comment_status" CASCADE;
+DROP TABLE IF EXISTS "comment" CASCADE;
 
 -- ASSET
 CREATE TYPE asset_status AS ENUM (
@@ -13,39 +16,25 @@ CREATE TYPE asset_status AS ENUM (
     'deleted'
 );
 
-CREATE TYPE owner_type AS ENUM (
-    'user',
-    'article',
-    'question',
-
-    -- 所有的 owner_type
-    'any'
-);
-
 CREATE TABLE asset(
-    "id"            uuid            PRIMARY KEY,
+    "id"            UUID            PRIMARY KEY     DEFAULT uuidv7(),
     "newest_key"    TEXT            NOT NULL,
     "status"        asset_status    NOT NULL        DEFAULT 'init',
 
-    "owner"         uuid            NOT NULL,
-    "owner_type"    owner_type      NOT NULL,
-
-    "history"       TEXT[]          NOT NULL        DEFAULT ARRAY[]::TEXT[],
-
-    "created_at"    timestamptz     NOT NULL        DEFAULT now(),
-    "updated_at"    timestamptz     NOT NULL        DEFAULT now(),
-    "deleted_at"    timestamptz                     DEFAULT NULL
+    "created_at"    TIMESTAMPTZ     NOT NULL        DEFAULT now(),
+    "updated_at"    TIMESTAMPTZ     NOT NULL        DEFAULT now(),
+    "deleted_at"    TIMESTAMPTZ                     DEFAULT NULL
 );
 
--- USER
+-- 用户
 CREATE SCHEMA "user" AUTHORIZATION postgres;
 
 CREATE TABLE "user"."user_info" (
-    "id"            UUID            PRIMARY KEY,
+    "id"            UUID            PRIMARY KEY     DEFAULT uuidv7(),
     "name"          VARCHAR(32)     NOT NULL,
     "email"         VARCHAR(256)    UNIQUE CHECK ("email" ~* '^[\w._%+-]+@[\w.-]+\.\w{2,}$'),
     "phone"         VARCHAR(16)     UNIQUE CHECK ("phone" ~* '^\+\d{1,15}$'),
-    "password_hash"   TEXT            NOT NULL,
+    "password_hash" TEXT            NOT NULL,
 
     CONSTRAINT login_method CHECK (("email" IS NOT NULL) OR ("phone" IS NOT NULL))
 );
@@ -62,3 +51,75 @@ CREATE TABLE "user"."user_profile" (
     "contact_me"    JSONB           NOT NULL DEFAULT '[]'::JSONB,
     "updated_at"    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
+
+-- 文章属于一种 asset
+CREATE TABLE article (
+    "id"              UUID            PRIMARY KEY   DEFAULT uuidv7(),
+    "author_id"       UUID            NOT NULL,
+    "title"           TEXT            NOT NULL,
+    "published_at"    TIMESTAMPTZ,                  -- 发布时间，NULL 表示草稿
+    "views"           BIGINT          DEFAULT 0,
+    "created_at"      TIMESTAMPTZ     NOT NULL      DEFAULT NOW(),
+    "updated_at"      TIMESTAMPTZ     NOT NULL      DEFAULT NOW(),
+    "tags"            TEXT[]          NOT NULL      DEFAULT ARRAY[]::TEXT[],
+
+    CONSTRAINT "fk_article_asset" FOREIGN KEY (id) REFERENCES "asset"(id) ON DELETE CASCADE,
+
+    -- 或者 set null
+    CONSTRAINT "fk_article_author" FOREIGN KEY (author_id) REFERENCES "user"."user_info"(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX idx_article_author_id ON article(author_id);
+CREATE INDEX idx_article_published_at ON article(published_at);
+-- GIN 索引
+CREATE INDEX idx_article_tags ON article USING gin(tags);
+
+
+-- 文章-资产关联表
+CREATE TABLE article_asset (
+    "article_id"      UUID            NOT NULL,
+    "asset_id"        UUID            NOT NULL,
+    "position"        INT             NOT NULL    DEFAULT 0,   -- 排序顺序
+    "role"            VARCHAR(32)     NOT NULL    DEFAULT 'inline', -- 'cover', 'inline', 'attachment' 等
+
+    PRIMARY KEY (article_id, asset_id),
+    CONSTRAINT fk_article_asset_article FOREIGN KEY (article_id) REFERENCES article(id) ON DELETE CASCADE,
+    -- 如果一个 asset 被另外的 asset 引用, 此处是文章, 我们拒绝删除
+    CONSTRAINT fk_article_asset_asset FOREIGN KEY (asset_id) REFERENCES asset(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX idx_article_asset_asset_id ON article_asset(asset_id);
+CREATE INDEX idx_article_asset_role ON article_asset(role);
+
+
+-- 评论
+CREATE TYPE comment_status AS ENUM ('active', 'hidden', 'deleted');
+
+CREATE TABLE "comment" (
+    "id"                 UUID            PRIMARY KEY DEFAULT uuidv7(),
+    "article_id"         UUID            NOT NULL,
+    "parent_comment_id"  UUID            DEFAULT NULL,
+    "author_id"          UUID            NOT NULL,
+    "content"            TEXT            NOT NULL,
+    "likes"              INT             NOT NULL DEFAULT 0,
+    "status"             comment_status  NOT NULL DEFAULT 'active',
+    "created_at"         TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    "updated_at"         TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_comment_article FOREIGN KEY (article_id)
+        REFERENCES "article"(id) ON DELETE CASCADE,
+
+    CONSTRAINT fk_comment_parent FOREIGN KEY (parent_comment_id)
+        REFERENCES "comment"(id) ON DELETE CASCADE,
+
+    CONSTRAINT fk_comment_author FOREIGN KEY (author_id)
+        REFERENCES "user"."user_info"(id) ON DELETE RESTRICT,
+
+    -- 防止评论指向自身
+    CONSTRAINT check_parent_not_self CHECK (parent_comment_id <> id)
+);
+
+CREATE INDEX idx_comment_article_id ON "comment"(article_id);
+CREATE INDEX idx_comment_parent_id ON "comment"(parent_comment_id);
+CREATE INDEX idx_comment_author_id ON "comment"(author_id);
+CREATE INDEX idx_comment_created_at ON "comment"(created_at DESC);

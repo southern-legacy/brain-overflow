@@ -1,12 +1,35 @@
 use serde::{Deserialize, Serialize};
-
-use crab_vault_logger::LogLevel;
+use tracing::level_filters::LevelFilter;
 
 use crate::{app_config::ConfigItem, error::fatal::FatalResult};
 
 pub type LoggerConfig = StaticLoggerConfig;
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub enum LogLevel {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+impl From<LogLevel> for LevelFilter {
+    fn from(level: LogLevel) -> LevelFilter {
+        use LogLevel as L;
+        use tracing::Level;
+        match level {
+            L::Trace => Level::TRACE,
+            L::Debug => Level::DEBUG,
+            L::Info => Level::INFO,
+            L::Warn => Level::WARN,
+            L::Error => Level::ERROR,
+        }
+        .into()
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(deny_unknown_fields, default)]
 pub struct StaticLoggerConfig {
     /// 最低的日志输出等级
@@ -53,6 +76,7 @@ impl Default for StaticLoggerConfig {
     }
 }
 
+#[allow(unused)]
 impl StaticLoggerConfig {
     #[inline]
     pub fn level(&self) -> LogLevel {

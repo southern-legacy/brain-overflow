@@ -6,16 +6,6 @@ use uuid::Uuid;
 use crate::error::db::DbResult;
 
 #[derive(sqlx::Type, Serialize, Deserialize, Clone, Copy, Debug)]
-#[sqlx(rename_all = "snake_case", type_name = "owner_type")]
-pub enum OwnerType {
-    User,
-    Article,
-    Question,
-
-    Any,
-}
-
-#[derive(sqlx::Type, Serialize, Deserialize, Clone, Copy, Debug)]
 #[sqlx(rename_all = "snake_case", type_name = "asset_status")]
 #[derive(PartialEq)]
 pub enum AssetStatus {
@@ -33,16 +23,8 @@ pub struct Asset {
     pub id: Uuid,
 
     /// 最新版本的 URI 路径
-    pub newest_key: String,
-
+    pub key: String,
     pub status: AssetStatus,
-
-    pub owner: Uuid,
-
-    pub owner_type: OwnerType,
-
-    /// 所有历史版本的 URI 路径
-    pub history: Vec<String>,
 
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -53,12 +35,11 @@ pub struct Asset {
 pub struct AssetHandle {
     pub id: Uuid,
     pub allow_deleted: bool,
-    #[allow(dead_code)]
-    pub owner_type: OwnerType,
 }
 
 impl Asset {
     #[allow(dead_code)]
+    #[inline]
     pub fn deleted(&self) -> bool {
         matches!(self.deleted_at, Some(deleted) if deleted < Utc::now())
     }
@@ -70,11 +51,8 @@ impl Asset {
     {
         let Self {
             id,
-            newest_key,
+            key,
             status,
-            owner,
-            owner_type,
-            history,
             created_at,
             updated_at,
             deleted_at,
@@ -83,16 +61,13 @@ impl Asset {
         let query = query!(
             r#"
                 UPDATE asset
-                SET newest_key = $2, status = $3, owner = $4, owner_type = $5, history = $6, created_at = $7, updated_at = $8, deleted_at = $9
+                SET key = $2, status = $3, created_at = $4, updated_at = $5, deleted_at = $6
                 WHERE id = $1
                 RETURNING id;
             "#,
             id,
-            newest_key,
+            key,
             status as _,
-            owner,
-            owner_type as _,
-            &history,
             created_at,
             updated_at,
             deleted_at.as_ref()
@@ -108,11 +83,8 @@ impl Asset {
     {
         let Self {
             id,
-            newest_key,
+            key,
             status,
-            owner,
-            owner_type,
-            history,
             created_at,
             updated_at,
             deleted_at,
@@ -120,16 +92,13 @@ impl Asset {
 
         let query = query!(
             r#"
-                INSERT INTO asset (id, newest_key, status, owner, owner_type, history, created_at, updated_at, deleted_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                INSERT INTO asset (id, key, status, created_at, updated_at, deleted_at)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id;
             "#,
             id,
-            newest_key,
+            key,
             status as _,
-            owner,
-            owner_type as _,
-            &history,
             created_at,
             updated_at,
             deleted_at.as_ref()
@@ -159,24 +128,22 @@ impl<'de> Deserialize<'de> for AssetHandle {
 
 impl From<Uuid> for AssetHandle {
     fn from(id: Uuid) -> Self {
-        Self::new_with_id(id, OwnerType::Any)
+        Self::new_with_id(id)
     }
 }
 
 #[allow(dead_code)]
 impl AssetHandle {
-    pub fn generate(owner_type: OwnerType) -> Self {
+    pub fn generate() -> Self {
         Self {
             id: Uuid::now_v7(),
             allow_deleted: false,
-            owner_type,
         }
     }
 
-    pub const fn new_with_id(id: Uuid, owner_type: OwnerType) -> Self {
+    pub const fn new_with_id(id: Uuid) -> Self {
         Self {
             id,
-            owner_type,
             allow_deleted: false,
         }
     }
@@ -196,8 +163,7 @@ impl AssetHandle {
                 Asset,
                 r#"
                     SELECT
-                        id, newest_key, owner, history, created_at, updated_at, deleted_at,
-                        owner_type as "owner_type: OwnerType",
+                        id, key, created_at, updated_at, deleted_at,
                         status as "status: AssetStatus"
                     FROM "asset"
                     WHERE "id" = $1;
@@ -211,8 +177,7 @@ impl AssetHandle {
                 Asset,
                 r#"
                     SELECT
-                        id, newest_key, owner, history, created_at, updated_at, deleted_at,
-                        owner_type as "owner_type: OwnerType",
+                        id, key, created_at, updated_at, deleted_at,
                         status as "status: AssetStatus"
                     FROM "asset"
                     WHERE "id" = $1;
@@ -222,28 +187,6 @@ impl AssetHandle {
             .fetch_optional(db)
             .await?
         })
-    }
-
-    pub async fn update_to<'c, E>(&self, db: E, newest_key: &str) -> DbResult<Option<()>>
-    where
-        E: Executor<'c, Database = Postgres>,
-    {
-        let query = query!(
-            r#"
-                UPDATE "asset"
-                SET
-                    "history" = array_append("history", "newest_key"),
-                    "newest_key" = $1
-                WHERE
-                    "id" = $2 AND "deleted_at" IS NULL
-            "#,
-            newest_key,
-            self.id
-        )
-        .fetch_optional(db)
-        .await?;
-
-        Ok(query.map(|_| ()))
     }
 
     /// ### **逻辑删除**

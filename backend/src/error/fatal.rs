@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::{CommandFactory, error::ErrorKind};
-use crab_vault_auth::error::AuthError;
+use ::auth::error::AuthError;
 
 use crate::cli::Cli;
 
@@ -131,18 +131,6 @@ impl From<std::io::Error> for FatalError {
 impl From<base64::DecodeError> for FatalError {
     fn from(value: base64::DecodeError) -> Self {
         Self::new(ErrorKind::Io, format!("base64 error: {value}"), None)
-    }
-}
-
-impl From<glob::GlobError> for FatalError {
-    fn from(value: glob::GlobError) -> Self {
-        Self::new(ErrorKind::Io, format!("glob pattern error: {value}"), None)
-    }
-}
-
-impl From<glob::PatternError> for FatalError {
-    fn from(value: glob::PatternError) -> Self {
-        Self::new(ErrorKind::Io, format!("glob pattern error: {value}"), None)
     }
 }
 

@@ -11,7 +11,7 @@ use axum::{
     http::{HeaderMap, header::AUTHORIZATION},
     response::{IntoResponse, Response},
 };
-use crab_vault_auth::{HttpMethod, Jwt, JwtDecoder, error::AuthError};
+use ::auth::{Jwt, JwtDecoder, error::AuthError};
 use http::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
@@ -25,12 +25,7 @@ where
     F: 'static
         + Clone
         + Send
-        + Fn(
-            &HeaderMap,
-            HttpMethod,
-            &str,
-            Jwt<T>,
-        ) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+        + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     inner_service: Inner,
@@ -45,12 +40,7 @@ where
     F: 'static
         + Clone
         + Send
-        + Fn(
-            &HeaderMap,
-            HttpMethod,
-            &str,
-            Jwt<T>,
-        ) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+        + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     decoder: JwtDecoder,
@@ -63,12 +53,7 @@ where
     F: 'static
         + Clone
         + Send
-        + Fn(
-            &HeaderMap,
-            HttpMethod,
-            &str,
-            Jwt<T>,
-        ) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+        + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     /// # 此函数将在堆上创建一个 [`JwtConfig`] 结构作为这个中间件的配置
@@ -104,12 +89,7 @@ where
     Valid: 'static
         + Clone
         + Send
-        + Fn(
-            &HeaderMap,
-            HttpMethod,
-            &str,
-            Jwt<Token>,
-        ) -> PinBox<dyn Future<Output = Result<Token, Response>> + Send>,
+        + Fn(&Request, Jwt<Token>) -> PinBox<dyn Future<Output = Result<Token, Response>> + Send>,
     Token: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     type Response = Response;
@@ -117,7 +97,9 @@ where
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner_service.poll_ready(cx).map_err(|_| unreachable!())
+        self.inner_service
+            .poll_ready(cx)
+            .map_err(|_| unreachable!())
     }
 
     fn call(&mut self, mut req: Request) -> Self::Future {
@@ -127,10 +109,8 @@ where
         let mut inner_service = std::mem::replace(&mut self.inner_service, cloned);
 
         Box::pin(async move {
-            let (headers, method, path) = (req.headers(), req.method().into(), req.uri().path());
-
-            match extract_token::<Token>(headers, &decoder).await {
-                Ok(token) => match validate_token(headers, method, path, token).await {
+            match extract_token::<Token>(req.headers(), &decoder).await {
+                Ok(token) => match validate_token(&req, token).await {
                     Ok(ext) => {
                         req.extensions_mut().insert(ext);
                         match inner_service.call(req).await {
@@ -161,9 +141,7 @@ where
         + Clone
         + Send
         + Fn(
-            &HeaderMap,
-            HttpMethod,
-            &str,
+            &Request,
             Jwt<T>,
         ) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,

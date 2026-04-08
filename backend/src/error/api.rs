@@ -130,8 +130,8 @@ impl From<validator::ValidationErrors> for ApiError {
     }
 }
 
-impl From<crab_vault_auth::error::AuthError> for ApiError {
-    fn from(_: crab_vault_auth::error::AuthError) -> Self {
+impl From<::auth::error::AuthError> for ApiError {
+    fn from(_: ::auth::error::AuthError) -> Self {
         Self::new(ApiErrorKind::Unauthorized)
     }
 }

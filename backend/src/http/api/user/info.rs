@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::{
     entity::{
-        asset::{Asset, AssetHandle, AssetStatus, OwnerType},
+        asset::{Asset, AssetHandle, AssetStatus},
         user::{user_info::UserInfo, user_profiles::UserProfile},
     },
     error::{
@@ -58,16 +58,13 @@ pub(super) async fn put(
         return update_name_or_contact_method(state, ident.id, info).await;
     }
 
-    let handle = AssetHandle::generate(OwnerType::User);
+    let handle = AssetHandle::generate();
 
     let url = format!("/asset/{}", handle.id);
     let new_asset = Asset {
         id: handle.id,
-        newest_key: url.clone(),
-        owner: ident.id,
+        key: url.clone(),
         status: AssetStatus::Init,
-        owner_type: OwnerType::User,
-        history: vec![],
         created_at: Utc::now(),
         updated_at: Utc::now(),
         deleted_at: None,

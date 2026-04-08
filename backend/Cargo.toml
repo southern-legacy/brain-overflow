@@ -1,5 +1,5 @@
 [package]
-name = "br-ovfl-svr"
+name = "brain-overflow"
 version = "0.1.0"
 edition = "2024"
 description = "The server of project Brain Overflow"
@@ -9,27 +9,52 @@ authors = ["Sylvan Lyon <sylvanlyon@gamil.com>"]
 default = []
 more-message = []
 
-[dependencies]
+[workspace]
+members = [ "crates/auth" ]
+
+[workspace.dependencies]
 axum = { version = "0.8", features = ["macros"] }
 base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 config = "0.15.19"
-crab-vault-auth = { version = "0.2.14", features = ["server-side"] }
-crab-vault-logger = "0.2.13"
-glob = "0.3.3"
 http = "1.4.0"
 jsonwebtoken = "9.3"
 num_cpus = "1.17"
+rand = "0.9"
 regex = "1.11.1"
 rust-argon2 = "3.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.142", features = ["raw_value"] }
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "derive", "macros", "chrono", "rust_decimal", "json", "uuid"] }
+thiserror = "2.0"
 tokio = { version = "1.47.1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "timeout", "cors", "limit", "normalize-path", "auth", "fs"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }
-uuid = { version = "1.17", features = ["v4", "v7"] }
+uuid = { version = "1.17", features = ["v4", "v7", "serde"] }
 validator = { version = "0.20", features = ["derive"] }
+
+[dependencies]
+axum.workspace = true
+base64.workspace = true
+chrono.workspace = true
+clap.workspace = true
+config.workspace = true
+http.workspace = true
+jsonwebtoken.workspace = true
+num_cpus.workspace = true
+regex.workspace = true
+rust-argon2.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid = { workspace = true }
+validator.workspace = true
+auth = { path = "crates/auth" }

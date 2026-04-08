@@ -9,29 +9,29 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Clone, Default)]
-pub(super) struct StaticCrabVaultConfig {
+pub(super) struct StaticS3Config {
     encoder: StaticJwtEncoderConfig,
     location: String,
 }
 
-pub struct CrabVaultConfig {
+pub struct S3Config {
     pub encoder_config: JwtEncoderConfig,
     pub location: String,
 }
 
-impl ConfigItem for StaticCrabVaultConfig {
-    type RuntimeConfig = CrabVaultConfig;
+impl ConfigItem for StaticS3Config {
+    type RuntimeConfig = S3Config;
 
-    fn into_runtime(self) -> FatalResult<CrabVaultConfig> {
-        let StaticCrabVaultConfig { encoder, location } = self;
-        Ok(CrabVaultConfig {
+    fn into_runtime(self) -> FatalResult<S3Config> {
+        let StaticS3Config { encoder, location } = self;
+        Ok(S3Config {
             encoder_config: encoder.into_runtime()?,
             location,
         })
     }
 }
 
-impl CrabVaultConfig {
+impl S3Config {
     /// # 获取 key 对应的 url（包含域名）
     /// 实现非常简单，就是一个 `format`
     pub fn location_of_asset(&self, key: &str) -> String {

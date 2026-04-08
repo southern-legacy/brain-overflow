@@ -4,9 +4,8 @@ use axum::{
     response::IntoResponse,
     routing,
 };
-use crab_vault_auth::{HttpMethod, Jwt, Permission};
-use http::{StatusCode, header};
-use serde_json::json;
+use auth::Jwt;
+use http::StatusCode;
 use uuid::Uuid;
 
 use crate::{
@@ -23,7 +22,7 @@ use crate::{
 pub fn build_router(config: &AppConfig) -> Router<ServerState> {
     let auth_layer = AuthLayer::new(
         config.auth.decoder_config.decoder.clone(),
-        |_, _, _, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
+        |_, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
     );
     Router::new()
         .route("/asset/{id}", routing::delete(delete))
@@ -40,44 +39,7 @@ async fn safe(
     Path(id): Path<Uuid>,
     _user_ident: Option<Extension<UserIdent>>,
 ) -> ApiResult {
-    let asset = AssetHandle::from(id)
-        .get(state.database.as_ref())
-        .await?
-        .ok_or(StatusCode::NOT_FOUND.into_response())?;
-
-    if asset.status != AssetStatus::Available {
-        // 如果这个 asset 不可用，那么就会返回这个状态码
-        return Err(StatusCode::IM_A_TEAPOT.into_response());
-    }
-
-    let permmision = Permission::new_minimum()
-        .permit_method(vec![HttpMethod::Safe])
-        .permit_content_type(vec!["*".to_string()])
-        .permit_resource_pattern(&asset.newest_key)
-        .restrict_maximum_size_option(None);
-
-    let encoder_config = &state.config.crab_vault.encoder_config;
-    let token = Jwt::new(
-        &encoder_config.issue_as,
-        &encoder_config.audience,
-        permmision,
-    );
-
-    let url = state.config.crab_vault.location_of_asset(&asset.newest_key);
-    Ok((
-        StatusCode::OK,
-        [(
-            header::LOCATION,
-            &url,
-        )],
-        json!({
-            "token": encoder_config.encoder.encode_randomly(&token)?,
-            "url": &url,
-            "id": asset.id
-        })
-        .to_string(),
-    )
-        .into_response())
+    todo!()
 }
 
 #[debug_handler]
@@ -86,7 +48,7 @@ async fn start_upload(
     Path(id): Path<Uuid>,
     Extension(_user_ident): Extension<UserIdent>,
 ) -> ApiResult {
-    let encoder_config = &state.config.crab_vault.encoder_config;
+    let encoder_config = &state.config.s3.encoder_config;
 
     let asset = {
         let mut transaction = state.database.begin().await.map_err(DbError::from)?;
@@ -103,29 +65,7 @@ async fn start_upload(
         asset
     };
 
-    let token = Jwt::new(
-        &encoder_config.issue_as,
-        &encoder_config.audience,
-        Permission::new()
-            .permit_method(vec![HttpMethod::Put])
-            .permit_resource_pattern(&asset.newest_key)
-            .restrict_maximum_size_option(None)
-            .permit_content_type(vec!["*".to_string()]),
-    );
-
-    let url = state.config.crab_vault.location_of_asset(&asset.newest_key);
-
-    Ok((
-        StatusCode::OK,
-        [(header::LOCATION, &url)],
-        json!({
-            "token": encoder_config.encoder.encode_randomly(&token)?,
-            "url": &url,
-            "id": asset.id
-        })
-        .to_string(),
-    )
-        .into_response())
+    todo!()
 }
 
 #[debug_handler]

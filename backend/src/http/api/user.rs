@@ -3,8 +3,8 @@ mod info;
 mod login;
 mod signup;
 use axum::extract::State;
-use crab_vault_auth::Jwt;
-use crab_vault_auth::error::AuthError;
+use ::auth::Jwt;
+use ::auth::error::AuthError;
 use http::header;
 use std::sync::LazyLock;
 use uuid::Uuid;
@@ -30,7 +30,7 @@ pub(super) fn build_router(config: &AppConfig) -> Router<ServerState> {
     let router = Router::new();
     let auth_layer = AuthLayer::new(
         config.auth.decoder_config.decoder.clone(),
-        |_, _, _, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
+        |_, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
     );
 
     async fn redirect(state: State<ServerState>, ident: Extension<UserIdent>) -> impl IntoResponse {
@@ -98,7 +98,7 @@ impl From<UserInfo> for UserIdent {
 
 /// 检查密码是否正确
 ///
-/// `val` 中是 使用 argon2 哈希过后的密码，`password` 是明文密码
+/// `val` 中是 使用 argon2 哈希过后的密码，`password` 是明文密码，通过 ssl 保证传输过程中的数据安全
 #[tracing::instrument(name = "[user/check password]", skip_all)]
 async fn check_password(val: &UserInfo, password: &str) -> Result<(), Response> {
     match argon2::verify_encoded(&val.password_hash, password.as_bytes()) {
