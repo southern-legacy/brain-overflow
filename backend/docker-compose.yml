@@ -34,8 +34,15 @@ services:
     container_name: brain-overflow-minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      - MINIO_ROOT_USER = minioadmin
+      - MINIO_ROOT_PASSWORD = minioadmin
+      # webhook 回调
+      - MINIO_NOTIFY_WEBHOOK_ENABLE = on
+      # 开启跨域
+      - MINIO_CORS_ENABLE = on
+      - MINIO_CORS_ALLOW_ORIGINS = *
+      - MINIO_CORS_ALLOW_METHODS = GET,PUT,POST,DELETE,HEAD
+      - MINIO_CORS_ALLOW_HEADERS = *
     volumes:
       - minio_data:/data
     ports:

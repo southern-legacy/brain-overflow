@@ -86,7 +86,7 @@ async fn safe(
 async fn start_upload(
     State(state): State<ServerState>,
     Path(id): Path<Uuid>,
-    Extension(_user_ident): Extension<UserIdent>,
+    Extension(user_ident): Extension<UserIdent>,
 ) -> ApiResult {
     let s3_config = &state.config.s3;
     let bucket = &s3_config.bucket;
@@ -105,6 +105,10 @@ async fn start_upload(
         transaction.commit().await.map_err(DbError::from)?;
         asset
     };
+
+    if asset.owner != user_ident.id {
+        return Err((StatusCode::FORBIDDEN, axum::Json(json!({"code":"sdva"}))).into_response());
+    }
 
     let presigned_request = state
         .s3_client
