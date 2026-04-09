@@ -1,8 +1,0 @@
-[
-  {
-    "AllowedOrigins": ["http://yourdomain.com"],
-    "AllowedMethods": ["GET", "PUT", "POST"],
-    "AllowedHeaders": ["*"],
-    "ExposeHeaders": ["ETag"]
-  }
-]
