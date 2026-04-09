@@ -57,7 +57,7 @@ async fn safe(
         Method::GET => client
             .get_object()
             .bucket(bucket)
-            .key(state.config.s3.full_key(asset.id))
+            .key(asset.id.to_string())
             .presigned(PresigningConfig::expires_in(Duration::from_secs(900)).unwrap())
             .await
             .map_err(|e| {
@@ -67,7 +67,7 @@ async fn safe(
         Method::HEAD => client
             .head_object()
             .bucket(bucket)
-            .key(state.config.s3.full_key(asset.id))
+            .key(asset.id.to_string())
             .presigned(PresigningConfig::expires_in(Duration::from_secs(900)).unwrap())
             .await
             .map_err(|e| {
@@ -90,7 +90,6 @@ async fn start_upload(
 ) -> ApiResult {
     let s3_config = &state.config.s3;
     let bucket = &s3_config.bucket;
-    let s3_key = s3_config.full_key(id);
 
     let asset = {
         let mut transaction = state.database.begin().await.map_err(DbError::from)?;
@@ -111,7 +110,7 @@ async fn start_upload(
         .s3_client
         .put_object()
         .bucket(bucket)
-        .key(&s3_key)
+        .key(id.to_string())
         .presigned(PresigningConfig::expires_in(Duration::from_secs(900)).unwrap())
         .await
         .map_err(|e| {
@@ -124,7 +123,6 @@ async fn start_upload(
         "asset_id": asset.id,
         "method": "PUT",
         "expires_in": 900,
-        "key": s3_key,
         "bucket": bucket,
     });
 

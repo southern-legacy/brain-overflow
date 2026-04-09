@@ -1,6 +1,5 @@
 use clap::error::ErrorKind;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::{
     app_config::ConfigItem,
@@ -71,11 +70,6 @@ impl ConfigItem for StaticS3Config {
 }
 
 impl S3Config {
-    /// # 获取完整的 S3 object key
-    pub fn full_key(&self, id: Uuid) -> String {
-        id.to_string()
-    }
-
     // # 获取公开访问的 URL（使用 CDN、自定义端点或 AWS S3）
     // pub fn public_url(&self, key: &str) -> String {
     //     let full_key = self.full_key(key);
