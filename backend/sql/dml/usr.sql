@@ -70,6 +70,8 @@ $$ LANGUAGE plpgsql;
 
 SELECT insert_mock_articles(500000,3,20);
 
+SELECT * from asset where id = '019d71e5-9fd4-7dc0-92d1-6eb2039ce2bc';
+
 -- 为前 500 篇文章生成大量评论（模拟热帖）
 DO $$
 DECLARE
