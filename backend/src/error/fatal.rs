@@ -3,8 +3,8 @@ use std::{
     str::ParseBoolError,
 };
 
-use clap::{CommandFactory, error::ErrorKind};
-use ::auth::error::AuthError;
+use auth::error::AuthError;
+use clap::{error::ErrorKind, CommandFactory};
 
 use crate::cli::Cli;
 
@@ -148,7 +148,7 @@ impl From<AuthError> for FatalError {
             InvalidIssuer => ("token is issued by untrusted issuer".into(), None),
             InvalidAudience => ("token has invalid audience".into(), None),
             InvalidSubject => ("subject of this token is invalid".into(), None),
-            InsufficientPermissions => ("the permission is not sufficient".into(), None),
+
             InvalidKeyId => ("no such key id!".into(), None),
             MissingClaim(claim) => (format!("claim `{claim}` is absent"), None),
             TokenRevoked => ("this token is revoked by the server".into(), None),

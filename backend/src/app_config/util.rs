@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
+use auth::{JwtDecoder, JwtEncoder};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use chrono::TimeDelta;
 use clap::error::ErrorKind;
-use auth::{JwtDecoder, JwtEncoder};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
 

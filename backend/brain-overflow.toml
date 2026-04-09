@@ -17,29 +17,24 @@ leeway = 60
 reject_tokens_expiring_in_less_than = 0
 audience = [ "brain overflow" ]
 
-
-# 如何签发 Crab Vault 的客户端直连令牌
-[crab_vault.encoder]
-encoding_keys = [
-    { algorithm = "HS256", form = "der_inline", kid = "key 2", key = "dGVzdDI=" }
-]
-issue_as = "brain overflow"
-audience = ["crab vault"]
-expires_in = 3600
-not_valid_in = 0
-
-
 # 数据库配置
 [database]
 host = "localhost"
 port = 5432
 user = "postgres"
 password = "123456"
-database = "br_ovfl"
+database = "brain-overflow"
 
 
 [logger]
+with_file = "false"
 
+[s3]
+bucket = "brain-overflow"
+access_key_id = "minioadmin"
+secret_access_key = "minioadmin"
+force_path_style = true
+endpoint = "http://localhost:9000"
 
 # 端口配置
 [server]

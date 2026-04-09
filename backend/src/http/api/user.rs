@@ -2,9 +2,9 @@ mod danger_zone;
 mod info;
 mod login;
 mod signup;
-use axum::extract::State;
 use ::auth::Jwt;
 use ::auth::error::AuthError;
+use axum::extract::State;
 use http::header;
 use std::sync::LazyLock;
 use uuid::Uuid;
@@ -36,7 +36,10 @@ pub(super) fn build_router(config: &AppConfig) -> Router<ServerState> {
     async fn redirect(state: State<ServerState>, ident: Extension<UserIdent>) -> impl IntoResponse {
         (
             StatusCode::TEMPORARY_REDIRECT,
-            [(header::LOCATION, format!("{}/user/{}", state.config.server.location, ident.id))],
+            [(
+                header::LOCATION,
+                format!("{}/user/{}", state.config.server.location, ident.id),
+            )],
         )
     }
 

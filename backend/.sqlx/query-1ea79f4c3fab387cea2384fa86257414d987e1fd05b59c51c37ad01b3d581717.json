@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE asset\n                SET status = $2, owner = $3, created_at = $4, updated_at = $5, deleted_at = $6\n                WHERE id = $1;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "asset_status",
+            "kind": {
+              "Enum": [
+                "init",
+                "uploading",
+                "available",
+                "failed",
+                "aborted",
+                "deleted"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1ea79f4c3fab387cea2384fa86257414d987e1fd05b59c51c37ad01b3d581717"
+}

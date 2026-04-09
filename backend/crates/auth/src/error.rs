@@ -127,7 +127,6 @@ impl IntoResponse for AuthError {
             | AuthError::TokenRevoked => StatusCode::UNAUTHORIZED,
 
             // AuthError::InsufficientPermissions => StatusCode::FORBIDDEN,
-
             AuthError::InternalError(_) => StatusCode::UNAUTHORIZED,
         };
 

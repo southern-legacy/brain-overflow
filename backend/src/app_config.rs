@@ -33,6 +33,7 @@ struct StaticAppConfig {
 
     auth: StaticAuthConfig,
 
+    #[serde(default)]
     s3: StaticS3Config,
 }
 

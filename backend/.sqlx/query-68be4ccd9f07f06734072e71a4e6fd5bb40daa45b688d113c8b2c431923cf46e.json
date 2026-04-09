@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE \"user\".\"user_profile\"\n                SET \"biography\" = $2, \"avatar\" = $3, \"banner\" = $4, \"contact_me\" = $5, \"updated_at\" = $6\n                WHERE \"user\".\"user_profile\".\"user_id\" = $1;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Jsonb",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "68be4ccd9f07f06734072e71a4e6fd5bb40daa45b688d113c8b2c431923cf46e"
+}

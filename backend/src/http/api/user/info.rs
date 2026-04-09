@@ -25,7 +25,7 @@ use crate::{
 #[debug_handler]
 #[tracing::instrument(name = "[user/info]", skip(state))]
 pub(super) async fn get(State(state): State<ServerState>, Path(id): Path<Uuid>) -> ApiResult {
-    let res = { UserProfile::fetch_all_fields_by_id(state.database.as_ref(), id).await? };
+    let res = { UserProfile::fetch_all_fields_by_id(&state.database, id).await? };
 
     Ok((StatusCode::OK, axum::Json(res)).into_response())
 }
@@ -60,11 +60,10 @@ pub(super) async fn put(
 
     let handle = AssetHandle::generate();
 
-    let url = format!("/asset/{}", handle.id);
     let new_asset = Asset {
         id: handle.id,
-        key: url.clone(),
         status: AssetStatus::Init,
+        owner: ident.id,
         created_at: Utc::now(),
         updated_at: Utc::now(),
         deleted_at: None,
@@ -83,11 +82,13 @@ pub(super) async fn put(
             PathParam::Other => unreachable!(),
         }
         new_asset.insert(transacton.as_mut()).await?;
+
         if user_profile
             .write_back(transacton.as_mut())
             .await?
             .is_some()
         {
+            let url = format!("/asset/{}", handle.id);
             transacton.commit().await.map_err(DbError::from)?;
             tracing::info!("insertion suceeded");
             Ok((
@@ -113,13 +114,12 @@ async fn update_name_or_contact_method(
 ) -> ApiResult {
     if let Some(Json(info)) = info {
         if let Some(name) = info.name {
-            UserInfo::update_name(state.database.as_ref(), id, &name).await?;
+            UserInfo::update_name(&state.database, id, &name).await?;
         }
         if let Some(contact_me) = info.contact_me {
-            let mut user_profile =
-                UserProfile::fetch_all_fields_by_id(state.database.as_ref(), id).await?;
+            let mut user_profile = UserProfile::fetch_all_fields_by_id(&state.database, id).await?;
             user_profile.contact_me = contact_me;
-            user_profile.write_back(state.database.as_ref()).await?;
+            user_profile.write_back(&state.database).await?;
         }
 
         Ok(StatusCode::NO_CONTENT.into_response())

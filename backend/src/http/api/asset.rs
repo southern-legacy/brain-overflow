@@ -1,11 +1,14 @@
+use auth::Jwt;
+use aws_sdk_s3::presigning::PresigningConfig;
 use axum::{
     Extension, Router, debug_handler,
     extract::{Path, State},
     response::IntoResponse,
     routing,
 };
-use auth::Jwt;
-use http::StatusCode;
+use http::{Method, StatusCode};
+use serde_json::json;
+use std::time::Duration;
 use uuid::Uuid;
 
 use crate::{
@@ -36,10 +39,47 @@ pub fn build_router(config: &AppConfig) -> Router<ServerState> {
 #[debug_handler]
 async fn safe(
     State(state): State<ServerState>,
+    method: http::Method,
     Path(id): Path<Uuid>,
     _user_ident: Option<Extension<UserIdent>>,
 ) -> ApiResult {
-    todo!()
+    let asset = AssetHandle::from(id)
+        .get(&state.database)
+        .await?
+        .ok_or(StatusCode::NOT_FOUND.into_response())?;
+
+    if asset.status != AssetStatus::Available {
+        return Err(StatusCode::NOT_FOUND.into_response());
+    }
+
+    let (client, bucket) = (&state.s3_client, &state.config.s3.bucket);
+    let presigned_request = match method {
+        Method::GET => client
+            .get_object()
+            .bucket(bucket)
+            .key(state.config.s3.full_key(asset.id))
+            .presigned(PresigningConfig::expires_in(Duration::from_secs(900)).unwrap())
+            .await
+            .map_err(|e| {
+                tracing::error!(error = ?e, "failed to generate presigned URL");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            })?,
+        Method::HEAD => client
+            .head_object()
+            .bucket(bucket)
+            .key(state.config.s3.full_key(asset.id))
+            .presigned(PresigningConfig::expires_in(Duration::from_secs(900)).unwrap())
+            .await
+            .map_err(|e| {
+                tracing::error!(error = ?e, "failed to generate presigned URL");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            })?,
+        _ => unreachable!(),
+    };
+
+    let response = json!({ "url": presigned_request.uri() });
+
+    Ok((StatusCode::OK, axum::Json(response)).into_response())
 }
 
 #[debug_handler]
@@ -48,7 +88,9 @@ async fn start_upload(
     Path(id): Path<Uuid>,
     Extension(_user_ident): Extension<UserIdent>,
 ) -> ApiResult {
-    let encoder_config = &state.config.s3.encoder_config;
+    let s3_config = &state.config.s3;
+    let bucket = &s3_config.bucket;
+    let s3_key = s3_config.full_key(id);
 
     let asset = {
         let mut transaction = state.database.begin().await.map_err(DbError::from)?;
@@ -65,7 +107,28 @@ async fn start_upload(
         asset
     };
 
-    todo!()
+    let presigned_request = state
+        .s3_client
+        .put_object()
+        .bucket(bucket)
+        .key(&s3_key)
+        .presigned(PresigningConfig::expires_in(Duration::from_secs(900)).unwrap())
+        .await
+        .map_err(|e| {
+            tracing::error!(error = ?e, "failed to generate presigned URL");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        })?;
+
+    let response = json!({
+        "upload_url": presigned_request.uri().to_string(),
+        "asset_id": asset.id,
+        "method": "PUT",
+        "expires_in": 900,
+        "key": s3_key,
+        "bucket": bucket,
+    });
+
+    Ok((StatusCode::OK, axum::Json(response)).into_response())
 }
 
 #[debug_handler]
@@ -99,7 +162,7 @@ async fn delete(
 ) -> ApiResult {
     {
         AssetHandle::from(id)
-            .logically_delete(state.database.as_ref())
+            .logically_delete(&state.database)
             .await?;
     }
 

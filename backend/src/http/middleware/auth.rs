@@ -6,12 +6,12 @@ use std::{
     task::{Context, Poll},
 };
 
+use ::auth::{Jwt, JwtDecoder, error::AuthError};
 use axum::{
     extract::Request,
     http::{HeaderMap, header::AUTHORIZATION},
     response::{IntoResponse, Response},
 };
-use ::auth::{Jwt, JwtDecoder, error::AuthError};
 use http::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
@@ -140,10 +140,7 @@ where
     F: 'static
         + Clone
         + Send
-        + Fn(
-            &Request,
-            Jwt<T>,
-        ) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+        + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     type Service = Auth<Inner, T, F>;

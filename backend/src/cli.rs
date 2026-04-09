@@ -2,7 +2,7 @@ use clap::Parser;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
-#[command(name = "Brain Overflow Server", bin_name = "br-ovfl")]
+#[command(name = "Brain Overflow Server", bin_name = "brain-overflow")]
 #[command(author = "Sylvan Lyon")]
 pub struct Cli {
     /// Port of server, will override the port specified in config file

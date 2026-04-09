@@ -9,7 +9,7 @@ pub type ServerConfig = StaticServerConfig;
 pub struct StaticServerConfig {
     pub port: u16,
     pub ipv6: bool,
-    pub location: String
+    pub location: String,
 }
 
 impl Default for ServerConfig {
@@ -18,7 +18,7 @@ impl Default for ServerConfig {
         Self {
             port: 10086,
             ipv6: false,
-            location: "http://localhost:10086".to_string()
+            location: "http://localhost:10086".to_string(),
         }
     }
 }

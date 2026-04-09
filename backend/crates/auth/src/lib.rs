@@ -59,7 +59,6 @@ pub struct Jwt<P> {
     pub load: P,
 }
 
-
 impl JwtEncoder {
     #[inline]
     pub fn new(encoding_key: HashMap<String, (EncodingKey, Algorithm)>) -> Self {

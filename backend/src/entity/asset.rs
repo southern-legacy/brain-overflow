@@ -21,10 +21,8 @@ pub enum AssetStatus {
 pub struct Asset {
     /// 这个资源的 id，使用 UUID
     pub id: Uuid,
-
-    /// 最新版本的 URI 路径
-    pub key: String,
     pub status: AssetStatus,
+    pub owner: Uuid,
 
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -51,8 +49,8 @@ impl Asset {
     {
         let Self {
             id,
-            key,
             status,
+            owner,
             created_at,
             updated_at,
             deleted_at,
@@ -61,17 +59,18 @@ impl Asset {
         let query = query!(
             r#"
                 UPDATE asset
-                SET key = $2, status = $3, created_at = $4, updated_at = $5, deleted_at = $6
-                WHERE id = $1
-                RETURNING id;
+                SET status = $2, owner = $3, created_at = $4, updated_at = $5, deleted_at = $6
+                WHERE id = $1;
             "#,
             id,
-            key,
             status as _,
+            owner,
             created_at,
             updated_at,
             deleted_at.as_ref()
-        ).fetch_optional(db).await?;
+        )
+        .fetch_optional(db)
+        .await?;
 
         Ok(query.map(|_| ()))
     }
@@ -83,8 +82,8 @@ impl Asset {
     {
         let Self {
             id,
-            key,
             status,
+            owner,
             created_at,
             updated_at,
             deleted_at,
@@ -92,17 +91,19 @@ impl Asset {
 
         let query = query!(
             r#"
-                INSERT INTO asset (id, key, status, created_at, updated_at, deleted_at)
+                INSERT INTO asset (id, status, owner, created_at, updated_at, deleted_at)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id;
             "#,
             id,
-            key,
             status as _,
+            owner,
             created_at,
             updated_at,
             deleted_at.as_ref()
-        ).fetch_one(db).await?;
+        )
+        .fetch_one(db)
+        .await?;
 
         Ok(query.id.into())
     }
@@ -132,7 +133,6 @@ impl From<Uuid> for AssetHandle {
     }
 }
 
-#[allow(dead_code)]
 impl AssetHandle {
     pub fn generate() -> Self {
         Self {
@@ -149,6 +149,7 @@ impl AssetHandle {
     }
 
     /// 允许过期的 [`Asset`] 被查找到
+    #[allow(dead_code)]
     pub const fn allow_deleted(mut self) -> Self {
         self.allow_deleted = true;
         self
@@ -163,7 +164,7 @@ impl AssetHandle {
                 Asset,
                 r#"
                     SELECT
-                        id, key, created_at, updated_at, deleted_at,
+                        id, owner, created_at, updated_at, deleted_at,
                         status as "status: AssetStatus"
                     FROM "asset"
                     WHERE "id" = $1;
@@ -177,10 +178,10 @@ impl AssetHandle {
                 Asset,
                 r#"
                     SELECT
-                        id, key, created_at, updated_at, deleted_at,
+                        id, owner, created_at, updated_at, deleted_at,
                         status as "status: AssetStatus"
                     FROM "asset"
-                    WHERE "id" = $1;
+                    WHERE "id" = $1 AND deleted_at IS NULL;
                 "#,
                 self.id
             )
@@ -213,6 +214,7 @@ impl AssetHandle {
         Ok(query.map(|_| ()))
     }
 
+    #[allow(dead_code)]
     pub async fn hard_delete<'c, E>(&self, db: E) -> DbResult<Option<()>>
     where
         E: Executor<'c, Database = Postgres>,

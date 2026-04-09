@@ -5,10 +5,6 @@ edition = "2024"
 description = "The server of project Brain Overflow"
 authors = ["Sylvan Lyon <sylvanlyon@gamil.com>"]
 
-[features]
-default = []
-more-message = []
-
 [workspace]
 members = [ "crates/auth" ]
 
@@ -35,6 +31,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }
 uuid = { version = "1.17", features = ["v4", "v7", "serde"] }
 validator = { version = "0.20", features = ["derive"] }
+aws-config = "1.0"
+aws-sdk-s3 = "1.0"
 
 [dependencies]
 axum.workspace = true
@@ -58,3 +56,5 @@ tracing-subscriber.workspace = true
 uuid = { workspace = true }
 validator.workspace = true
 auth = { path = "crates/auth" }
+aws-config.workspace = true
+aws-sdk-s3.workspace = true

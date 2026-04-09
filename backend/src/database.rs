@@ -1,7 +1,5 @@
-use crate::app_config::db::DatabaseConfig;
-use crate::error::fatal::FatalError;
-use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgPool, query};
+use crate::{app_config::db::DatabaseConfig, error::fatal::FatalError};
+use sqlx::{PgPool, postgres::{PgConnectOptions, PgPoolOptions}, query};
 use std::time::Duration;
 use tracing::info_span;
 
@@ -9,7 +7,12 @@ pub async fn init(database_config: &DatabaseConfig) -> PgPool {
     let span = info_span!("Setting up database connection...");
     let _ = span.enter();
 
-    let url = &database_config.url;
+    let opts = PgConnectOptions::new()
+        .host(&database_config.host)
+        .port(database_config.port)
+        .username(&database_config.user)
+        .password(&database_config.password)
+        .database(&database_config.database);
 
     let conn_opts = PgPoolOptions::new()
         .min_connections(database_config.max_connection)
@@ -18,9 +21,9 @@ pub async fn init(database_config: &DatabaseConfig) -> PgPool {
         .max_lifetime(Duration::from_secs(300))
         .acquire_timeout(Duration::from_secs(20));
 
-    tracing::info!("Connecting to database: {url}");
+    tracing::info!("Connecting to database: {:#?}", opts);
     let conn = conn_opts
-        .connect(url)
+        .connect_with(opts)
         .await
         .map_err(|e| {
             FatalError::from(e)
@@ -28,6 +31,7 @@ pub async fn init(database_config: &DatabaseConfig) -> PgPool {
                 .exit_now()
         })
         .unwrap();
+
     tracing::info!("Connection set up successfully!");
 
     let version = query!(r#"SELECT version()"#)

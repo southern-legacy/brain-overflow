@@ -5,41 +5,23 @@ use crate::{app_config::ConfigItem, error::fatal::FatalResult};
 
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields, default)]
-pub(super) struct StaticDatabaseConfig {
-    host: String,
-    port: u16,
-    user: String,
-    password: String,
-    database: String,
-    max_connection: u32,
-    min_connection: u32,
-}
-
-pub struct DatabaseConfig {
-    pub url: String,
+pub struct StaticDatabaseConfig {
+    pub host: String,
+    pub port: u16,
+    pub user: String,
+    pub password: String,
+    pub database: String,
     pub max_connection: u32,
     pub min_connection: u32,
 }
 
+pub type DatabaseConfig = StaticDatabaseConfig;
+
 impl ConfigItem for StaticDatabaseConfig {
-    type RuntimeConfig = DatabaseConfig;
+    type RuntimeConfig = StaticDatabaseConfig;
 
     fn into_runtime(self) -> FatalResult<Self::RuntimeConfig> {
-        let StaticDatabaseConfig {
-            host,
-            port,
-            user,
-            password,
-            database,
-            max_connection,
-            min_connection,
-        } = self;
-
-        Ok(DatabaseConfig {
-            url: format!("postgres://{user}:{password}@{host}:{port}/{database}"),
-            max_connection,
-            min_connection,
-        })
+        Ok(self)
     }
 }
 

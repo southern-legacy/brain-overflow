@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO \"user\".\"user_profile\"(user_id, updated_at)\n                VALUES ($1, $2);\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "31955fedcf08d6a85a70506ca5d66bfa81e87614ea1f12fd89cb78ba2831bf51"
+}
