@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE asset SET status = $1::asset_status WHERE id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "asset_status",
+            "kind": {
+              "Enum": [
+                "init",
+                "uploading",
+                "available",
+                "failed",
+                "aborted",
+                "deleted"
+              ]
+            }
+          }
+        },
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0f0cf66d2f9522770077a63096f7a5b0ebc3272703d56050c4135b2909ed1367"
+}

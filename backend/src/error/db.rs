@@ -117,33 +117,33 @@ impl Display for DbError {
 }
 
 impl From<DbError> for Response {
-    fn from(value: DbError) -> Self {
+    fn from(e: DbError) -> Self {
         use DbErrorKind::*;
         use tracing::{error, warn};
-        match value.kind() {
+        match e.kind() {
             Unprocessable(e) => {
                 error!("Error occurs while manipulating database! Details: {e}");
                 StatusCode::INTERNAL_SERVER_ERROR.into_response()
             }
             Unique(error) => {
                 warn!("Unique key violation! Details: {}", error.message());
-                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(value)).into_response()
+                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(e)).into_response()
             }
             Foreign(error) => {
                 warn!("Foreign key violation! Details: {}", error.message());
-                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(value)).into_response()
+                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(e)).into_response()
             }
             Check(error) => {
                 warn!("Check key violation! Details: {}", error.message());
-                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(value)).into_response()
+                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(e)).into_response()
             }
             NotNull(error) => {
                 warn!("Not null key violation! Details: {}", error.message());
-                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(value)).into_response()
+                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(e)).into_response()
             }
             Other(error) => {
                 warn!("Other violation! Details: {}", error.message());
-                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(value)).into_response()
+                (StatusCode::UNPROCESSABLE_ENTITY, axum::Json(e)).into_response()
             }
             NotFound => StatusCode::NOT_FOUND.into_response(),
         }

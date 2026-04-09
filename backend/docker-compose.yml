@@ -37,7 +37,8 @@ services:
       - MINIO_ROOT_USER = minioadmin
       - MINIO_ROOT_PASSWORD = minioadmin
       # webhook 回调
-      - MINIO_NOTIFY_WEBHOOK_ENABLE = on
+      - MINIO_NOTIFY_WEBHOOK_ENABLE_PRIMARY = on
+      - MINIO_NOTIFY_WEBHOOK_ENDPOINT_PRIMARY = http://brain-overflow:10086/s3/webhook
       # 开启跨域
       - MINIO_CORS_ENABLE = on
       - MINIO_CORS_ALLOW_ORIGINS = *

@@ -190,6 +190,20 @@ impl AssetHandle {
         })
     }
 
+    pub async fn set_status<'c, E>(&self, status: AssetStatus, db: E) -> DbResult<Option<()>>
+    where
+        E: Executor<'c, Database = Postgres>,
+    {
+        Ok(query!(
+            r#"UPDATE asset SET status = $1::asset_status WHERE id = $2"#,
+            status as AssetStatus,
+            self.id
+        )
+        .fetch_optional(db)
+        .await?
+        .map(|_| ()))
+    }
+
     /// ### **逻辑删除**
     ///
     /// 同所有的方法一样，这个函数的 `db` 也是一个执行器类型，可以是一个
