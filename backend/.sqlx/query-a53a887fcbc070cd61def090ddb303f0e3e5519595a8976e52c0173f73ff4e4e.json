@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE \"asset\" SET \"deleted_at\" = now() WHERE \"id\" = $1 RETURNING owner;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "owner",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a53a887fcbc070cd61def090ddb303f0e3e5519595a8976e52c0173f73ff4e4e"
+}

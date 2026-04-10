@@ -1,4 +1,8 @@
 use clap::Parser;
+use tokio::{
+    select,
+    signal::{self, unix::SignalKind},
+};
 
 use crate::cli::Cli;
 
@@ -15,28 +19,36 @@ mod server;
 async fn main() {
     let cli = Cli::parse();
 
-    server::start(&cli).await;
+    let gracefully_shutdown = tokio::spawn(async {
+        let ctrl_c = tokio::spawn(async {
+            if signal::ctrl_c().await.is_err() {
+                tracing::error!("Failed to install ctrl_c signal handle");
+            } else {
+                tracing::info!("Receiced ctrl_c, gracefully shutdown.");
+            }
+        });
+
+        if !cfg!(windows) {
+            let sigterm = match signal::unix::signal(SignalKind::terminate()) {
+                Ok(mut sig) => tokio::spawn(async move {
+                    sig.recv().await;
+                    tracing::info!("Receiced SIGTERM, gracefully shutdown.");
+                }),
+                Err(e) => tokio::spawn(async move {
+                    tracing::error!("Failed to install SIGTERM signal handle {}", e);
+                }),
+            };
+            select! {
+                _ = ctrl_c => {},
+                _ = sigterm => {},
+            };
+        } else {
+            ctrl_c.await.unwrap()
+        }
+    });
+
+    select! {
+        _ = gracefully_shutdown => {},
+        _ = server::start(&cli) => {}
+    };
 }
-
-// struct AsyncRunner<F> {
-//     handler: F,
-// }
-
-// impl<F> AsyncRunner<F>
-// where
-//     F: AsyncFn(&str) -> usize,
-// {
-//     async fn run(&self, data: &str) {
-//         let len = (self.handler)(data).await;
-//         println!("处理后的长度: {}", len);
-//     }
-// }
-
-// #[tokio::main]
-// async fn main() {
-//     let runner = AsyncRunner {
-//         handler: async |s: &str| s.len(),
-//     };
-
-//     runner.run("Hello Rust 1.85").await;
-// }
