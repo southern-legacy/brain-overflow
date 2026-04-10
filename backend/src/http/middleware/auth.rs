@@ -22,10 +22,7 @@ type PinBox<T> = Pin<Box<T>>;
 #[derive(Clone)]
 pub struct Auth<Inner, T, F>
 where
-    F: 'static
-        + Clone
-        + Send
-        + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+    F: 'static + Clone + Send + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     inner_service: Inner,
@@ -37,10 +34,7 @@ where
 #[derive(Clone)]
 pub struct AuthLayer<T, F>
 where
-    F: 'static
-        + Clone
-        + Send
-        + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+    F: 'static + Clone + Send + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     decoder: JwtDecoder,
@@ -50,10 +44,7 @@ where
 
 impl<T, F> AuthLayer<T, F>
 where
-    F: 'static
-        + Clone
-        + Send
-        + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+    F: 'static + Clone + Send + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     /// # 此函数将在堆上创建一个 [`JwtConfig`] 结构作为这个中间件的配置
@@ -86,10 +77,7 @@ where
     Inner::Error: std::error::Error,
     Inner::Response: IntoResponse,
     Inner::Future: 'static + Send,
-    Valid: 'static
-        + Clone
-        + Send
-        + Fn(&Request, Jwt<Token>) -> PinBox<dyn Future<Output = Result<Token, Response>> + Send>,
+    Valid: 'static + Clone + Send + Fn(&Request, Jwt<Token>) -> PinBox<dyn Future<Output = Result<Token, Response>> + Send>,
     Token: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     type Response = Response;
@@ -97,9 +85,7 @@ where
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner_service
-            .poll_ready(cx)
-            .map_err(|_| unreachable!())
+        self.inner_service.poll_ready(cx).map_err(|_| unreachable!())
     }
 
     fn call(&mut self, mut req: Request) -> Self::Future {
@@ -137,20 +123,13 @@ where
 
 impl<Inner, T, F> Layer<Inner> for AuthLayer<T, F>
 where
-    F: 'static
-        + Clone
-        + Send
-        + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+    F: 'static + Clone + Send + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     type Service = Auth<Inner, T, F>;
 
     fn layer(&self, inner: Inner) -> Self::Service {
-        let Self {
-            decoder,
-            validator,
-            _p,
-        } = self.clone();
+        let Self { decoder, validator, _p } = self.clone();
 
         Auth {
             inner_service: inner,
@@ -174,9 +153,7 @@ where
         .map_err(|_| AuthError::InvalidAuthFormat)?;
 
     // 2. 验证Bearer格式并提取令牌
-    let token = auth_header
-        .strip_prefix("Bearer ")
-        .ok_or(AuthError::InvalidAuthFormat)?;
+    let token = auth_header.strip_prefix("Bearer ").ok_or(AuthError::InvalidAuthFormat)?;
 
     decoder.decode(token)
 }

@@ -11,9 +11,7 @@ use uuid::Uuid;
 
 use crate::app_config::AppConfig;
 use crate::app_config::util::JwtEncoderConfig;
-use crate::{
-    entity::user::user_info::UserInfo, http::middleware::auth::AuthLayer, server::ServerState,
-};
+use crate::{entity::user::user_info::UserInfo, http::middleware::auth::AuthLayer, server::ServerState};
 use axum::{
     Extension, Router,
     http::StatusCode,
@@ -28,18 +26,14 @@ static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::d
 
 pub(super) fn build_router(config: &AppConfig) -> Router<ServerState> {
     let router = Router::new();
-    let auth_layer = AuthLayer::new(
-        config.auth.decoder_config.decoder.clone(),
-        |_, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
-    );
+    let auth_layer = AuthLayer::new(config.auth.decoder_config.decoder.clone(), |_, token: Jwt<UserIdent>| {
+        Box::pin(async move { Ok(token.load) })
+    });
 
     async fn redirect(state: State<ServerState>, ident: Extension<UserIdent>) -> impl IntoResponse {
         (
             StatusCode::TEMPORARY_REDIRECT,
-            [(
-                header::LOCATION,
-                format!("{}/user/{}", state.config.server.location, ident.id),
-            )],
+            [(header::LOCATION, format!("{}/user/{}", state.config.server.location, ident.id))],
         )
     }
 
@@ -110,10 +104,7 @@ async fn check_password(val: &UserInfo, password: &str) -> Result<(), Response> 
             Ok(())
         }
         Ok(false) => {
-            tracing::info!(
-                "Authorization of user (id: {}) failed for incorrect password.",
-                val.id
-            );
+            tracing::info!("Authorization of user (id: {}) failed for incorrect password.", val.id);
             Err(StatusCode::UNAUTHORIZED.into_response())
         }
         Err(e) => {

@@ -2,8 +2,7 @@ use regex::Regex;
 use std::{borrow::Cow, sync::LazyLock};
 use validator::ValidationError;
 
-pub static EMAIL_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[\w._%+-]+@[\w.-]+\.\w{2,}$").unwrap());
+pub static EMAIL_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\w._%+-]+@[\w.-]+\.\w{2,}$").unwrap());
 pub static PHONE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+\d{1,15}$").unwrap());
 
 fn meet_email_format(email: &str) -> bool {
@@ -16,8 +15,7 @@ fn meet_phone_format(phone: &str) -> bool {
 
 pub fn validate_email(email: &str) -> Result<(), ValidationError> {
     if !meet_email_format(email) {
-        let err = ValidationError::new("format")
-            .with_message(Cow::Borrowed("email address format error"));
+        let err = ValidationError::new("format").with_message(Cow::Borrowed("email address format error"));
         Err(err)
     } else {
         Ok(())
@@ -26,8 +24,7 @@ pub fn validate_email(email: &str) -> Result<(), ValidationError> {
 
 pub fn validate_phone(phone: &str) -> Result<(), ValidationError> {
     if !meet_phone_format(phone) {
-        let err =
-            ValidationError::new("format").with_message(Cow::Borrowed("phone number format error"));
+        let err = ValidationError::new("format").with_message(Cow::Borrowed("phone number format error"));
         Err(err)
     } else {
         Ok(())

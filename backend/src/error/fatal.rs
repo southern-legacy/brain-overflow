@@ -4,7 +4,7 @@ use std::{
 };
 
 use auth::error::AuthError;
-use clap::{error::ErrorKind, CommandFactory};
+use clap::{CommandFactory, error::ErrorKind};
 
 use crate::cli::Cli;
 
@@ -152,22 +152,10 @@ impl From<AuthError> for FatalError {
             InvalidKeyId => ("no such key id!".into(), None),
             MissingClaim(claim) => (format!("claim `{claim}` is absent"), None),
             TokenRevoked => ("this token is revoked by the server".into(), None),
-            InvalidUtf8(e) => (
-                format!("the token has some invalid utf-8 character, details: {e}"),
-                None,
-            ),
-            InvalidJson(e) => (
-                format!("this token cannot be deserialized, details: {e}"),
-                None,
-            ),
-            InvalidBase64(e) => (
-                format!("this token is not encoded in standard base64, details: {e}"),
-                None,
-            ),
-            InternalError(e) => (
-                format!("something wrong while handling the token, details: {e}"),
-                None,
-            ),
+            InvalidUtf8(e) => (format!("the token has some invalid utf-8 character, details: {e}"), None),
+            InvalidJson(e) => (format!("this token cannot be deserialized, details: {e}"), None),
+            InvalidBase64(e) => (format!("this token is not encoded in standard base64, details: {e}"), None),
+            InternalError(e) => (format!("something wrong while handling the token, details: {e}"), None),
         };
 
         Self::new(ErrorKind::Io, general_message, source)
@@ -185,16 +173,10 @@ impl From<config::ConfigError> for FatalError {
             ),
             NotFound(e) => Self::new(
                 ErrorKind::Io,
-                format!(
-                    "Failed to read configuration file, because configuration field `{e}` is not found"
-                ),
+                format!("Failed to read configuration file, because configuration field `{e}` is not found"),
                 None,
             ),
-            PathParse { cause } => Self::new(
-                ErrorKind::Io,
-                format!("Failed to read configuration file, because `{cause}`"),
-                None,
-            ),
+            PathParse { cause } => Self::new(ErrorKind::Io, format!("Failed to read configuration file, because `{cause}`"), None),
             FileParse { uri, cause } => Self::new(
                 ErrorKind::Io,
                 format!(
@@ -226,21 +208,9 @@ impl From<config::ConfigError> for FatalError {
                 ),
                 None,
             ),
-            Message(e) => Self::new(
-                ErrorKind::Io,
-                format!("Failed to read configuration file, details: {e}"),
-                None,
-            ),
-            Foreign(e) => Self::new(
-                ErrorKind::Io,
-                format!("Failed to read configuration file, details: {e}"),
-                None,
-            ),
-            _ => Self::new(
-                ErrorKind::Io,
-                "Failed to read configuration file, unknown error".into(),
-                None,
-            ),
+            Message(e) => Self::new(ErrorKind::Io, format!("Failed to read configuration file, details: {e}"), None),
+            Foreign(e) => Self::new(ErrorKind::Io, format!("Failed to read configuration file, details: {e}"), None),
+            _ => Self::new(ErrorKind::Io, "Failed to read configuration file, unknown error".into(), None),
         }
     }
 }
@@ -255,16 +225,10 @@ impl From<sqlx::error::Error> for FatalError {
             ),
             sqlx::Error::InvalidArgument(e) => FatalError::new(
                 ErrorKind::Io,
-                format!(
-                    "One or more of the arguments to the called sqlx function was invalid, details: {e}"
-                ),
+                format!("One or more of the arguments to the called sqlx function was invalid, details: {e}"),
                 None,
             ),
-            sqlx::Error::Database(e) => FatalError::new(
-                ErrorKind::Io,
-                format!("Database returned an error message: `{e}`"),
-                None,
-            ),
+            sqlx::Error::Database(e) => FatalError::new(ErrorKind::Io, format!("Database returned an error message: `{e}`"), None),
             sqlx::Error::Io(e) => FatalError::new(
                 ErrorKind::Io,
                 format!("Cannot communicate with the database backend, details: `{e}`"),
@@ -272,16 +236,12 @@ impl From<sqlx::error::Error> for FatalError {
             ),
             sqlx::Error::Tls(e) => FatalError::new(
                 ErrorKind::Io,
-                format!(
-                    "Error occurred while attempting to establish a TLS connection to database, details: {e}"
-                ),
+                format!("Error occurred while attempting to establish a TLS connection to database, details: {e}"),
                 None,
             ),
             sqlx::Error::Protocol(e) => FatalError::new(
                 ErrorKind::Io,
-                format!(
-                    "Unexpected or invalid data encountered while communicating with the database, details `{e}`"
-                ),
+                format!("Unexpected or invalid data encountered while communicating with the database, details `{e}`"),
                 None,
             ),
             _ => unreachable!("你在错误的地方使用了这个 CliError, 这些错误不应该转化为 CliError"),

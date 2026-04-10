@@ -10,8 +10,7 @@ use crate::error::{
     api::{ApiError, ApiErrorKind},
 };
 
-pub static EMAIL_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[\w._%+-]+@[\w.-]+\.\w{2,}$").unwrap());
+pub static EMAIL_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\w._%+-]+@[\w.-]+\.\w{2,}$").unwrap());
 pub static PHONE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\+\d{1,15}$").unwrap());
 
 #[derive(Serialize, Deserialize)]

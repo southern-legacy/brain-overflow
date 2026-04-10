@@ -26,11 +26,7 @@ impl UserInfo {
     where
         E: Executor<'c, Database = Postgres>,
     {
-        let statement = sqlx::query_as!(
-            Self,
-            r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."id" = $1"#,
-            id
-        );
+        let statement = sqlx::query_as!(Self, r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."id" = $1"#, id);
         Ok(statement.fetch_one(db).await?)
     }
 
@@ -38,11 +34,7 @@ impl UserInfo {
     where
         E: Executor<'c, Database = Postgres>,
     {
-        let statement = sqlx::query_as!(
-            Self,
-            r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."email" = $1"#,
-            email
-        );
+        let statement = sqlx::query_as!(Self, r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."email" = $1"#, email);
         Ok(statement.fetch_one(db).await?)
     }
 
@@ -50,11 +42,7 @@ impl UserInfo {
     where
         E: Executor<'c, Database = Postgres>,
     {
-        let statement = sqlx::query_as!(
-            Self,
-            r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."phone" = $1"#,
-            phone
-        );
+        let statement = sqlx::query_as!(Self, r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."phone" = $1"#, phone);
         Ok(statement.fetch_one(db).await?)
     }
 
@@ -161,11 +149,7 @@ impl UserInfo {
         Ok(statement.fetch_one(db).await?)
     }
 
-    pub async fn update_password_hash<'c, E>(
-        db: E,
-        id: Uuid,
-        new_password_hash: &str,
-    ) -> DbResult<UserInfo>
+    pub async fn update_password_hash<'c, E>(db: E, id: Uuid, new_password_hash: &str) -> DbResult<UserInfo>
     where
         E: Executor<'c, Database = Postgres>,
     {

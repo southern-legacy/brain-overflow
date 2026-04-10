@@ -21,12 +21,9 @@ impl UserProfile {
     where
         E: Executor<'c, Database = Postgres>,
     {
-        let v = query!(
-            r#"SELECT * FROM "user"."user_profile" WHERE "user"."user_profile"."user_id" = $1;"#,
-            id
-        )
-        .fetch_one(db)
-        .await?;
+        let v = query!(r#"SELECT * FROM "user"."user_profile" WHERE "user"."user_profile"."user_id" = $1;"#, id)
+            .fetch_one(db)
+            .await?;
 
         Ok(UserProfile {
             user_id: v.user_id,
@@ -65,9 +62,16 @@ impl UserProfile {
                 UPDATE "user"."user_profile"
                 SET "biography" = $2, "avatar" = $3, "banner" = $4, "contact_me" = $5, "updated_at" = $6
                 WHERE "user"."user_profile"."user_id" = $1;
-            "#, self.user_id, self.biography.map(|v| v.id), self.avatar.map(|v| v.id), self.banner.map(|v| v.id), self.contact_me, Utc::now()
+            "#,
+            self.user_id,
+            self.biography.map(|v| v.id),
+            self.avatar.map(|v| v.id),
+            self.banner.map(|v| v.id),
+            self.contact_me,
+            Utc::now()
         )
-        .execute(db).await?;
+        .execute(db)
+        .await?;
 
         match res.rows_affected() {
             0 => Ok(None),

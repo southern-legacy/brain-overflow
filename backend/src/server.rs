@@ -27,10 +27,7 @@ pub struct ServerState {
 }
 
 pub async fn start(cli: &Cli) {
-    let config_path = cli
-        .config_path
-        .clone()
-        .unwrap_or("./brain-overflow.toml".to_string());
+    let config_path = cli.config_path.clone().unwrap_or("./brain-overflow.toml".to_string());
 
     let config = Arc::new(AppConfig::load(&config_path).merge_cli(cli));
 
@@ -68,8 +65,7 @@ pub async fn start(cli: &Cli) {
     // S3 客户端
     let s3_client = S3Client::from_conf({
         let s3_config = &config.s3;
-        let mut config_loader = aws_config::defaults(BehaviorVersion::latest())
-            .region(aws_sdk_s3::config::Region::new(s3_config.region.clone()));
+        let mut config_loader = aws_config::defaults(BehaviorVersion::latest()).region(aws_sdk_s3::config::Region::new(s3_config.region.clone()));
 
         // 设置 credential
         if let Some(access_key_id) = &s3_config.access_key_id
@@ -110,8 +106,7 @@ pub async fn start(cli: &Cli) {
             .on_request(DefaultOnRequest::new().level(tracing::Level::INFO))
             .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
 
-        let timeout_layer =
-            TimeoutLayer::with_status_code(StatusCode::REQUEST_TIMEOUT, Duration::from_secs(120));
+        let timeout_layer = TimeoutLayer::with_status_code(StatusCode::REQUEST_TIMEOUT, Duration::from_secs(120));
 
         let body_limit_layer = DefaultBodyLimit::max((1024 * 1024 * 16) as usize); // 16 MB 的最大报文大小
 
@@ -134,25 +129,14 @@ pub async fn start(cli: &Cli) {
     };
 
     let listener = if config.server.ipv6 {
-        TcpListener::bind((Ipv6Addr::UNSPECIFIED, config.server.port))
-            .await
-            .unwrap()
+        TcpListener::bind((Ipv6Addr::UNSPECIFIED, config.server.port)).await.unwrap()
     } else {
-        TcpListener::bind((Ipv4Addr::UNSPECIFIED, config.server.port))
-            .await
-            .unwrap()
+        TcpListener::bind((Ipv4Addr::UNSPECIFIED, config.server.port)).await.unwrap()
     };
 
     info!("Listening on {}", listener.local_addr().unwrap());
 
-    axum::serve(
-        listener,
-        router.with_state(ServerState {
-            database,
-            config,
-            s3_client,
-        }),
-    )
-    .await
-    .unwrap()
+    axum::serve(listener, router.with_state(ServerState { database, config, s3_client }))
+        .await
+        .unwrap()
 }

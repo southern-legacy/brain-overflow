@@ -15,11 +15,7 @@ struct UserPayload {
 fn setup_keys() -> (String, EncodingKey, DecodingKey) {
     let secret = b"super_secret_key_for_testing";
     let kid = "key_v1".to_string();
-    (
-        kid,
-        EncodingKey::from_secret(secret),
-        DecodingKey::from_secret(secret),
-    )
+    (kid, EncodingKey::from_secret(secret), DecodingKey::from_secret(secret))
 }
 
 // 辅助函数：构建 Encoder
@@ -61,14 +57,8 @@ fn test_encode_randomly() {
     let secret = b"secret";
     let mut map = HashMap::new();
     // 放入两个 key
-    map.insert(
-        "k1".to_string(),
-        (EncodingKey::from_secret(secret), Algorithm::HS256),
-    );
-    map.insert(
-        "k2".to_string(),
-        (EncodingKey::from_secret(secret), Algorithm::HS256),
-    );
+    map.insert("k1".to_string(), (EncodingKey::from_secret(secret), Algorithm::HS256));
+    map.insert("k2".to_string(), (EncodingKey::from_secret(secret), Algorithm::HS256));
 
     let encoder = JwtEncoder::new(map);
     let payload = UserPayload {
@@ -79,9 +69,7 @@ fn test_encode_randomly() {
 
     // 随机编码多次，确保不会 panic 且能生成 token
     for _ in 0..5 {
-        let token = encoder
-            .encode_randomly(&claims)
-            .expect("Random encode failed");
+        let token = encoder.encode_randomly(&claims).expect("Random encode failed");
         assert!(!token.is_empty());
     }
 }
@@ -122,11 +110,7 @@ fn test_expiration_error() {
     let token = encoder.encode(&claims, &kid).unwrap();
     let result = decoder.decode::<UserPayload>(&token);
 
-    assert!(
-        result.is_err(),
-        "Should have returned TokenExpired error, got {:?}",
-        result
-    )
+    assert!(result.is_err(), "Should have returned TokenExpired error, got {:?}", result)
 }
 
 #[test]
@@ -296,8 +280,7 @@ fn test_reject_tokens_expiring_soon() {
     let token = encoder.encode(&claims, &kid).unwrap();
 
     // Decoder 拒绝所有 10 分钟内过期的 Token
-    let decoder =
-        create_decoder("iss", &kid, dec_key, "aud").reject_tokens_expiring_in_less_than(10 * 60);
+    let decoder = create_decoder("iss", &kid, dec_key, "aud").reject_tokens_expiring_in_less_than(10 * 60);
 
     // jsonwebtoken 库的逻辑比较特殊，reject_tokens_expiring_in_less_than 不会返回 TokenExpired，
     // 而是属于 InvalidToken 或 Generic 验证失败，但在你的封装中，
@@ -313,8 +296,7 @@ fn test_multiple_audience() {
     let encoder = create_encoder(&kid, enc_key);
 
     // 允许多个 audience
-    let decoder = create_decoder("iss", &kid, dec_key, "service-a")
-        .possible_audience(&["service-a", "service-b"]);
+    let decoder = create_decoder("iss", &kid, dec_key, "service-a").possible_audience(&["service-a", "service-b"]);
 
     // Token 面向 service-b
     let claims = Jwt::new(

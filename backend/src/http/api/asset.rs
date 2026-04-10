@@ -23,10 +23,9 @@ use crate::{
 };
 
 pub fn build_router(config: &AppConfig) -> Router<ServerState> {
-    let auth_layer = AuthLayer::new(
-        config.auth.decoder_config.decoder.clone(),
-        |_, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
-    );
+    let auth_layer = AuthLayer::new(config.auth.decoder_config.decoder.clone(), |_, token: Jwt<UserIdent>| {
+        Box::pin(async move { Ok(token.load) })
+    });
     Router::new()
         // .route("/asset/{id}", routing::delete(delete))
         .route("/asset/{id}", routing::put(start_upload))
@@ -36,12 +35,7 @@ pub fn build_router(config: &AppConfig) -> Router<ServerState> {
 }
 
 #[debug_handler]
-async fn safe(
-    State(state): State<ServerState>,
-    method: http::Method,
-    Path(id): Path<Uuid>,
-    _user_ident: Option<Extension<UserIdent>>,
-) -> ApiResult {
+async fn safe(State(state): State<ServerState>, method: http::Method, Path(id): Path<Uuid>, _user_ident: Option<Extension<UserIdent>>) -> ApiResult {
     let asset = AssetHandle::from(id)
         .get(&state.database)
         .await?
@@ -51,11 +45,7 @@ async fn safe(
         return Err(StatusCode::NOT_FOUND.into_response());
     }
 
-    let (client, bucket, url_ttl) = (
-        &state.s3_client,
-        &state.config.s3.bucket,
-        state.config.s3.url_ttl,
-    );
+    let (client, bucket, url_ttl) = (&state.s3_client, &state.config.s3.bucket, state.config.s3.url_ttl);
     let presigned_request = match method {
         Method::GET => client
             .get_object()
@@ -86,11 +76,7 @@ async fn safe(
 }
 
 #[debug_handler]
-async fn start_upload(
-    State(state): State<ServerState>,
-    Path(id): Path<Uuid>,
-    Extension(user_ident): Extension<UserIdent>,
-) -> ApiResult {
+async fn start_upload(State(state): State<ServerState>, Path(id): Path<Uuid>, Extension(user_ident): Extension<UserIdent>) -> ApiResult {
     let (bucket, url_ttl) = (&state.config.s3.bucket, state.config.s3.url_ttl);
 
     let asset = {
@@ -137,15 +123,9 @@ async fn start_upload(
 
 #[debug_handler]
 #[allow(unused)]
-async fn delete(
-    State(state): State<ServerState>,
-    Path(id): Path<Uuid>,
-    Extension(_user_ident): Extension<UserIdent>,
-) -> ApiResult {
+async fn delete(State(state): State<ServerState>, Path(id): Path<Uuid>, Extension(_user_ident): Extension<UserIdent>) -> ApiResult {
     {
-        let _owner = AssetHandle::from(id)
-            .logically_delete(&state.database)
-            .await?;
+        let _owner = AssetHandle::from(id).logically_delete(&state.database).await?;
     }
 
     Ok(StatusCode::NO_CONTENT.into_response())

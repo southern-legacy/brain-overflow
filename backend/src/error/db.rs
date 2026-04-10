@@ -54,34 +54,20 @@ impl From<sqlx::Error> for DbError {
         use DbErrorKind::*;
         use sqlx::Error::*;
         match value {
-            Configuration(e) | Encode(e) | Decode(e) | AnyDriverError(e) | Tls(e) => {
-                DbError::new(Unprocessable(Owned(e.to_string())))
-            }
+            Configuration(e) | Encode(e) | Decode(e) | AnyDriverError(e) | Tls(e) => DbError::new(Unprocessable(Owned(e.to_string()))),
             Io(e) => DbError::new(Unprocessable(Owned(e.to_string()))),
             InvalidArgument(e) => DbError::new(Unprocessable(Owned(e))),
-            TypeNotFound { type_name } => DbError::new(Unprocessable(Owned(format!(
-                "Type name {type_name} not found!"
-            )))),
-            ColumnDecode { index, source } => DbError::new(Unprocessable(Owned(format!(
-                "Cloumn Decode Error{index}, {source}"
-            )))),
+            TypeNotFound { type_name } => DbError::new(Unprocessable(Owned(format!("Type name {type_name} not found!")))),
+            ColumnDecode { index, source } => DbError::new(Unprocessable(Owned(format!("Cloumn Decode Error{index}, {source}")))),
             Protocol(e) => DbError::new(Unprocessable(Owned(e))),
             ColumnNotFound(col) => DbError::new(Unprocessable(Owned(format!("No column: {col}")))),
-            ColumnIndexOutOfBounds { index, len } => DbError::new(Unprocessable(Owned(format!(
-                "Column Index Out of Bounds! index: {index}, len: {len}"
-            )))),
-            PoolTimedOut => DbError::new(Unprocessable(Borrowed(
-                "Pool Time Out, which shouldn't have been",
-            ))),
-            PoolClosed => DbError::new(Unprocessable(Borrowed(
-                "Pool Closed, which shouldn't have been",
-            ))),
-            WorkerCrashed => DbError::new(Unprocessable(Borrowed(
-                "Worker Crashed, which shouldn't have been",
-            ))),
-            InvalidSavePointStatement => DbError::new(Unprocessable(Borrowed(
-                "Invalid Save Point Statement (Trigger)",
-            ))),
+            ColumnIndexOutOfBounds { index, len } => {
+                DbError::new(Unprocessable(Owned(format!("Column Index Out of Bounds! index: {index}, len: {len}"))))
+            }
+            PoolTimedOut => DbError::new(Unprocessable(Borrowed("Pool Time Out, which shouldn't have been"))),
+            PoolClosed => DbError::new(Unprocessable(Borrowed("Pool Closed, which shouldn't have been"))),
+            WorkerCrashed => DbError::new(Unprocessable(Borrowed("Worker Crashed, which shouldn't have been"))),
+            InvalidSavePointStatement => DbError::new(Unprocessable(Borrowed("Invalid Save Point Statement (Trigger)"))),
             Migrate(e) => DbError::new(Unprocessable(Owned(format!("{e}")))),
             BeginFailed => DbError::new(Unprocessable(Borrowed("Begin Failed!"))),
 

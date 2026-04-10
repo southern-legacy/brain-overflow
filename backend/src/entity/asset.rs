@@ -142,10 +142,7 @@ impl AssetHandle {
     }
 
     pub const fn new_with_id(id: Uuid) -> Self {
-        Self {
-            id,
-            allow_deleted: false,
-        }
+        Self { id, allow_deleted: false }
     }
 
     /// 允许过期的 [`Asset`] 被查找到
@@ -218,12 +215,9 @@ impl AssetHandle {
     where
         E: Executor<'c, Database = Postgres>,
     {
-        let query = query!(
-            r#"UPDATE "asset" SET "deleted_at" = now() WHERE "id" = $1 RETURNING owner;"#,
-            self.id
-        )
-        .fetch_optional(db)
-        .await?;
+        let query = query!(r#"UPDATE "asset" SET "deleted_at" = now() WHERE "id" = $1 RETURNING owner;"#, self.id)
+            .fetch_optional(db)
+            .await?;
 
         Ok(query.map(|v| v.owner))
     }
@@ -233,9 +227,7 @@ impl AssetHandle {
     where
         E: Executor<'c, Database = Postgres>,
     {
-        let query = query!(r#"DELETE FROM "asset" WHERE "id" = $1;"#, self.id)
-            .fetch_optional(db)
-            .await?;
+        let query = query!(r#"DELETE FROM "asset" WHERE "id" = $1;"#, self.id).fetch_optional(db).await?;
 
         Ok(query.map(|_| ()))
     }

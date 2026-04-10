@@ -76,8 +76,7 @@ impl ConfigItem for StaticJwtEncoderConfig {
             not_valid_in,
         } = self;
 
-        let (mut keys, mut errors, mut algs, mut kids) =
-            (HashMap::new(), MultiFatalError::new(), vec![], vec![]);
+        let (mut keys, mut errors, mut algs, mut kids) = (HashMap::new(), MultiFatalError::new(), vec![], vec![]);
 
         for key in encoding_keys {
             match key.build_as_encode_key() {
@@ -124,8 +123,7 @@ impl ConfigItem for StaticJwtDecoderConfig {
             reject_tokens_expiring_in_less_than,
             audience: aud,
         } = self;
-        let (mut keys, mut errors, mut algs, mut issuers) =
-            (HashMap::new(), MultiFatalError::new(), vec![], vec![]);
+        let (mut keys, mut errors, mut algs, mut issuers) = (HashMap::new(), MultiFatalError::new(), vec![], vec![]);
 
         for (iss, key) in decoding_keys {
             match key.build_as_decode_key() {
@@ -166,28 +164,22 @@ impl Key {
             KeyForm::DerInline => BASE64_STANDARD.decode(self.key.clone()).map_err(|e| {
                 FatalError::from(e).when(format!(
                     "while decoding the secrete key `{}` into binary, note this should be encoded in standard base64",
-                    self.key
-                        .get(0..4)
-                        .map(|val| format!("{val}..."))
-                        .unwrap_or(self.key.clone())
+                    self.key.get(0..4).map(|val| format!("{val}...")).unwrap_or(self.key.clone())
                 ))
             })?,
-            KeyForm::DerFile => std::fs::read(&self.key).map_err(|e| {
-                FatalError::from(e).when(format!("while reading the der key from {}", self.key))
-            })?,
+            KeyForm::DerFile => {
+                std::fs::read(&self.key).map_err(|e| FatalError::from(e).when(format!("while reading the der key from {}", self.key)))?
+            }
             KeyForm::PemInline => self.key.clone().into_bytes(),
-            KeyForm::PemFile => std::fs::read(&self.key).map_err(|e| {
-                FatalError::from(e).when(format!("while reading the pem key from {}", self.key))
-            })?,
+            KeyForm::PemFile => {
+                std::fs::read(&self.key).map_err(|e| FatalError::from(e).when(format!("while reading the pem key from {}", self.key)))?
+            }
         };
 
         if res.len() < 32 {
             tracing::warn!(
                 "the secret key `{}` is too short to prevent brute cracking",
-                self.key
-                    .get(0..4)
-                    .map(|val| format!("{val}..."))
-                    .unwrap_or(self.key.clone())
+                self.key.get(0..4).map(|val| format!("{val}...")).unwrap_or(self.key.clone())
             )
         }
 
@@ -207,9 +199,11 @@ impl Key {
             Ok((
                 self.kid.clone(),
                 self.algorithm,
-                build_from_der(&self.get_key().map_err(|e| {
-                    e.when("while building jwt encoding key from a der form".into())
-                })?),
+                build_from_der(
+                    &self
+                        .get_key()
+                        .map_err(|e| e.when("while building jwt encoding key from a der form".into()))?,
+                ),
             ))
         } else if self.form.is_pem() {
             let build_from_pem = match self.algorithm {
@@ -232,9 +226,11 @@ impl Key {
             Ok((
                 self.kid.clone(),
                 self.algorithm,
-                build_from_pem(&self.get_key().map_err(|e| {
-                    e.when("while building jwt encoding key from a pem form".into())
-                })?)
+                build_from_pem(
+                    &self
+                        .get_key()
+                        .map_err(|e| e.when("while building jwt encoding key from a pem form".into()))?,
+                )
                 .map_err(|e| {
                     FatalError::new(
                         ErrorKind::Io,
@@ -244,9 +240,7 @@ impl Key {
                 })?,
             ))
         } else {
-            unreachable!(
-                "Sylvan, 你加了新的变体但是没有添加相应的条件判断，去检查你的 is_der 和 is_pem 方法是否包含了所有的情况"
-            )
+            unreachable!("Sylvan, 你加了新的变体但是没有添加相应的条件判断，去检查你的 is_der 和 is_pem 方法是否包含了所有的情况")
         }
     }
 
@@ -263,9 +257,11 @@ impl Key {
             Ok((
                 self.kid.clone(),
                 self.algorithm,
-                build_from_der(&self.get_key().map_err(|e| {
-                    e.when("while building jwt encoding key from a der form".into())
-                })?),
+                build_from_der(
+                    &self
+                        .get_key()
+                        .map_err(|e| e.when("while building jwt encoding key from a der form".into()))?,
+                ),
             ))
         } else if self.form.is_pem() {
             let build_from_pem = match self.algorithm {
@@ -297,9 +293,7 @@ impl Key {
                 })?,
             ))
         } else {
-            unreachable!(
-                "Sylvan, 你加了新的变体但是没有添加相应的条件判断，去检查你的 is_der 和 is_pem 方法是否包含了所有的情况"
-            )
+            unreachable!("Sylvan, 你加了新的变体但是没有添加相应的条件判断，去检查你的 is_der 和 is_pem 方法是否包含了所有的情况")
         }
     }
 }

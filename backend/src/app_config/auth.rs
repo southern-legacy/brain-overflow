@@ -3,9 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     app_config::{
         ConfigItem,
-        util::{
-            JwtDecoderConfig, JwtEncoderConfig, StaticJwtDecoderConfig, StaticJwtEncoderConfig,
-        },
+        util::{JwtDecoderConfig, JwtEncoderConfig, StaticJwtDecoderConfig, StaticJwtEncoderConfig},
     },
     error::fatal::{FatalResult, MultiFatalError},
 };
@@ -33,12 +31,8 @@ impl ConfigItem for StaticAuthConfig {
         let StaticAuthConfig { encoder, decoder } = self;
         let mut errors = MultiFatalError::new();
 
-        let encoder = encoder
-            .into_runtime()
-            .map_err(|mut e| errors.append(&mut e));
-        let decoder = decoder
-            .into_runtime()
-            .map_err(|mut e| errors.append(&mut e));
+        let encoder = encoder.into_runtime().map_err(|mut e| errors.append(&mut e));
+        let decoder = decoder.into_runtime().map_err(|mut e| errors.append(&mut e));
 
         if let Ok(encoder) = encoder
             && let Ok(decoder) = decoder

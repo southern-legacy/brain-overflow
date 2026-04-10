@@ -16,17 +16,12 @@ pub fn build_router() -> Router<ServerState> {
 }
 
 #[debug_handler]
-async fn s3_event_handler(
-    State(state): State<ServerState>,
-    Json(event): Json<S3Event>,
-) -> ApiResult {
+async fn s3_event_handler(State(state): State<ServerState>, Json(event): Json<S3Event>) -> ApiResult {
     for record in event.records {
         if let Some(key) = record.s3.object.key {
             tracing::debug!(key, "handling webhook callback");
             if let Ok(id) = Uuid::from_str(&key)
-                && let Err(e) = AssetHandle::new_with_id(id)
-                    .set_status(AssetStatus::Available, &state.database)
-                    .await
+                && let Err(e) = AssetHandle::new_with_id(id).set_status(AssetStatus::Available, &state.database).await
             {
                 tracing::warn!("error while looking up the asset" = ?e);
             }

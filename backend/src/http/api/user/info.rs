@@ -72,8 +72,7 @@ pub(super) async fn put(
     {
         let mut transacton = state.database.begin().await.map_err(DbError::from)?;
 
-        let mut user_profile =
-            UserProfile::fetch_all_fields_by_id(transacton.as_mut(), ident.id).await?;
+        let mut user_profile = UserProfile::fetch_all_fields_by_id(transacton.as_mut(), ident.id).await?;
 
         match part {
             PathParam::Avatar => user_profile.avatar = Some(handle),
@@ -83,11 +82,7 @@ pub(super) async fn put(
         }
         new_asset.insert(transacton.as_mut()).await?;
 
-        if user_profile
-            .write_back(transacton.as_mut())
-            .await?
-            .is_some()
-        {
+        if user_profile.write_back(transacton.as_mut()).await?.is_some() {
             let url = format!("/asset/{}", handle.id);
             transacton.commit().await.map_err(DbError::from)?;
             tracing::info!("insertion suceeded");
@@ -107,11 +102,7 @@ pub(super) async fn put(
     }
 }
 
-async fn update_name_or_contact_method(
-    state: ServerState,
-    id: Uuid,
-    info: Option<Json<JsonBody>>,
-) -> ApiResult {
+async fn update_name_or_contact_method(state: ServerState, id: Uuid, info: Option<Json<JsonBody>>) -> ApiResult {
     if let Some(Json(info)) = info {
         if let Some(name) = info.name {
             UserInfo::update_name(&state.database, id, &name).await?;

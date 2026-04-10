@@ -1,5 +1,9 @@
 use crate::{app_config::db::DatabaseConfig, error::fatal::FatalError};
-use sqlx::{PgPool, postgres::{PgConnectOptions, PgPoolOptions}, query};
+use sqlx::{
+    PgPool,
+    postgres::{PgConnectOptions, PgPoolOptions},
+    query,
+};
 use std::time::Duration;
 use tracing::info_span;
 
@@ -25,19 +29,12 @@ pub async fn init(database_config: &DatabaseConfig) -> PgPool {
     let conn = conn_opts
         .connect_with(opts)
         .await
-        .map_err(|e| {
-            FatalError::from(e)
-                .when("while setting up database connection".into())
-                .exit_now()
-        })
+        .map_err(|e| FatalError::from(e).when("while setting up database connection".into()).exit_now())
         .unwrap();
 
     tracing::info!("Connection set up successfully!");
 
-    let version = query!(r#"SELECT version()"#)
-        .fetch_one(&conn)
-        .await
-        .map(|val| val.version);
+    let version = query!(r#"SELECT version()"#).fetch_one(&conn).await.map(|val| val.version);
 
     match version {
         Ok(Some(version)) => tracing::info!("Database version: {}", version),

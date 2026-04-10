@@ -25,11 +25,7 @@ use crate::{
 
 #[debug_handler]
 #[tracing::instrument(name = "[user/delete_account]", skip_all, fields(user_id = %ident.id))]
-pub(super) async fn delete_account(
-    state: State<ServerState>,
-    ident: Extension<UserIdent>,
-    password: String,
-) -> ApiResult {
+pub(super) async fn delete_account(state: State<ServerState>, ident: Extension<UserIdent>, password: String) -> ApiResult {
     let user_info = ident.retrieve_self_from_db(&state.database).await?;
     check_password(&user_info, &password).await?;
     try_delete_account(&state.database, ident.id).await
@@ -85,8 +81,7 @@ impl ChangeAuthParam {
         if count == 1 {
             Ok(())
         } else {
-            Err(ValidationError::new("params")
-                .with_message(Cow::Borrowed("excepted ONE field to change at ONE time")))
+            Err(ValidationError::new("params").with_message(Cow::Borrowed("excepted ONE field to change at ONE time")))
         }
     }
 }
@@ -112,14 +107,7 @@ pub(super) async fn change_auth_info(
         None => None,
     };
 
-    try_change_auth_info(
-        &state,
-        ident.id,
-        new_email.as_ref(),
-        new_phone.as_ref(),
-        new_password_hash.as_ref(),
-    )
-    .await
+    try_change_auth_info(&state, ident.id, new_email.as_ref(), new_phone.as_ref(), new_password_hash.as_ref()).await
 }
 
 async fn try_change_auth_info(

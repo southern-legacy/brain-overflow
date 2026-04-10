@@ -72,11 +72,7 @@ impl ConfigItem for StaticAppConfig {
             s3,
         } = self;
 
-        let (database_res, auth_res, s3_res) = (
-            database.into_runtime(),
-            auth.into_runtime(),
-            s3.into_runtime(),
-        );
+        let (database_res, auth_res, s3_res) = (database.into_runtime(), auth.into_runtime(), s3.into_runtime());
 
         let mut errors = MultiFatalError::new();
 
@@ -104,28 +100,13 @@ impl ConfigItem for StaticAppConfig {
 impl AppConfig {
     pub fn load(path: &str) -> Self {
         let static_config: StaticAppConfig = Config::builder()
-            .add_source(
-                config::File::with_name(path)
-                    .required(true)
-                    .format(config::FileFormat::Toml),
-            )
+            .add_source(config::File::with_name(path).required(true).format(config::FileFormat::Toml))
             .build()
-            .unwrap_or_else(|e| {
-                FatalError::from(e)
-                    .when("while reading the configuration file".into())
-                    .exit_now()
-            })
+            .unwrap_or_else(|e| FatalError::from(e).when("while reading the configuration file".into()).exit_now())
             .try_deserialize()
-            .unwrap_or_else(|e| {
-                FatalError::from(e)
-                    .when("while deserializing the configuration file".into())
-                    .exit_now()
-            });
+            .unwrap_or_else(|e| FatalError::from(e).when("while deserializing the configuration file".into()).exit_now());
 
-        static_config
-            .into_runtime()
-            .map_err(|e| e.exit_now())
-            .unwrap()
+        static_config.into_runtime().map_err(|e| e.exit_now()).unwrap()
     }
 
     pub fn merge_cli(mut self, cli: &Cli) -> Self {

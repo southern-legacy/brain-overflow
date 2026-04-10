@@ -78,9 +78,7 @@ where
         use axum::extract;
         let extract::Path::<T>(path) = extract::Path::from_request_parts(parts, state).await?;
 
-        path.validate()
-            .map(|_| ValidPath(path))
-            .map_err(ApiError::from)
+        path.validate().map(|_| ValidPath(path)).map_err(ApiError::from)
     }
 }
 
@@ -94,9 +92,7 @@ where
         use axum::extract;
 
         let extract::Query::<T>(que) = extract::Query::from_request_parts(parts, state).await?;
-        que.validate()
-            .map(|_| ValidQuery(que))
-            .map_err(ApiError::from)
+        que.validate().map(|_| ValidQuery(que)).map_err(ApiError::from)
     }
 }
 
@@ -109,9 +105,7 @@ where
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let axum::Json::<T>(json) = axum::Json::from_request(req, state).await?;
 
-        json.validate()
-            .map(|_| ValidJson(json))
-            .map_err(ApiError::from)
+        json.validate().map(|_| ValidJson(json)).map_err(ApiError::from)
     }
 }
 
@@ -124,10 +118,7 @@ where
     async fn from_request(req: Request, state: &S) -> Result<Option<Self>, Self::Rejection> {
         let json: Option<axum::Json<T>> = axum::Json::from_request(req, state).await?;
         match json {
-            Some(axum::Json(data)) => data
-                .validate()
-                .map(|_| Some(ValidJson(data)))
-                .map_err(ApiError::from),
+            Some(axum::Json(data)) => data.validate().map(|_| Some(ValidJson(data))).map_err(ApiError::from),
             None => Ok(None),
         }
     }

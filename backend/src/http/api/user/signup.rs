@@ -20,9 +20,7 @@ use crate::{
             user::{UserIdent, generate_password_hash},
         },
         extractor::ValidJson,
-        utils::{
-            validate_email, validate_password_complexity, validate_password_length, validate_phone,
-        },
+        utils::{validate_email, validate_password_complexity, validate_password_length, validate_phone},
     },
     server::ServerState,
 };
@@ -48,15 +46,8 @@ pub struct SignUpParam {
 
 #[debug_handler]
 #[tracing::instrument(name = "[user/signup]", skip_all, fields(verify = %param.method.get_anyway()))]
-pub(super) async fn signup(
-    State(state): State<ServerState>,
-    ValidJson(param): ValidJson<SignUpParam>,
-) -> ApiResult {
-    let SignUpParam {
-        name,
-        method,
-        password,
-    } = param;
+pub(super) async fn signup(State(state): State<ServerState>, ValidJson(param): ValidJson<SignUpParam>) -> ApiResult {
+    let SignUpParam { name, method, password } = param;
 
     let (phone, email) = method.get_tup_phone_email();
 
@@ -80,19 +71,11 @@ pub(super) async fn signup(
 
     tracing::info!("Successfully inserted a user into database.");
 
-    let user_ident = UserIdent {
-        id,
-        name,
-        email,
-        phone,
-    };
+    let user_ident = UserIdent { id, name, email, phone };
 
     Ok((
         StatusCode::CREATED,
-        [(
-            header::LOCATION,
-            format!("{}/user/{}", &state.config.server.location, id),
-        )],
+        [(header::LOCATION, format!("{}/user/{}", &state.config.server.location, id))],
         json!({
             "id": user_ident.id,
             "name": user_ident.name,
@@ -130,8 +113,7 @@ impl Validate for SignUpParam {
         let mut errors = ValidationErrors::new();
 
         if self.name.chars().count() > 32 {
-            let mut e =
-                ValidationError::new("length").with_message(Borrowed("your name is too long"));
+            let mut e = ValidationError::new("length").with_message(Borrowed("your name is too long"));
             e.add_param(Borrowed("name"), &self.name);
             errors.add("name", e)
         }
@@ -157,10 +139,6 @@ impl Validate for SignUpParam {
             errors.add("complexity", e);
         });
 
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
-        }
+        if errors.is_empty() { Ok(()) } else { Err(errors) }
     }
 }
