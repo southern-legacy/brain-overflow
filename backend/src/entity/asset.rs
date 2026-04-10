@@ -211,21 +211,21 @@ impl AssetHandle {
     /// [`sqlx::Pool<Postgres>`]，
     ///
     /// 返回值说明：
-    /// - Ok(Some())：确确实实有一个 [`Asset`] 被标记为了删除
+    /// - Ok(Some(id))：确确实实有一个 [`Asset`] 被标记为了删除
     /// - Ok(None)：没找到这个 [`AssetHandle`] 指定的 [`Asset`]
     /// - Err([`DbError`](crate::error::db::DbError))：发生了各种各样的错误
-    pub async fn logically_delete<'c, E>(&self, db: E) -> DbResult<Option<()>>
+    pub async fn logically_delete<'c, E>(&self, db: E) -> DbResult<Option<Uuid>>
     where
         E: Executor<'c, Database = Postgres>,
     {
         let query = query!(
-            r#"UPDATE "asset" SET "deleted_at" = now() WHERE "id" = $1;"#,
+            r#"UPDATE "asset" SET "deleted_at" = now() WHERE "id" = $1 RETURNING owner;"#,
             self.id
         )
         .fetch_optional(db)
         .await?;
 
-        Ok(query.map(|_| ()))
+        Ok(query.map(|v| v.owner))
     }
 
     #[allow(dead_code)]

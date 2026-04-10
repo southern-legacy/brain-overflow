@@ -28,7 +28,7 @@ pub fn build_router(config: &AppConfig) -> Router<ServerState> {
         |_, token: Jwt<UserIdent>| Box::pin(async move { Ok(token.load) }),
     );
     Router::new()
-        .route("/asset/{id}", routing::delete(delete))
+        // .route("/asset/{id}", routing::delete(delete))
         .route("/asset/{id}", routing::put(start_upload))
         .route_layer(auth_layer)
         .route("/asset/{id}", routing::get(safe))
@@ -136,13 +136,14 @@ async fn start_upload(
 }
 
 #[debug_handler]
+#[allow(unused)]
 async fn delete(
     State(state): State<ServerState>,
     Path(id): Path<Uuid>,
     Extension(_user_ident): Extension<UserIdent>,
 ) -> ApiResult {
     {
-        AssetHandle::from(id)
+        let _owner = AssetHandle::from(id)
             .logically_delete(&state.database)
             .await?;
     }
