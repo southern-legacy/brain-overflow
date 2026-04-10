@@ -33,19 +33,12 @@ with_target = false
 with_thread = false
 
 [s3]
-bucket = "brain-overflow"
-# 用户名和密码
-access_key_id = "minioadmin"
+bucket = "brain-overflow"           # 哪一个桶
+access_key_id = "minioadmin"        # 用户名和密码
 secret_access_key = "minioadmin"
-
-# 默认就是路径的形式而非子域名的形式，此处只是为了更加明确
-force_path_style = true
-
-# 容器暴露出来的端点
-endpoint = "http://localhost:9000"
-
-# 预签名 url 的过期时间
-url_ttl = 3600
+force_path_style = true             # 默认就是路径的形式而非子域名的形式，此处只是为了更加明确
+endpoint = "http://localhost:9000"  # 容器暴露出来的端点，也可以是 aws 的端点
+url_ttl = 3600                      # 预签名 url 的过期时间
 
 # 端口配置
 [server]
