@@ -21,7 +21,7 @@ async fn s3_event_handler(
     Json(event): Json<S3Event>,
 ) -> ApiResult {
     for record in event.records {
-        if let Some(key) = record.s3.object.url_decoded_key {
+        if let Some(key) = record.s3.object.key {
             tracing::debug!(key, "handling webhook callback");
             if let Ok(id) = Uuid::from_str(&key)
                 && let Err(e) = AssetHandle::new_with_id(id)

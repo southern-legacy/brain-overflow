@@ -32,6 +32,9 @@ pub struct StaticS3Config {
 
     /// Key prefix for organizing objects (e.g., "assets/")
     pub key_prefix: Option<String>,
+
+    /// TTL for presigned url, default 900s
+    pub url_ttl: u64,
 }
 
 pub type S3Config = StaticS3Config;
@@ -44,9 +47,10 @@ impl Default for StaticS3Config {
             access_key_id: None,
             secret_access_key: None,
             endpoint: None,
-            force_path_style: false,
+            force_path_style: true,
             cdn_domain: None,
             key_prefix: None,
+            url_ttl: 900
         }
     }
 }

@@ -6,6 +6,7 @@ use crate::{app_config::ConfigItem, error::fatal::FatalResult};
 pub type LoggerConfig = StaticLoggerConfig;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
 pub enum LogLevel {
     Trace,
     Debug,

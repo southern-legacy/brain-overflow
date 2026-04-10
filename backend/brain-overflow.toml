@@ -19,7 +19,7 @@ audience = [ "brain overflow" ]
 
 # 数据库配置
 [database]
-host = "localhost"
+host = "postgres"
 port = 5432
 user = "postgres"
 password = "123456"
@@ -27,14 +27,25 @@ database = "brain-overflow"
 
 
 [logger]
-with_file = "false"
+level = "debug"
+with_file = false
+with_target = false
+with_thread = false
 
 [s3]
 bucket = "brain-overflow"
+# 用户名和密码
 access_key_id = "minioadmin"
 secret_access_key = "minioadmin"
+
+# 默认就是路径的形式而非子域名的形式，此处只是为了更加明确
 force_path_style = true
+
+# 容器暴露出来的端点
 endpoint = "http://localhost:9000"
+
+# 预签名 url 的过期时间
+url_ttl = 3600
 
 # 端口配置
 [server]

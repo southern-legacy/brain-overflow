@@ -25,25 +25,25 @@ services:
       - brain-overflow-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 1s
       timeout: 5s
-      retries: 5
+      retries: 120
 
   minio:
     image: quay.io/minio/minio:latest
     container_name: brain-overflow-minio
     command: server /data --console-address ":9001"
     environment:
-      - MINIO_ROOT_USER = minioadmin
-      - MINIO_ROOT_PASSWORD = minioadmin
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
       # webhook 回调
-      - MINIO_NOTIFY_WEBHOOK_ENABLE_PRIMARY = on
-      - MINIO_NOTIFY_WEBHOOK_ENDPOINT_PRIMARY = http://brain-overflow:10086/s3/webhook
+      MINIO_NOTIFY_WEBHOOK_ENABLE_primary: on
+      MINIO_NOTIFY_WEBHOOK_ENDPOINT_primary: http://brain-overflow:10086/s3/webhook
       # 开启跨域
-      - MINIO_CORS_ENABLE = on
-      - MINIO_CORS_ALLOW_ORIGINS = *
-      - MINIO_CORS_ALLOW_METHODS = GET,PUT,POST,DELETE,HEAD
-      - MINIO_CORS_ALLOW_HEADERS = *
+      MINIO_CORS_ENABLE: on
+      MINIO_CORS_ALLOW_ORIGINS: "*"
+      MINIO_CORS_ALLOW_METHODS: "GET,PUT,POST,DELETE,HEAD"
+      MINIO_CORS_ALLOW_HEADERS: "*"
     volumes:
       - minio_data:/data
     ports:
@@ -53,9 +53,9 @@ services:
       - brain-overflow-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      interval: 1s
+      timeout: 5s
+      retries: 120
 
   minio-setup:
     image: quay.io/minio/mc
@@ -67,14 +67,24 @@ services:
       - brain-overflow-network
     entrypoint: >
       /bin/sh -c "
-      until mc alias set brainoverflow http://minio:9000 minioadmin minioadmin 2>/dev/null; do
-        echo 'Waiting for MinIO to be ready...';
-        sleep 2;
+      until mc alias set brain-overflow http://minio:9000 minioadmin minioadmin 2>/dev/null; do
+          echo 'Waiting for MinIO to be ready...';
+          sleep 2;
       done &&
       echo 'Creating bucket brain-overflow if not exists...' &&
-      mc mb brainoverflow/brain-overflow --ignore-existing &&
-      echo 'Bucket brain-overflow created or already exists'
-      "
+          mc mb brain-overflow/brain-overflow --ignore-existing &&
+      echo 'Bucket brain-overflow created or already exists' &&
+
+      echo 'Creating webhook of brain-overflow' &&
+          # 如果用命令行，minio 会检验这个端点的可达性，显然不行，所以我们使用环境变量
+          # mc admin config set brain-overflow notify_webhook:primary \
+          #     endpoint='http://brain-overflow:10086/s3/webhook' &&
+          # mc admin service restart brain-overflow &&
+          mc event add brain-overflow/brain-overflow \
+              arn:minio:sqs::primary:webhook --event put,delete &&
+          mc event ls brain-overflow/brain-overflow \
+              arn:minio:sqs::primary:webhook &&
+      echo 'Webhook set to http://brain-overflow:10086/s3/webhook, listening put and delete'"
     restart: "no"
 
   brain-overflow:
@@ -90,7 +100,7 @@ services:
       minio-setup:
         condition: service_completed_successfully
     volumes:
-      - ./docker-compose.brain-overflow.toml:/app/brain-overflow.toml:ro
+      - ./brain-overflow.toml:/app/brain-overflow.toml:ro
     ports:
       - "10086:10086"
     networks:

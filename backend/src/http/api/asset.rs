@@ -30,7 +30,6 @@ pub fn build_router(config: &AppConfig) -> Router<ServerState> {
     Router::new()
         .route("/asset/{id}", routing::delete(delete))
         .route("/asset/{id}", routing::put(start_upload))
-        .route("/asset/{id}/end", routing::any(end_upload))
         .route_layer(auth_layer)
         .route("/asset/{id}", routing::get(safe))
         .route("/asset/{id}", routing::head(safe))
@@ -52,13 +51,17 @@ async fn safe(
         return Err(StatusCode::NOT_FOUND.into_response());
     }
 
-    let (client, bucket) = (&state.s3_client, &state.config.s3.bucket);
+    let (client, bucket, url_ttl) = (
+        &state.s3_client,
+        &state.config.s3.bucket,
+        state.config.s3.url_ttl,
+    );
     let presigned_request = match method {
         Method::GET => client
             .get_object()
             .bucket(bucket)
             .key(asset.id.to_string())
-            .presigned(PresigningConfig::expires_in(Duration::from_secs(900)).unwrap())
+            .presigned(PresigningConfig::expires_in(Duration::from_secs(url_ttl)).unwrap())
             .await
             .map_err(|e| {
                 tracing::error!(error = ?e, "failed to generate presigned URL");
@@ -68,7 +71,7 @@ async fn safe(
             .head_object()
             .bucket(bucket)
             .key(asset.id.to_string())
-            .presigned(PresigningConfig::expires_in(Duration::from_secs(900)).unwrap())
+            .presigned(PresigningConfig::expires_in(Duration::from_secs(url_ttl)).unwrap())
             .await
             .map_err(|e| {
                 tracing::error!(error = ?e, "failed to generate presigned URL");
@@ -88,8 +91,7 @@ async fn start_upload(
     Path(id): Path<Uuid>,
     Extension(user_ident): Extension<UserIdent>,
 ) -> ApiResult {
-    let s3_config = &state.config.s3;
-    let bucket = &s3_config.bucket;
+    let (bucket, url_ttl) = (&state.config.s3.bucket, state.config.s3.url_ttl);
 
     let asset = {
         let mut transaction = state.database.begin().await.map_err(DbError::from)?;
@@ -115,7 +117,7 @@ async fn start_upload(
         .put_object()
         .bucket(bucket)
         .key(id.to_string())
-        .presigned(PresigningConfig::expires_in(Duration::from_secs(900)).unwrap())
+        .presigned(PresigningConfig::expires_in(Duration::from_secs(url_ttl)).unwrap())
         .await
         .map_err(|e| {
             tracing::error!(error = ?e, "failed to generate presigned URL");
@@ -131,29 +133,6 @@ async fn start_upload(
     });
 
     Ok((StatusCode::OK, axum::Json(response)).into_response())
-}
-
-#[debug_handler]
-async fn end_upload(
-    State(state): State<ServerState>,
-    Path(id): Path<Uuid>,
-    Extension(_user_ident): Extension<UserIdent>,
-) -> ApiResult {
-    {
-        let mut transaction = state.database.begin().await.map_err(DbError::from)?;
-
-        let mut asset = AssetHandle::from(id)
-            .get(transaction.as_mut())
-            .await?
-            .ok_or(StatusCode::NOT_FOUND.into_response())?;
-
-        asset.status = AssetStatus::Available;
-        asset.write_back(transaction.as_mut()).await?;
-
-        transaction.commit().await.map_err(DbError::from)?;
-    }
-
-    Ok(StatusCode::NO_CONTENT.into_response())
 }
 
 #[debug_handler]
