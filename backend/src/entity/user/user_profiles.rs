@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use sqlx::{Executor, Postgres, query};
+use sqlx::{PgExecutor, query};
 use uuid::Uuid;
 
 use crate::{entity::asset::AssetHandle, error::db::DbResult};
@@ -19,7 +19,7 @@ pub struct UserProfile {
 impl UserProfile {
     pub async fn fetch_all_fields_by_id<'c, E>(db: E, id: Uuid) -> DbResult<Self>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let v = query!(r#"SELECT * FROM "user"."user_profile" WHERE "user"."user_profile"."user_id" = $1;"#, id)
             .fetch_one(db)
@@ -37,7 +37,7 @@ impl UserProfile {
 
     pub async fn insert<'c, E>(id: Uuid, db: E) -> DbResult<()>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let _res = query!(
             r#"
@@ -55,7 +55,7 @@ impl UserProfile {
 
     pub async fn write_back<'c, E>(self, db: E) -> DbResult<Option<()>>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let res = query!(
             r#"

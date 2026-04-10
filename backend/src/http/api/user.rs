@@ -2,9 +2,18 @@ mod danger_zone;
 mod info;
 mod login;
 mod signup;
-use ::auth::Jwt;
-use ::auth::error::AuthError;
-use axum::extract::State;
+
+use ::auth::{Jwt, error::AuthError};
+use axum::{
+    Extension, Router,
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing,
+};
+use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
+use serde::{Deserialize, Serialize};
+use sqlx::PgExecutor;
 use http::header;
 use std::sync::LazyLock;
 use uuid::Uuid;
@@ -12,15 +21,6 @@ use uuid::Uuid;
 use crate::app_config::AppConfig;
 use crate::app_config::util::JwtEncoderConfig;
 use crate::{entity::user::user_info::UserInfo, http::middleware::auth::AuthLayer, server::ServerState};
-use axum::{
-    Extension, Router,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    routing,
-};
-use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
-use serde::{Deserialize, Serialize};
-use sqlx::{Executor, Postgres};
 
 static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::default);
 
@@ -59,7 +59,7 @@ pub struct UserIdent {
 impl UserIdent {
     pub async fn retrieve_self_from_db<'c, E>(&self, db: E) -> Result<UserInfo, Response>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         match UserInfo::fetch_all_fields_by_id(db, self.id).await {
             Ok(user_info) => Ok(user_info),

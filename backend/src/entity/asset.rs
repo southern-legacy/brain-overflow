@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{Executor, Postgres, query, query_as};
+use sqlx::{PgExecutor, query, query_as};
 use uuid::Uuid;
 
 use crate::error::db::DbResult;
@@ -45,7 +45,7 @@ impl Asset {
     /// 更新 [`Asset`] 记录
     pub async fn write_back<'c, E>(&self, db: E) -> DbResult<Option<()>>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let Self {
             id,
@@ -78,7 +78,7 @@ impl Asset {
     /// 将一个新的 [`Asset`] 记录添加到数据库中
     pub async fn insert<'c, E>(&self, db: E) -> DbResult<AssetHandle>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let Self {
             id,
@@ -154,7 +154,7 @@ impl AssetHandle {
 
     pub async fn get<'c, E>(&self, db: E) -> DbResult<Option<Asset>>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         Ok(if self.allow_deleted {
             query_as!(
@@ -189,7 +189,7 @@ impl AssetHandle {
 
     pub async fn set_status<'c, E>(&self, status: AssetStatus, db: E) -> DbResult<Option<()>>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         Ok(query!(
             r#"UPDATE asset SET status = $1::asset_status WHERE id = $2"#,
@@ -213,7 +213,7 @@ impl AssetHandle {
     /// - Err([`DbError`](crate::error::db::DbError))：发生了各种各样的错误
     pub async fn logically_delete<'c, E>(&self, db: E) -> DbResult<Option<Uuid>>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let query = query!(r#"UPDATE "asset" SET "deleted_at" = now() WHERE "id" = $1 RETURNING owner;"#, self.id)
             .fetch_optional(db)
@@ -225,7 +225,7 @@ impl AssetHandle {
     #[allow(dead_code)]
     pub async fn hard_delete<'c, E>(&self, db: E) -> DbResult<Option<()>>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let query = query!(r#"DELETE FROM "asset" WHERE "id" = $1;"#, self.id).fetch_optional(db).await?;
 

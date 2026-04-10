@@ -1,6 +1,6 @@
 use crate::error::db::DbResult;
 use serde::Serialize;
-use sqlx::{Executor, Postgres};
+use sqlx::PgExecutor;
 use uuid::Uuid;
 
 #[derive(Serialize)]
@@ -24,7 +24,7 @@ pub struct InsertParam<'a> {
 impl UserInfo {
     pub async fn fetch_all_fields_by_id<'c, E>(db: E, id: Uuid) -> DbResult<Self>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let statement = sqlx::query_as!(Self, r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."id" = $1"#, id);
         Ok(statement.fetch_one(db).await?)
@@ -32,7 +32,7 @@ impl UserInfo {
 
     pub async fn fetch_all_fields_by_email<'c, E>(db: E, email: &str) -> DbResult<Self>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let statement = sqlx::query_as!(Self, r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."email" = $1"#, email);
         Ok(statement.fetch_one(db).await?)
@@ -40,7 +40,7 @@ impl UserInfo {
 
     pub async fn fetch_all_fields_by_phone<'c, E>(db: E, phone: &str) -> DbResult<Self>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let statement = sqlx::query_as!(Self, r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."phone" = $1"#, phone);
         Ok(statement.fetch_one(db).await?)
@@ -57,7 +57,7 @@ impl UserInfo {
         }: InsertParam<'a>,
     ) -> DbResult<Uuid>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let res = sqlx::query!(
             r#"
@@ -82,7 +82,7 @@ impl UserInfo {
     /// 返回值：`Uuid` 标识删除的用户的 id
     pub async fn delete_by_id<'c, E>(db: E, id: Uuid) -> DbResult<Uuid>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let statement = sqlx::query!(
             r#"
@@ -97,7 +97,7 @@ impl UserInfo {
 
     pub async fn update_name<'c, E>(db: E, id: Uuid, new_name: &str) -> DbResult<UserInfo>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let statement = sqlx::query_as!(
             UserInfo,
@@ -115,7 +115,7 @@ impl UserInfo {
 
     pub async fn update_email<'c, E>(db: E, id: Uuid, new_email: &str) -> DbResult<UserInfo>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let statement = sqlx::query_as!(
             UserInfo,
@@ -133,7 +133,7 @@ impl UserInfo {
 
     pub async fn update_phone<'c, E>(db: E, id: Uuid, new_phone: &str) -> DbResult<UserInfo>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let statement = sqlx::query_as!(
             UserInfo,
@@ -151,7 +151,7 @@ impl UserInfo {
 
     pub async fn update_password_hash<'c, E>(db: E, id: Uuid, new_password_hash: &str) -> DbResult<UserInfo>
     where
-        E: Executor<'c, Database = Postgres>,
+        E: PgExecutor<'c>,
     {
         let statement = sqlx::query_as!(
             UserInfo,
