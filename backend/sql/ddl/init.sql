@@ -49,13 +49,25 @@ CREATE INDEX "btree_index_email" ON "user"."user_info" USING btree (LOWER("email
 CREATE INDEX "btree_index_phone" ON "user"."user_info" USING btree ("phone");
 
 CREATE TABLE "user"."user_profile" (
-    "user_id"       UUID            PRIMARY KEY REFERENCES "user"."user_info"(id) ON DELETE CASCADE,
+    "id"            UUID            PRIMARY KEY REFERENCES "user"."user_info"(id) ON DELETE CASCADE,
     "biography"     UUID            REFERENCES "asset" DEFAULT NULL,
     "avatar"        UUID            REFERENCES "asset" DEFAULT NULL,
     "banner"        UUID            REFERENCES "asset" DEFAULT NULL,
     "contact_me"    JSONB           NOT NULL DEFAULT '[]'::JSONB,
     "updated_at"    TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
+
+CREATE OR REPLACE FUNCTION "_auto_insert"()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO "user"."user_profile"(id) VALUES (new.id);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER "auto_insert_trigger" AFTER INSERT ON "user"."user_info"
+FOR EACH ROW
+EXECUTE FUNCTION "_auto_insert"();
 
 -- 文章属于一种 asset
 CREATE TABLE "article" (

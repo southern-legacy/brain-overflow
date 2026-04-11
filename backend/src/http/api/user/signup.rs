@@ -130,12 +130,12 @@ pub(super) async fn signup(
     };
 
     // 生成六位验证码并将其写入 redis
-    let confirm_code = format!("{:6}", rand::random_range(0..1_000_000));
+    let verification = format!("{:6}", rand::random_range(0..1_000_000));
     let (mut redis1, mut redis2) = (state.redis.clone(), state.redis.clone());
 
     match tokio::join!(
         redis1.set_ex::<_, _, ()>(get_insert_param_key(new_user.id), &new_user, 300), // 生成的新用户信息,
-        redis2.set_ex::<_, _, ()>(get_confirm_code_key(new_user.id), &confirm_code, 300)  // 验证码
+        redis2.set_ex::<_, _, ()>(get_confirm_code_key(new_user.id), &verification, 300)  // 验证码
     ) {
         (Ok(_), Err(e)) | (Err(e), Ok(_)) => {
             tracing::warn!("error while accessing redis: {e}");
@@ -151,7 +151,7 @@ pub(super) async fn signup(
                     mail.to(Mailbox::new(Some(new_user.name), email.parse().unwrap()))
                         .header(ContentType::TEXT_PLAIN)
                         .subject("Brain Overflow")
-                        .body(format!("You are trying to sign up, your confirm code: {confirm_code}"))
+                        .body(format!("You are signing up, your verification code: {verification}"))
                         .unwrap()
                 });
             }
