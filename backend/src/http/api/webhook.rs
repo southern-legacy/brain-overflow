@@ -24,7 +24,7 @@ async fn s3_event_handler(State(state): State<ServerState>, Json(event): Json<S3
             tracing::debug!(key, "handling webhook callback");
             if let Ok(id) = Uuid::from_str(&key)
                 && let Err(e) = AssetHandle::new_with_id(id)
-                    .set_status(AssetStatus::Available, &state.database)
+                    .set_status(AssetStatus::Available, &state.database())
                     .await
             {
                 tracing::warn!("error while looking up the asset" = ?e);

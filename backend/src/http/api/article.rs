@@ -60,7 +60,7 @@ async fn get_article_of_someone(
     Path(id): Path<Uuid>,
     Query(opts): Query<PageOption>,
 ) -> ApiResult {
-    let res = Article::by_author(&state.database, id, opts).await?;
+    let res = Article::by_author(&state.database(), id, opts).await?;
     Ok((StatusCode::OK, axum::Json(res)).into_response())
 }
 
@@ -70,6 +70,6 @@ async fn get_article_by_title(
     Path(title): Path<String>,
     Query(opts): Query<PageOption>,
 ) -> ApiResult {
-    let res = Article::by_title(&state.database, title, opts).await?;
+    let res = Article::by_title(&state.database(), title, opts).await?;
     Ok((StatusCode::OK, axum::Json(res)).into_response())
 }

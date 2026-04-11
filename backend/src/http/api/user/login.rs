@@ -73,7 +73,7 @@ pub(super) async fn login(State(state): State<ServerState>, Json(param): Json<Lo
             "name": user.name,
             "email": user.email,
             "phone": user.phone,
-            "token": user.into_jwt(&state.config.auth.encoder_config)?
+            "token": user.into_jwt(&state.config().auth.encoder_config)?
         })
         .to_string(),
     )

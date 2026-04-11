@@ -23,12 +23,7 @@ pub fn build_router(state: ServerState) -> Router {
         Box::pin(async move {
             // 获取二进制形式的 jti 存储，为什么不封 user_id 呢？因为有可能是黑客发起的重放攻击
             // 我不太想错杀
-            match state
-                .redis
-                .clone()
-                .sismember("brain-overflow:banned-jti", token.jti)
-                .await
-            {
+            match state.redis().sismember("brain-overflow:banned-jti", token.jti).await {
                 Ok(false) => Ok(token.load),
                 Ok(true) => Err(StatusCode::FORBIDDEN.into_response()),
                 _ => Err(StatusCode::UNAUTHORIZED.into_response()),

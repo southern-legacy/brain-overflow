@@ -60,7 +60,7 @@ fn get_confirm_code_key(id: Uuid) -> String {
 pub(super) async fn confirm(State(state): State<ServerState>, Path((id, code)): Path<(Uuid, i32)>) -> ApiResult {
     // 获取验证码并比对
     let new_user = {
-        let mut redis = state.redis.clone();
+        let mut redis = state.redis();
 
         // 有四种情况：获取验证码时出错了、没有这个验证码、验证码和提交的不匹配、验证码和提交的匹配
         match redis.get::<_, Option<i32>>(get_confirm_code_key(id)).await {
@@ -106,7 +106,7 @@ pub(super) async fn confirm(State(state): State<ServerState>, Path((id, code)): 
             "name": user_ident.name,
             "email": user_ident.email,
             "phone": user_ident.phone,
-            "token": user_ident.into_jwt(&state.config.auth.encoder_config)?
+            "token": user_ident.into_jwt(&state.config().auth.encoder_config)?
         })
         .to_string(),
     )
@@ -131,7 +131,7 @@ pub(super) async fn signup(
 
     // 生成六位验证码并将其写入 redis
     let verification = format!("{:6}", rand::random_range(0..1_000_000));
-    let (mut redis1, mut redis2) = (state.redis.clone(), state.redis.clone());
+    let (mut redis1, mut redis2) = (state.redis(), state.redis());
 
     match tokio::join!(
         redis1.set_ex::<_, _, ()>(get_insert_param_key(new_user.id), &new_user, 300), // 生成的新用户信息,

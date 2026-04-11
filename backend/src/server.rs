@@ -21,9 +21,11 @@ use tower_http::{
 };
 use tracing::info;
 
-/// 本身就是一个引用类型，可以廉价的 clone
 #[derive(Clone)]
-pub struct ServerState {
+pub struct ServerState(Arc<ServerStateImpl>);
+
+/// 本身就是一个引用类型，可以廉价的 clone，但是里面的字段似乎有点多了，大多数时候都不需要全部克隆
+struct ServerStateImpl {
     pub config: Arc<AppConfig>,
     pub smtp_transport: SmtpTransport,
     pub database: PgPool,
@@ -141,13 +143,13 @@ pub async fn start(cli: &Cli) {
 
         let path_normalize_layer = NormalizePathLayer::trim_trailing_slash();
 
-        http::build_router(ServerState {
+        http::build_router(ServerState(Arc::new(ServerStateImpl {
             config,
             database,
             smtp_transport,
             redis,
             s3_client,
-        })
+        })))
         .layer(timeout_layer)
         .layer(body_limit_layer)
         .layer(tracing_layer)
@@ -166,22 +168,47 @@ pub async fn start(cli: &Cli) {
 }
 
 impl ServerState {
+    #[inline]
+    pub fn redis(&self) -> MultiplexedConnection {
+        self.0.redis.clone()
+    }
+
+    #[inline]
+    pub fn database(&self) -> PgPool {
+        self.0.database.clone()
+    }
+
+    #[inline]
+    pub fn smtp_transport(&self) -> SmtpTransport {
+        self.0.smtp_transport.clone()
+    }
+
+    #[inline]
+    pub fn s3_client(&self) -> S3Client {
+        self.0.s3_client.clone()
+    }
+
+    #[inline]
+    pub fn config(&self) -> Arc<AppConfig> {
+        self.0.config.clone()
+    }
+
     /// uri 应该以 `/` 开头
     #[inline]
     pub fn prefix_uri(&self, uri: impl std::fmt::Display) -> String {
-        format!("{}{}", self.config.server.location, uri)
+        format!("{}{}", self.0.config.server.location, uri)
     }
 
     #[inline]
     pub async fn begin_transaction(&self) -> crate::error::db::DbResult<sqlx::PgTransaction<'static>> {
         use crate::error::db::DbError;
-        self.database.begin().await.map_err(DbError::from)
+        self.0.database.begin().await.map_err(DbError::from)
     }
 
     /// fill 在调用时会被填入一个 `from` 被填好的 [`MessageBuilder`]
     pub fn email_to(&self, fill: impl FnOnce(MessageBuilder) -> Message + Send + 'static) {
-        let mailer = self.smtp_transport.clone();
-        let from = self.config.email.from.clone();
+        let mailer = self.smtp_transport();
+        let from = self.0.config.email.from.clone();
         tokio::spawn(async move { mailer.send(&fill(Message::builder().from(from))) });
     }
 }

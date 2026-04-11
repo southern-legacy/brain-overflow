@@ -37,8 +37,10 @@ async fn safe(
     Path(id): Path<Uuid>,
     _user_ident: Option<Extension<UserIdent>>,
 ) -> ApiResult {
+    let database = state.database();
+
     let asset = AssetHandle::from(id)
-        .get(&state.database)
+        .get(&database)
         .await?
         .ok_or(StatusCode::NOT_FOUND.into_response())?;
 
@@ -46,7 +48,8 @@ async fn safe(
         return Err(StatusCode::NOT_FOUND.into_response());
     }
 
-    let (client, bucket, url_ttl) = (&state.s3_client, &state.config.s3.bucket, state.config.s3.url_ttl);
+    let (client, config) = (&state.s3_client(), state.config());
+    let (bucket, url_ttl) = (&config.s3.bucket, config.s3.url_ttl);
     let presigned_request = match method {
         Method::GET => client
             .get_object()
@@ -82,7 +85,8 @@ async fn start_upload(
     Path(id): Path<Uuid>,
     Extension(user_ident): Extension<UserIdent>,
 ) -> ApiResult {
-    let (bucket, url_ttl) = (&state.config.s3.bucket, state.config.s3.url_ttl);
+    let config = state.config();
+    let (bucket, url_ttl) = (&config.s3.bucket, config.s3.url_ttl);
 
     let asset = {
         let mut transaction = state.begin_transaction().await?;
@@ -104,7 +108,7 @@ async fn start_upload(
     }
 
     let presigned_request = state
-        .s3_client
+        .s3_client()
         .put_object()
         .bucket(bucket)
         .key(id.to_string())
@@ -134,7 +138,7 @@ async fn delete(
     Extension(_user_ident): Extension<UserIdent>,
 ) -> ApiResult {
     {
-        let _owner = AssetHandle::from(id).logically_delete(&state.database).await?;
+        let _owner = AssetHandle::from(id).logically_delete(&state.database()).await?;
     }
 
     Ok(StatusCode::NO_CONTENT.into_response())

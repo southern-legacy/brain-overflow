@@ -25,7 +25,7 @@ use crate::{
 #[debug_handler]
 #[tracing::instrument(name = "[user/info]", skip(state))]
 pub(super) async fn get(State(state): State<ServerState>, Path(id): Path<Uuid>) -> ApiResult {
-    let res = { UserProfile::fetch_all_fields_by_id(&state.database, id).await? };
+    let res = { UserProfile::fetch_all_fields_by_id(&state.database(), id).await? };
 
     Ok((StatusCode::OK, axum::Json(res)).into_response())
 }
@@ -103,14 +103,16 @@ pub(super) async fn put(
 }
 
 async fn update_name_or_contact_method(state: ServerState, id: Uuid, info: Option<Json<JsonBody>>) -> ApiResult {
+    let database = state.database();
     if let Some(Json(info)) = info {
         if let Some(name) = info.name {
-            UserInfo::update_name(&state.database, id, &name).await?;
+            UserInfo::update_name(&database, id, &name).await?;
         }
         if let Some(contact_me) = info.contact_me {
-            let mut user_profile = UserProfile::fetch_all_fields_by_id(&state.database, id).await?;
+            let mut transaction = database.begin().await.map_err(DbError::from)?;
+            let mut user_profile = UserProfile::fetch_all_fields_by_id(transaction.as_mut(), id).await?;
             user_profile.contact_me = contact_me;
-            user_profile.write_back(&state.database).await?;
+            user_profile.write_back(transaction.as_mut()).await?;
         }
 
         Ok(StatusCode::NO_CONTENT.into_response())

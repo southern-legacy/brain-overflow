@@ -30,9 +30,10 @@ pub(super) async fn delete_account(
     ident: Extension<UserIdent>,
     password: String,
 ) -> ApiResult {
-    let user_info = ident.retrieve_self_from_db(&state.database).await?;
+    let database = state.database();
+    let user_info = ident.retrieve_self_from_db(&database).await?;
     check_password(&user_info, &password).await?;
-    try_delete_account(&state.database, ident.id).await
+    try_delete_account(&database, ident.id).await
 }
 
 async fn try_delete_account(db: &PgPool, id: Uuid) -> ApiResult {
@@ -102,7 +103,7 @@ pub(super) async fn change_auth_info(
         password,
     }): ValidJson<ChangeAuthParam>,
 ) -> ApiResult {
-    let user_info = ident.retrieve_self_from_db(&state.database).await?;
+    let user_info = ident.retrieve_self_from_db(&state.database()).await?;
 
     check_password(&user_info, &password).await?;
 
@@ -158,7 +159,7 @@ async fn try_change_auth_info(
                     "name": ident.name,
                     "phone": ident.phone,
                     "email": ident.email,
-                    "token": ident.into_jwt(&state.config.auth.encoder_config)?
+                    "token": ident.into_jwt(&state.config().auth.encoder_config)?
                 })
                 .to_string(),
             )
