@@ -11,7 +11,6 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
-    app_config::AppConfig,
     entity::{article::Article, page::PageOption},
     error::db::DbError,
     http::{
@@ -21,8 +20,8 @@ use crate::{
     server::ServerState,
 };
 
-pub(super) fn build_router(config: &AppConfig) -> Router<ServerState> {
-    let auth_layer = AuthLayer::new(config.auth.decoder_config.decoder.clone(), |_, token: Jwt<UserIdent>| {
+pub(super) fn build_router(state: ServerState) -> Router {
+    let auth_layer = AuthLayer::new(state.clone(), |_, _, token: Jwt<UserIdent>| {
         Box::pin(async move { Ok(token.load) })
     });
 
@@ -31,6 +30,7 @@ pub(super) fn build_router(config: &AppConfig) -> Router<ServerState> {
         .layer(auth_layer)
         .route("/user/{user_id}/article", routing::get(get_article_of_someone))
         .route("/article/{title}", routing::get(get_article_by_title))
+        .with_state(state)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

@@ -2,7 +2,6 @@ use std::{
     convert::Infallible,
     marker::PhantomData,
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll},
 };
 
@@ -17,16 +16,18 @@ use serde::Deserialize;
 use serde_json::json;
 use tower::{Layer, Service};
 
-type PinBox<T> = Pin<Box<T>>;
+use crate::server::ServerState;
+
+type PinBoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 
 #[derive(Clone)]
 pub struct Auth<Inner, T, F>
 where
-    F: 'static + Clone + Send + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+    F: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     inner_service: Inner,
-    decoder: Arc<JwtDecoder>,
+    state: ServerState,
     validator: F,
     _p: PhantomData<T>,
 }
@@ -34,35 +35,36 @@ where
 #[derive(Clone)]
 pub struct AuthLayer<T, F>
 where
-    F: 'static + Clone + Send + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+    F: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
-    decoder: JwtDecoder,
     validator: F,
+    state: ServerState,
     _p: PhantomData<T>,
 }
 
 impl<T, F> AuthLayer<T, F>
 where
-    F: 'static + Clone + Send + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+    F: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     /// # 此函数将在堆上创建一个 [`JwtConfig`] 结构作为这个中间件的配置
     ///
     /// ## 参数说明
     ///
-    /// - `decoder`：解码 Jwt 的结构
-    /// - `validator`：验证 token 上下文的
+    /// - [`ServerState`]：可能需要的全局资源，比如数据库连接
+    /// - [`Request`]：请求本身
+    /// - [`Jwt<T>`]：目前看来没有问题的 token
     ///
-    /// > `validator` 接受 (&HeaderMap, HttpMethod, &str, Jwt<T>) 返回一个 [`Pin`] 住的 [`Box`]<[`Future`]>，
-    /// >
-    /// > 这个 [`Future`] 可以返回一个 [`Result`]
-    /// >
-    /// > - `Ok(_)` 时，表示里面的 token 合法，现在将这个校验后的 token 给到 `Inner` 服务
-    /// > - `Err(response)` 时，表示 token 不合法，直接给客户端返回相应的错误
-    pub fn new(decoder: JwtDecoder, validator: F) -> Self {
+    /// 你应该返回：
+    ///
+    /// [`Result<T, Response>`]
+    ///
+    /// - `Ok(_)` 时，表示里面的 token 合法，现在将这个校验后的 `T` 给到 `Inner` 服务
+    /// - `Err(response)` 时，表示 token 不合法，直接给客户端返回相应的错误
+    pub fn new(state: ServerState, validator: F) -> Self {
         Self {
-            decoder,
+            state,
             validator,
             _p: PhantomData,
         }
@@ -77,7 +79,7 @@ where
     Inner::Error: std::error::Error,
     Inner::Response: IntoResponse,
     Inner::Future: 'static + Send,
-    Valid: 'static + Clone + Send + Fn(&Request, Jwt<Token>) -> PinBox<dyn Future<Output = Result<Token, Response>> + Send>,
+    Valid: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<Token>) -> PinBoxFuture<Result<Token, Response>>,
     Token: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     type Response = Response;
@@ -91,12 +93,12 @@ where
     fn call(&mut self, mut req: Request) -> Self::Future {
         let cloned = self.inner_service.clone();
         let validate_token = self.validator.clone();
-        let decoder = self.decoder.clone();
+        let state = self.state.clone();
         let mut inner_service = std::mem::replace(&mut self.inner_service, cloned);
 
         Box::pin(async move {
-            match extract_token::<Token>(req.headers(), &decoder).await {
-                Ok(token) => match validate_token(&req, token).await {
+            match extract_token::<Token>(req.headers(), &state.config.auth.decoder_config.decoder).await {
+                Ok(token) => match validate_token(state, &req, token).await {
                     Ok(ext) => {
                         req.extensions_mut().insert(ext);
                         match inner_service.call(req).await {
@@ -123,18 +125,18 @@ where
 
 impl<Inner, T, F> Layer<Inner> for AuthLayer<T, F>
 where
-    F: 'static + Clone + Send + Fn(&Request, Jwt<T>) -> PinBox<dyn Future<Output = Result<T, Response>> + Send>,
+    F: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     type Service = Auth<Inner, T, F>;
 
     fn layer(&self, inner: Inner) -> Self::Service {
-        let Self { decoder, validator, _p } = self.clone();
+        let Self { state, validator, _p } = self.clone();
 
         Auth {
             inner_service: inner,
-            validator: validator.clone(),
-            decoder: Arc::new(decoder),
+            state,
+            validator,
             _p: PhantomData,
         }
     }

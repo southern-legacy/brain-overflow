@@ -12,7 +12,6 @@ use std::time::Duration;
 use uuid::Uuid;
 
 use crate::{
-    app_config::AppConfig,
     entity::asset::{AssetHandle, AssetStatus},
     error::db::DbError,
     http::{
@@ -22,16 +21,18 @@ use crate::{
     server::ServerState,
 };
 
-pub fn build_router(config: &AppConfig) -> Router<ServerState> {
-    let auth_layer = AuthLayer::new(config.auth.decoder_config.decoder.clone(), |_, token: Jwt<UserIdent>| {
+pub fn build_router(state: ServerState) -> Router {
+    let auth_layer = AuthLayer::new(state.clone(), |_, _, token: Jwt<UserIdent>| {
         Box::pin(async move { Ok(token.load) })
     });
+
     Router::new()
         // .route("/asset/{id}", routing::delete(delete))
         .route("/asset/{id}", routing::put(start_upload))
         .route_layer(auth_layer)
         .route("/asset/{id}", routing::get(safe))
         .route("/asset/{id}", routing::head(safe))
+        .with_state(state)
 }
 
 #[debug_handler]

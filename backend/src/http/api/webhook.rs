@@ -11,8 +11,8 @@ use crate::{
     server::ServerState,
 };
 
-pub fn build_router() -> Router<ServerState> {
-    Router::new().route("/s3/webhook", routing::post(s3_event_handler))
+pub fn build_router(state: ServerState) -> Router {
+    Router::new().route("/s3/webhook", routing::post(s3_event_handler)).with_state(state)
 }
 
 #[debug_handler]

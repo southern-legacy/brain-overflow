@@ -18,15 +18,14 @@ use http::header;
 use std::sync::LazyLock;
 use uuid::Uuid;
 
-use crate::app_config::AppConfig;
 use crate::app_config::util::JwtEncoderConfig;
 use crate::{entity::user::user_info::UserInfo, http::middleware::auth::AuthLayer, server::ServerState};
 
 static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::default);
 
-pub(super) fn build_router(config: &AppConfig) -> Router<ServerState> {
+pub(super) fn build_router(state: ServerState) -> Router {
     let router = Router::new();
-    let auth_layer = AuthLayer::new(config.auth.decoder_config.decoder.clone(), |_, token: Jwt<UserIdent>| {
+    let auth_layer = AuthLayer::new(state.clone(), |_, _, token: Jwt<UserIdent>| {
         Box::pin(async move { Ok(token.load) })
     });
 
@@ -46,6 +45,7 @@ pub(super) fn build_router(config: &AppConfig) -> Router<ServerState> {
         .route("/user/{id}", routing::get(info::get))
         .route("/user", routing::post(signup::signup))
         .route("/user/login", routing::post(login::login))
+        .with_state(state)
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]

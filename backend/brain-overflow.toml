@@ -27,7 +27,7 @@ database = "brain-overflow"
 
 
 [logger]
-level = "debug"
+level = "info"
 with_file = false
 with_target = false
 with_thread = false

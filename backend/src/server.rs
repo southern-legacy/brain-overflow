@@ -19,6 +19,7 @@ use tower_http::{
 };
 use tracing::info;
 
+/// 本身就是一个引用类型，可以廉价的 clone
 #[derive(Clone)]
 pub struct ServerState {
     pub database: PgPool,
@@ -93,6 +94,8 @@ pub async fn start(cli: &Cli) {
             .build()
     });
 
+    let (ipv6, port) = (config.server.ipv6, config.server.port);
+
     // 路由和通用中间件
     let router = {
         let tracing_layer = TraceLayer::new_for_http()
@@ -120,7 +123,7 @@ pub async fn start(cli: &Cli) {
 
         let path_normalize_layer = NormalizePathLayer::trim_trailing_slash();
 
-        http::build_router(config.as_ref())
+        http::build_router(ServerState { database, config, s3_client })
             .layer(timeout_layer)
             .layer(body_limit_layer)
             .layer(tracing_layer)
@@ -128,15 +131,12 @@ pub async fn start(cli: &Cli) {
             .layer(path_normalize_layer)
     };
 
-    let listener = if config.server.ipv6 {
-        TcpListener::bind((Ipv6Addr::UNSPECIFIED, config.server.port)).await.unwrap()
+    let listener = if ipv6 {
+        TcpListener::bind((Ipv6Addr::UNSPECIFIED, port)).await.unwrap()
     } else {
-        TcpListener::bind((Ipv4Addr::UNSPECIFIED, config.server.port)).await.unwrap()
+        TcpListener::bind((Ipv4Addr::UNSPECIFIED, port)).await.unwrap()
     };
 
     info!("Listening on {}", listener.local_addr().unwrap());
-
-    axum::serve(listener, router.with_state(ServerState { database, config, s3_client }))
-        .await
-        .unwrap()
+    axum::serve(listener, router).await.unwrap()
 }
