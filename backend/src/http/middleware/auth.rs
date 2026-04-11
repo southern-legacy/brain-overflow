@@ -18,13 +18,32 @@ use tower::{Layer, Service};
 
 use crate::server::ServerState;
 
-type PinBoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
+pub type PinBoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
+
+pub trait Validator<T>
+where
+    Self: 'static + Clone + Send + Sync + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
+{
+}
+
+impl<T, Arbitrary> Validator<T> for Arbitrary where
+    Arbitrary: 'static + Clone + Send + Sync + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>
+{
+}
+
+pub trait TokenContent
+where
+    Self: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
+{
+}
+
+impl<Arbitrary> TokenContent for Arbitrary where Arbitrary: 'static + Clone + Sync + Send + for<'de> Deserialize<'de> {}
 
 #[derive(Clone)]
 pub struct Auth<Inner, T, F>
 where
-    F: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
-    T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
+    F: Validator<T>,
+    T: TokenContent,
 {
     inner_service: Inner,
     state: ServerState,
@@ -35,7 +54,7 @@ where
 #[derive(Clone)]
 pub struct AuthLayer<T, F>
 where
-    F: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
+    F: Validator<T>,
     T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     validator: F,
@@ -45,8 +64,8 @@ where
 
 impl<T, F> AuthLayer<T, F>
 where
-    F: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
-    T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
+    F: Validator<T>,
+    T: TokenContent,
 {
     /// # 此函数将在堆上创建一个 [`JwtConfig`] 结构作为这个中间件的配置
     ///
@@ -79,8 +98,8 @@ where
     Inner::Error: std::error::Error,
     Inner::Response: IntoResponse,
     Inner::Future: 'static + Send,
-    F: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
-    T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
+    F: Validator<T>,
+    T: TokenContent,
 {
     type Response = Response;
     type Error = Infallible;
@@ -125,8 +144,8 @@ where
 
 impl<Inner, T, F> Layer<Inner> for AuthLayer<T, F>
 where
-    F: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
-    T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
+    F: Validator<T>,
+    T: TokenContent,
 {
     type Service = Auth<Inner, T, F>;
 

@@ -1,9 +1,10 @@
-use crate::{app_config::AppConfig, cli::Cli, database, http, logger};
+use crate::{app_config::AppConfig, cli::Cli, database, http, logger, redis};
 use ::http::StatusCode;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::{Client as S3Client, config::Credentials};
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
+use ::redis::aio::MultiplexedConnection;
 use sqlx::PgPool;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
@@ -22,8 +23,9 @@ use tracing::info;
 /// 本身就是一个引用类型，可以廉价的 clone
 #[derive(Clone)]
 pub struct ServerState {
-    pub database: PgPool,
     pub config: Arc<AppConfig>,
+    pub database: PgPool,
+    pub redis: MultiplexedConnection,
     pub s3_client: S3Client,
 }
 
@@ -62,6 +64,9 @@ pub async fn start(cli: &Cli) {
 
     // 数据库连接
     let database = database::init(&config.database).await;
+
+    // Redis 连接
+    let redis = redis::init(&config).await;
 
     // S3 客户端
     let s3_client = S3Client::from_conf({
@@ -123,7 +128,7 @@ pub async fn start(cli: &Cli) {
 
         let path_normalize_layer = NormalizePathLayer::trim_trailing_slash();
 
-        http::build_router(ServerState { database, config, s3_client })
+        http::build_router(ServerState { config, database, redis, s3_client })
             .layer(timeout_layer)
             .layer(body_limit_layer)
             .layer(tracing_layer)

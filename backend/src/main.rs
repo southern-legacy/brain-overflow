@@ -13,6 +13,7 @@ mod entity;
 mod error;
 mod http;
 mod logger;
+mod redis;
 mod server;
 
 #[tokio::main]

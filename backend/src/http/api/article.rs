@@ -1,4 +1,3 @@
-use auth::Jwt;
 use axum::{
     Extension, Json, Router, debug_handler,
     extract::{Path, Query, State},
@@ -15,16 +14,15 @@ use crate::{
     error::db::DbError,
     http::{
         api::{ApiResult, user::UserIdent},
-        middleware::auth::AuthLayer,
+        middleware::auth::{AuthLayer, Validator},
     },
     server::ServerState,
 };
 
-pub(super) fn build_router(state: ServerState) -> Router {
-    let auth_layer = AuthLayer::new(state.clone(), |_, _, token: Jwt<UserIdent>| {
-        Box::pin(async move { Ok(token.load) })
-    });
-
+pub(super) fn build_router<F>(state: ServerState, auth_layer: AuthLayer<UserIdent, F>) -> Router
+where
+    F: Validator<UserIdent>,
+{
     Router::new()
         .route("/article", routing::post(post_article))
         .layer(auth_layer)

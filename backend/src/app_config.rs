@@ -1,17 +1,14 @@
 pub mod auth;
 pub mod db;
 pub mod logger;
+pub mod redis;
 pub mod s3;
 pub mod server;
 pub mod util;
 
 use crate::{
     app_config::{
-        auth::{AuthConfig, StaticAuthConfig},
-        db::DatabaseConfig,
-        logger::{LoggerConfig, StaticLoggerConfig},
-        s3::{S3Config, StaticS3Config},
-        server::{ServerConfig, StaticServerConfig},
+        auth::{AuthConfig, StaticAuthConfig}, db::DatabaseConfig, logger::{LoggerConfig, StaticLoggerConfig}, redis::RedisConfig, s3::{S3Config, StaticS3Config}, server::{ServerConfig, StaticServerConfig}
     },
     cli::Cli,
     error::fatal::{FatalError, FatalResult, MultiFatalError},
@@ -32,6 +29,7 @@ struct StaticAppConfig {
     database: StaticDatabaseConfig, // db 配置字段
 
     auth: StaticAuthConfig,
+    redis: RedisConfig,
 
     #[serde(default)]
     s3: StaticS3Config,
@@ -42,6 +40,7 @@ pub struct AppConfig {
     pub logger: LoggerConfig,
     pub database: DatabaseConfig,
     pub auth: AuthConfig,
+    pub redis: RedisConfig,
     pub s3: S3Config,
 }
 
@@ -68,6 +67,7 @@ impl ConfigItem for StaticAppConfig {
             server,
             logger,
             database,
+            redis,
             auth,
             s3,
         } = self;
@@ -83,6 +83,7 @@ impl ConfigItem for StaticAppConfig {
             Ok(AppConfig {
                 server,
                 logger,
+                redis,
                 database: database_res.unwrap(),
                 auth: auth_res.unwrap(),
                 s3: s3_res.unwrap(),
