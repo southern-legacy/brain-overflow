@@ -1,10 +1,10 @@
 use crate::{app_config::AppConfig, cli::Cli, database, http, logger, redis};
 use ::http::StatusCode;
+use ::redis::{AsyncCommands, aio::MultiplexedConnection};
 use aws_config::BehaviorVersion;
 use aws_sdk_s3::{Client as S3Client, config::Credentials};
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
-use ::redis::aio::MultiplexedConnection;
 use sqlx::PgPool;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
@@ -66,7 +66,8 @@ pub async fn start(cli: &Cli) {
     let database = database::init(&config.database).await;
 
     // Redis 连接
-    let redis = redis::init(&config).await;
+    let mut redis = redis::init(&config).await;
+    let _: Result<(), _> = redis.set("brain-overflow-running", true).await;
 
     // S3 客户端
     let s3_client = S3Client::from_conf({
@@ -105,14 +106,14 @@ pub async fn start(cli: &Cli) {
     let router = {
         let tracing_layer = TraceLayer::new_for_http()
             .make_span_with(|req: &Request| {
-                let method = req.method().to_string();
+                let mth = req.method().to_string();
                 let uri = req.uri().to_string();
-                let req_id = BASE64_STANDARD_NO_PAD.encode(uuid::Uuid::now_v7()); // 使用 base64 编码的 uuid 作为请求 req_id
-                tracing::info_span!("[request id]", req_id, method, uri)
+                let id = BASE64_STANDARD_NO_PAD.encode(rand::random::<[u8; 8]>());
+                tracing::info_span!("[rqst]", id, mth, uri)
             })
             .on_failure(())
-            .on_request(DefaultOnRequest::new().level(tracing::Level::INFO))
-            .on_response(DefaultOnResponse::new().level(tracing::Level::INFO));
+            .on_request(DefaultOnRequest::new().level(tracing::Level::DEBUG))
+            .on_response(DefaultOnResponse::new().level(tracing::Level::DEBUG));
 
         let timeout_layer = TimeoutLayer::with_status_code(StatusCode::REQUEST_TIMEOUT, Duration::from_secs(120));
 
@@ -128,12 +129,17 @@ pub async fn start(cli: &Cli) {
 
         let path_normalize_layer = NormalizePathLayer::trim_trailing_slash();
 
-        http::build_router(ServerState { config, database, redis, s3_client })
-            .layer(timeout_layer)
-            .layer(body_limit_layer)
-            .layer(tracing_layer)
-            .layer(cors_layer)
-            .layer(path_normalize_layer)
+        http::build_router(ServerState {
+            config,
+            database,
+            redis,
+            s3_client,
+        })
+        .layer(timeout_layer)
+        .layer(body_limit_layer)
+        .layer(tracing_layer)
+        .layer(cors_layer)
+        .layer(path_normalize_layer)
     };
 
     let listener = if ipv6 {

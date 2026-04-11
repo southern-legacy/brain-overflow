@@ -47,6 +47,7 @@ config.workspace = true
 http.workspace = true
 jsonwebtoken.workspace = true
 num_cpus.workspace = true
+rand.workspace = true
 redis.workspace = true
 regex.workspace = true
 rust-argon2.workspace = true

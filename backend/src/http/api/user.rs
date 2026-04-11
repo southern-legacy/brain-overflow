@@ -18,17 +18,15 @@ use http::header;
 use std::sync::LazyLock;
 use uuid::Uuid;
 
-use crate::app_config::util::JwtEncoderConfig;
+use crate::{app_config::util::JwtEncoderConfig, http::middleware::auth::Validator};
 use crate::{entity::user::user_info::UserInfo, http::middleware::auth::AuthLayer, server::ServerState};
 
 static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::default);
 
-pub(super) fn build_router(state: ServerState) -> Router {
-    let router = Router::new();
-    let auth_layer = AuthLayer::new(state.clone(), |_, _, token: Jwt<UserIdent>| {
-        Box::pin(async move { Ok(token.load) })
-    });
-
+pub(super) fn build_router<F>(state: ServerState, auth_layer: AuthLayer<UserIdent, F>) -> Router
+where
+    F: Validator<UserIdent>
+{
     async fn redirect(state: State<ServerState>, ident: Extension<UserIdent>) -> impl IntoResponse {
         (
             StatusCode::TEMPORARY_REDIRECT,
@@ -36,7 +34,7 @@ pub(super) fn build_router(state: ServerState) -> Router {
         )
     }
 
-    router
+    Router::new()
         .route("/user", routing::delete(danger_zone::delete_account))
         .route("/user", routing::put(danger_zone::change_auth_info))
         .route("/user/bio", routing::get(redirect))

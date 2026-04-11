@@ -25,6 +25,8 @@ username = "postgres"
 password = "123456"
 database = "brain-overflow"
 
+[redis]
+url = "redis://redis"
 
 [logger]
 level = "info"
