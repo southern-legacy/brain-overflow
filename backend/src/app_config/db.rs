@@ -8,7 +8,7 @@ use crate::{app_config::ConfigItem, error::fatal::FatalResult};
 pub struct StaticDatabaseConfig {
     pub host: String,
     pub port: u16,
-    pub user: String,
+    pub username: String,
     pub password: String,
     pub database: String,
     pub max_connection: u32,
@@ -30,7 +30,7 @@ impl Default for StaticDatabaseConfig {
         Self {
             host: "localhost".into(),
             port: 5432,
-            user: "postgres".into(),
+            username: "postgres".into(),
             password: "password unknown".into(),
             database: "postgres".into(),
             max_connection: max((num_cpus::get() * 8) as u32, 10),

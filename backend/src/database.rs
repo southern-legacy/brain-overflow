@@ -14,7 +14,7 @@ pub async fn init(database_config: &DatabaseConfig) -> PgPool {
     let opts = PgConnectOptions::new()
         .host(&database_config.host)
         .port(database_config.port)
-        .username(&database_config.user)
+        .username(&database_config.username)
         .password(&database_config.password)
         .database(&database_config.database);
 

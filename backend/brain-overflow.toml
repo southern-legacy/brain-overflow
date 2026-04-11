@@ -21,7 +21,7 @@ audience = [ "brain overflow" ]
 [database]
 host = "postgres"
 port = 5432
-user = "postgres"
+username = "postgres"
 password = "123456"
 database = "brain-overflow"
 
