@@ -8,7 +8,7 @@ use crate::{entity::asset::AssetHandle, error::db::DbResult};
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserProfile {
-    pub user_id: Uuid,
+    pub id: Uuid,
     pub biography: Option<AssetHandle>,
     pub avatar: Option<AssetHandle>,
     pub banner: Option<AssetHandle>,
@@ -29,7 +29,7 @@ impl UserProfile {
         .await?;
 
         Ok(UserProfile {
-            user_id: v.user_id,
+            id: v.user_id,
             biography: v.biography.map(AssetHandle::from),
             avatar: v.avatar.map(AssetHandle::from),
             banner: v.banner.map(AssetHandle::from),
@@ -66,7 +66,7 @@ impl UserProfile {
                 SET "biography" = $2, "avatar" = $3, "banner" = $4, "contact_me" = $5, "updated_at" = $6
                 WHERE "user"."user_profile"."user_id" = $1;
             "#,
-            self.user_id,
+            self.id,
             self.biography.map(|v| v.id),
             self.avatar.map(|v| v.id),
             self.banner.map(|v| v.id),
