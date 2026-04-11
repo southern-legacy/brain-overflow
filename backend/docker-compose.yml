@@ -87,6 +87,19 @@ services:
       echo 'Webhook set to http://brain-overflow:10086/s3/webhook, listening put and delete'"
     restart: "no"
 
+  redis:
+    image: docker.io/library/redis:8.6.2
+    container_name: brain-overflow-redis
+    networks:
+      - brain-overflow-network
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+
   brain-overflow:
     build:
       context: .
