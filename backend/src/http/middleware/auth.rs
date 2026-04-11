@@ -73,14 +73,14 @@ where
 
 // 在 Inner 是一个 Service 的情况下，可以为 Auth<Inner> 实现 Service
 // 这个 Auth 和 Inner 使用同样的请求参数，axum::http::Request<ReqBody>
-impl<Inner, Token, Valid> Service<Request> for Auth<Inner, Token, Valid>
+impl<Inner, T, F> Service<Request> for Auth<Inner, T, F>
 where
     Inner: Service<Request> + Send + Clone + 'static,
     Inner::Error: std::error::Error,
     Inner::Response: IntoResponse,
     Inner::Future: 'static + Send,
-    Valid: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<Token>) -> PinBoxFuture<Result<Token, Response>>,
-    Token: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
+    F: 'static + Clone + Send + Fn(ServerState, &Request, Jwt<T>) -> PinBoxFuture<Result<T, Response>>,
+    T: 'static + Clone + Sync + Send + for<'de> Deserialize<'de>,
 {
     type Response = Response;
     type Error = Infallible;
@@ -97,7 +97,7 @@ where
         let mut inner_service = std::mem::replace(&mut self.inner_service, cloned);
 
         Box::pin(async move {
-            match extract_token::<Token>(req.headers(), &state.config.auth.decoder_config.decoder).await {
+            match extract_token::<T>(req.headers(), &state.config.auth.decoder_config.decoder).await {
                 Ok(token) => match validate_token(state, &req, token).await {
                     Ok(ext) => {
                         req.extensions_mut().insert(ext);
