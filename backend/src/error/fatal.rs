@@ -152,9 +152,15 @@ impl From<AuthError> for FatalError {
             InvalidKeyId => ("no such key id!".into(), None),
             MissingClaim(claim) => (format!("claim `{claim}` is absent"), None),
             TokenRevoked => ("this token is revoked by the server".into(), None),
-            InvalidUtf8(e) => (format!("the token has some invalid utf-8 character, details: {e}"), None),
+            InvalidUtf8(e) => (
+                format!("the token has some invalid utf-8 character, details: {e}"),
+                None,
+            ),
             InvalidJson(e) => (format!("this token cannot be deserialized, details: {e}"), None),
-            InvalidBase64(e) => (format!("this token is not encoded in standard base64, details: {e}"), None),
+            InvalidBase64(e) => (
+                format!("this token is not encoded in standard base64, details: {e}"),
+                None,
+            ),
             InternalError(e) => (format!("something wrong while handling the token, details: {e}"), None),
         };
 
@@ -228,7 +234,11 @@ impl From<sqlx::error::Error> for FatalError {
                 format!("One or more of the arguments to the called sqlx function was invalid, details: {e}"),
                 None,
             ),
-            sqlx::Error::Database(e) => FatalError::new(ErrorKind::Io, format!("Database returned an error message: `{e}`"), None),
+            sqlx::Error::Database(e) => FatalError::new(
+                ErrorKind::Io,
+                format!("Database returned an error message: `{e}`"),
+                None,
+            ),
             sqlx::Error::Io(e) => FatalError::new(
                 ErrorKind::Io,
                 format!("Cannot communicate with the database backend, details: `{e}`"),

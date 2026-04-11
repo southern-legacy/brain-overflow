@@ -1,5 +1,6 @@
 use crate::error::db::DbResult;
-use serde::Serialize;
+use redis::{FromRedisValue, ToRedisArgs, ToSingleRedisArg};
+use serde::{Deserialize, Serialize};
 use sqlx::PgExecutor;
 use uuid::Uuid;
 
@@ -14,11 +15,31 @@ pub struct UserInfo {
     pub password_hash: String,
 }
 
-pub struct InsertParam<'a> {
-    pub name: &'a str,
-    pub email: Option<&'a String>,
-    pub phone: Option<&'a String>,
-    pub password: &'a str,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InsertParam {
+    pub id: Uuid,
+    pub name: String,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub password: String,
+}
+
+impl ToRedisArgs for InsertParam {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + redis::RedisWrite,
+    {
+        out.write_arg(&serde_json::to_vec(self).expect("This can never fail"));
+    }
+}
+
+impl ToSingleRedisArg for InsertParam {}
+
+impl FromRedisValue for InsertParam {
+    fn from_redis_value(v: redis::Value) -> Result<Self, redis::ParsingError> {
+        let json_str = String::from_redis_value(v)?;
+        serde_json::from_str(&json_str).map_err(|e| redis::ParsingError::from(e.to_string()))
+    }
 }
 
 impl UserInfo {
@@ -34,7 +55,11 @@ impl UserInfo {
     where
         E: PgExecutor<'c>,
     {
-        let statement = sqlx::query_as!(Self, r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."email" = $1"#, email);
+        let statement = sqlx::query_as!(
+            Self,
+            r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."email" = $1"#,
+            email
+        );
         Ok(statement.fetch_one(db).await?)
     }
 
@@ -42,7 +67,11 @@ impl UserInfo {
     where
         E: PgExecutor<'c>,
     {
-        let statement = sqlx::query_as!(Self, r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."phone" = $1"#, phone);
+        let statement = sqlx::query_as!(
+            Self,
+            r#"SELECT * FROM "user"."user_info" "U" WHERE "U"."phone" = $1"#,
+            phone
+        );
         Ok(statement.fetch_one(db).await?)
     }
 
@@ -50,11 +79,12 @@ impl UserInfo {
     pub async fn insert_and_return_id<'a, 'c, E>(
         db: E,
         InsertParam {
+            id,
             name,
             email,
             phone,
             password,
-        }: InsertParam<'a>,
+        }: &InsertParam,
     ) -> DbResult<Uuid>
     where
         E: PgExecutor<'c>,
@@ -65,10 +95,10 @@ impl UserInfo {
                 VALUES ($1, $2, $3, $4, $5)
                 RETURNING "id";
             "#,
-            Uuid::now_v7(),
+            id,
             name,
-            email,
-            phone,
+            email.as_ref(),
+            phone.as_ref(),
             password
         )
         .fetch_one(db)

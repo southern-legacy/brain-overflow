@@ -15,15 +15,12 @@ use crate::{
     error::db::DbError,
     http::{
         api::{ApiResult, user::UserIdent},
-        middleware::auth::{AuthLayer, Validator},
+        middleware::auth::{AuthLayer, Judgement},
     },
     server::ServerState,
 };
 
-pub fn build_router<F>(state: ServerState, auth_layer: AuthLayer<UserIdent, F>) -> Router
-where
-    F: Validator<UserIdent>,
-{
+pub fn build_router(state: ServerState, auth_layer: AuthLayer<UserIdent, impl Judgement<UserIdent>>) -> Router {
     Router::new()
         // .route("/asset/{id}", routing::delete(delete))
         .route("/asset/{id}", routing::put(start_upload))
@@ -34,7 +31,12 @@ where
 }
 
 #[debug_handler]
-async fn safe(State(state): State<ServerState>, method: http::Method, Path(id): Path<Uuid>, _user_ident: Option<Extension<UserIdent>>) -> ApiResult {
+async fn safe(
+    State(state): State<ServerState>,
+    method: http::Method,
+    Path(id): Path<Uuid>,
+    _user_ident: Option<Extension<UserIdent>>,
+) -> ApiResult {
     let asset = AssetHandle::from(id)
         .get(&state.database)
         .await?
@@ -75,11 +77,15 @@ async fn safe(State(state): State<ServerState>, method: http::Method, Path(id): 
 }
 
 #[debug_handler]
-async fn start_upload(State(state): State<ServerState>, Path(id): Path<Uuid>, Extension(user_ident): Extension<UserIdent>) -> ApiResult {
+async fn start_upload(
+    State(state): State<ServerState>,
+    Path(id): Path<Uuid>,
+    Extension(user_ident): Extension<UserIdent>,
+) -> ApiResult {
     let (bucket, url_ttl) = (&state.config.s3.bucket, state.config.s3.url_ttl);
 
     let asset = {
-        let mut transaction = state.database.begin().await.map_err(DbError::from)?;
+        let mut transaction = state.begin_transaction().await?;
 
         let mut asset = AssetHandle::from(id)
             .get(transaction.as_mut())
@@ -122,7 +128,11 @@ async fn start_upload(State(state): State<ServerState>, Path(id): Path<Uuid>, Ex
 
 #[debug_handler]
 #[allow(unused)]
-async fn delete(State(state): State<ServerState>, Path(id): Path<Uuid>, Extension(_user_ident): Extension<UserIdent>) -> ApiResult {
+async fn delete(
+    State(state): State<ServerState>,
+    Path(id): Path<Uuid>,
+    Extension(_user_ident): Extension<UserIdent>,
+) -> ApiResult {
     {
         let _owner = AssetHandle::from(id).logically_delete(&state.database).await?;
     }

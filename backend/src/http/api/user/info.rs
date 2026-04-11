@@ -70,7 +70,7 @@ pub(super) async fn put(
     };
 
     {
-        let mut transacton = state.database.begin().await.map_err(DbError::from)?;
+        let mut transacton = state.begin_transaction().await?;
 
         let mut user_profile = UserProfile::fetch_all_fields_by_id(transacton.as_mut(), ident.id).await?;
 
@@ -83,7 +83,7 @@ pub(super) async fn put(
         new_asset.insert(transacton.as_mut()).await?;
 
         if user_profile.write_back(transacton.as_mut()).await?.is_some() {
-            let url = format!("/asset/{}", handle.id);
+            let url = state.prefix_uri(format!("/asset/{}", handle.id));
             transacton.commit().await.map_err(DbError::from)?;
             tracing::info!("insertion suceeded");
             Ok((

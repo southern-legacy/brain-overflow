@@ -21,9 +21,12 @@ impl UserProfile {
     where
         E: PgExecutor<'c>,
     {
-        let v = query!(r#"SELECT * FROM "user"."user_profile" WHERE "user"."user_profile"."user_id" = $1;"#, id)
-            .fetch_one(db)
-            .await?;
+        let v = query!(
+            r#"SELECT * FROM "user"."user_profile" WHERE "user"."user_profile"."user_id" = $1;"#,
+            id
+        )
+        .fetch_one(db)
+        .await?;
 
         Ok(UserProfile {
             user_id: v.user_id,

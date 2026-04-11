@@ -17,6 +17,14 @@ leeway = 60
 reject_tokens_expiring_in_less_than = 0
 audience = [ "brain overflow" ]
 
+[email]
+name = "brain-overflow"
+# 邮箱服务的登录和密码
+email = "example@example.com"
+password = "password"
+################################
+smtp_addr = "smtp.qq.com"
+
 # 数据库配置
 [database]
 host = "postgres"
@@ -24,12 +32,11 @@ port = 5432
 username = "postgres"
 password = "123456"
 database = "brain-overflow"
-
 [redis]
 url = "redis://redis"
 
 [logger]
-level = "info"
+level = "debug"
 with_file = false
 with_target = false
 with_thread = false
@@ -46,3 +53,4 @@ url_ttl = 3600                      # 预签名 url 的过期时间
 [server]
 port = 10086
 ipv6 = false
+location = "http://localhost:10086"

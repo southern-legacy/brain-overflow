@@ -12,7 +12,9 @@ use crate::{
 };
 
 pub fn build_router(state: ServerState) -> Router {
-    Router::new().route("/s3/webhook", routing::post(s3_event_handler)).with_state(state)
+    Router::new()
+        .route("/s3/webhook", routing::post(s3_event_handler))
+        .with_state(state)
 }
 
 #[debug_handler]
@@ -21,7 +23,9 @@ async fn s3_event_handler(State(state): State<ServerState>, Json(event): Json<S3
         if let Some(key) = record.s3.object.key {
             tracing::debug!(key, "handling webhook callback");
             if let Ok(id) = Uuid::from_str(&key)
-                && let Err(e) = AssetHandle::new_with_id(id).set_status(AssetStatus::Available, &state.database).await
+                && let Err(e) = AssetHandle::new_with_id(id)
+                    .set_status(AssetStatus::Available, &state.database)
+                    .await
             {
                 tracing::warn!("error while looking up the asset" = ?e);
             }

@@ -115,7 +115,12 @@ impl JwtDecoder {
     ///
     /// ### 然后可以使用方法 [`decode`](JwtDecoder::decode) 来解码、校验一个 jwt
     ///
-    pub fn new<T: ToString, U: ToString>(mapping: HashMap<(String, String), DecodingKey>, algorithms: &[Algorithm], iss: &[T], aud: &[U]) -> Self {
+    pub fn new<T: ToString, U: ToString>(
+        mapping: HashMap<(String, String), DecodingKey>,
+        algorithms: &[Algorithm],
+        iss: &[T],
+        aud: &[U],
+    ) -> Self {
         let mut validation = Validation::new(
             *algorithms
                 .first()
@@ -250,7 +255,10 @@ impl JwtDecoder {
 
         let body_unchecked: Jwt<P> = serde_json::from_value(Self::decode_unchecked(token)?)?;
 
-        let key = self.decoding_keys.get(&(body_unchecked.iss, kid)).ok_or(AuthError::InvalidIssuer)?;
+        let key = self
+            .decoding_keys
+            .get(&(body_unchecked.iss, kid))
+            .ok_or(AuthError::InvalidIssuer)?;
 
         Ok(jsonwebtoken::decode::<Jwt<P>>(token, key, &self.validation)?.claims)
     }

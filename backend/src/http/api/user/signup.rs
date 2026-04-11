@@ -1,11 +1,14 @@
 use axum::{
     debug_handler,
-    extract::State,
+    extract::{Path, State},
     http::{StatusCode, header},
     response::IntoResponse,
 };
+use lettre::message::{Mailbox, header::ContentType};
+use redis::AsyncCommands;
 use serde::Deserialize;
 use serde_json::json;
+use uuid::Uuid;
 use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::{
@@ -44,38 +47,60 @@ pub struct SignUpParam {
     password: String,
 }
 
+fn get_insert_param_key(id: Uuid) -> String {
+    format!("brain-overflow:signup:{}", id)
+}
+
+fn get_confirm_code_key(id: Uuid) -> String {
+    format!("brain-overflow:signup:{}:code", id)
+}
+
 #[debug_handler]
-#[tracing::instrument(name = "[user/signup]", skip_all, fields(verify = %param.method.get_anyway()))]
-pub(super) async fn signup(State(state): State<ServerState>, ValidJson(param): ValidJson<SignUpParam>) -> ApiResult {
-    let SignUpParam { name, method, password } = param;
+#[tracing::instrument(name = "[user/signup/confirm]", skip(state))]
+pub(super) async fn confirm(State(state): State<ServerState>, Path((id, code)): Path<(Uuid, i32)>) -> ApiResult {
+    // 获取验证码并比对
+    let new_user = {
+        let mut redis = state.redis.clone();
 
-    let (phone, email) = method.get_tup_phone_email();
+        // 有四种情况：获取验证码时出错了、没有这个验证码、验证码和提交的不匹配、验证码和提交的匹配
+        match redis.get::<_, Option<i32>>(get_confirm_code_key(id)).await {
+            Err(e) => {
+                tracing::warn!("error while accessing redis: {e}");
+                return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+            }
+            Ok(None) => return Err(StatusCode::NOT_FOUND.into_response()),
+            Ok(Some(v)) if v != code => return Err(StatusCode::UNAUTHORIZED.into_response()),
+            _ => (),
+        }
 
-    let password_hash = generate_password_hash(&password).await?;
-
-    let new_user = InsertParam {
-        email: email.as_ref(),
-        phone: phone.as_ref(),
-        name: &name,
-        password: &password_hash,
+        match redis.get(get_insert_param_key(id)).await {
+            Err(e) => {
+                tracing::warn!("error while accessing redis: {e}");
+                return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+            }
+            Ok(None) => return Err(StatusCode::NOT_FOUND.into_response()),
+            Ok(Some(v)) => v,
+        }
     };
 
-    let id = {
+    {
         // 往数据库中添加 user_info 记录和 user_profile 记录
-        let mut transacton = state.database.begin().await.map_err(DbError::from)?;
-        let id = UserInfo::insert_and_return_id(transacton.as_mut(), new_user).await?;
+        let mut transacton = state.begin_transaction().await?;
+        let id = UserInfo::insert_and_return_id(transacton.as_mut(), &new_user).await?;
         UserProfile::insert(id, transacton.as_mut()).await?;
         transacton.commit().await.map_err(DbError::from)?;
-        id
+    }
+
+    let user_ident = UserIdent {
+        id,
+        name: new_user.name,
+        email: new_user.email,
+        phone: new_user.phone,
     };
-
-    tracing::info!("Successfully inserted a user into database.");
-
-    let user_ident = UserIdent { id, name, email, phone };
 
     Ok((
         StatusCode::CREATED,
-        [(header::LOCATION, format!("{}/user/{}", &state.config.server.location, id))],
+        [(header::LOCATION, state.prefix_uri(format!("/user/{}", id)))],
         json!({
             "id": user_ident.id,
             "name": user_ident.name,
@@ -86,6 +111,53 @@ pub(super) async fn signup(State(state): State<ServerState>, ValidJson(param): V
         .to_string(),
     )
         .into_response())
+}
+
+#[debug_handler]
+#[tracing::instrument(name = "[user/signup/gen]", skip_all, fields(verify = %method.get_anyway()))]
+pub(super) async fn signup(
+    State(state): State<ServerState>,
+    ValidJson(SignUpParam { name, method, password }): ValidJson<SignUpParam>,
+) -> ApiResult {
+    let (phone, email) = method.get_tup_phone_email();
+    let password_hash = generate_password_hash(&password).await?;
+    let new_user = InsertParam {
+        id: Uuid::now_v7(),
+        email,
+        phone,
+        name,
+        password: password_hash,
+    };
+
+    // 生成六位验证码并将其写入 redis
+    let confirm_code = format!("{:6}", rand::random_range(0..1_000_000));
+    let (mut redis1, mut redis2) = (state.redis.clone(), state.redis.clone());
+
+    match tokio::join!(
+        redis1.set_ex::<_, _, ()>(get_insert_param_key(new_user.id), &new_user, 300), // 生成的新用户信息,
+        redis2.set_ex::<_, _, ()>(get_confirm_code_key(new_user.id), &confirm_code, 300)  // 验证码
+    ) {
+        (Ok(_), Err(e)) | (Err(e), Ok(_)) => {
+            tracing::warn!("error while accessing redis: {e}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+        }
+        (Err(e1), Err(e2)) => {
+            tracing::warn!("error while accessing redis: {e1} {e2}");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+        }
+        _ => {
+            if let Some(email) = new_user.email {
+                state.email_to(move |mail| {
+                    mail.to(Mailbox::new(Some(new_user.name), email.parse().unwrap()))
+                        .header(ContentType::TEXT_PLAIN)
+                        .subject("Brain Overflow")
+                        .body(format!("You are trying to sign up, your confirm code: {confirm_code}"))
+                        .unwrap()
+                });
+            }
+            Ok((StatusCode::OK, axum::Json(serde_json::json!({"id": new_user.id}))).into_response())
+        }
+    }
 }
 
 impl SignUpMethod {

@@ -41,7 +41,7 @@ pub(super) async fn login(State(state): State<ServerState>, Json(param): Json<Lo
 
     let res = {
         // 我们先查找数据库中的记录
-        let mut transacton = state.database.begin().await.map_err(DbError::from)?;
+        let mut transacton = state.begin_transaction().await?;
         let res = match method {
             LoginMethod::Phone(num) => UserInfo::fetch_all_fields_by_phone(transacton.as_mut(), num).await,
             LoginMethod::Email(add) => UserInfo::fetch_all_fields_by_email(transacton.as_mut(), add).await,

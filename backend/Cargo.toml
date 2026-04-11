@@ -3,7 +3,6 @@ name = "brain-overflow"
 version = "0.1.0"
 edition = "2024"
 description = "The server of project Brain Overflow"
-authors = ["Sylvan Lyon <sylvanlyon@gamil.com>"]
 
 [workspace]
 members = [ "crates/auth" ]
@@ -36,6 +35,7 @@ uuid = { version = "1.17", features = ["v4", "v7", "serde"] }
 validator = { version = "0.20", features = ["derive"] }
 
 [dependencies]
+auth = { path = "crates/auth" }
 aws-config.workspace = true
 aws-sdk-s3.workspace = true
 aws_lambda_events = "1.1.2"
@@ -61,4 +61,4 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 uuid = { workspace = true }
 validator.workspace = true
-auth = { path = "crates/auth" }
+lettre = { version = "0.11.21", features = ["serde", "tokio1", "tokio1-native-tls"] }

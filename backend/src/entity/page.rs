@@ -12,7 +12,10 @@ pub struct PageOption {
 
 impl Default for PageOption {
     fn default() -> Self {
-        Self { index: 0, page_size: 20 }
+        Self {
+            index: 0,
+            page_size: 20,
+        }
     }
 }
 

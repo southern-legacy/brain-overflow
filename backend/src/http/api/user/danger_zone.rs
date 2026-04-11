@@ -25,7 +25,11 @@ use crate::{
 
 #[debug_handler]
 #[tracing::instrument(name = "[user/delete_account]", skip_all, fields(user_id = %ident.id))]
-pub(super) async fn delete_account(state: State<ServerState>, ident: Extension<UserIdent>, password: String) -> ApiResult {
+pub(super) async fn delete_account(
+    state: State<ServerState>,
+    ident: Extension<UserIdent>,
+    password: String,
+) -> ApiResult {
     let user_info = ident.retrieve_self_from_db(&state.database).await?;
     check_password(&user_info, &password).await?;
     try_delete_account(&state.database, ident.id).await
@@ -107,7 +111,14 @@ pub(super) async fn change_auth_info(
         None => None,
     };
 
-    try_change_auth_info(&state, ident.id, new_email.as_ref(), new_phone.as_ref(), new_password_hash.as_ref()).await
+    try_change_auth_info(
+        &state,
+        ident.id,
+        new_email.as_ref(),
+        new_phone.as_ref(),
+        new_password_hash.as_ref(),
+    )
+    .await
 }
 
 async fn try_change_auth_info(
@@ -118,7 +129,7 @@ async fn try_change_auth_info(
     new_password_hash: Option<&String>,
 ) -> ApiResult {
     let res = {
-        let mut transacton = state.database.begin().await.map_err(DbError::from)?;
+        let mut transacton = state.begin_transaction().await?;
 
         let res = if let Some(new_email) = new_email {
             UserInfo::update_email(transacton.as_mut(), id, new_email).await

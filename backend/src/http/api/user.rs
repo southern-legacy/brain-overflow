@@ -12,25 +12,22 @@ use axum::{
     routing,
 };
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
+use http::header;
 use serde::{Deserialize, Serialize};
 use sqlx::PgExecutor;
-use http::header;
 use std::sync::LazyLock;
 use uuid::Uuid;
 
-use crate::{app_config::util::JwtEncoderConfig, http::middleware::auth::Validator};
+use crate::{app_config::util::JwtEncoderConfig, http::middleware::auth::Judgement};
 use crate::{entity::user::user_info::UserInfo, http::middleware::auth::AuthLayer, server::ServerState};
 
 static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::default);
 
-pub(super) fn build_router<F>(state: ServerState, auth_layer: AuthLayer<UserIdent, F>) -> Router
-where
-    F: Validator<UserIdent>
-{
+pub(super) fn build_router(state: ServerState, auth_layer: AuthLayer<UserIdent, impl Judgement<UserIdent>>) -> Router {
     async fn redirect(state: State<ServerState>, ident: Extension<UserIdent>) -> impl IntoResponse {
         (
             StatusCode::TEMPORARY_REDIRECT,
-            [(header::LOCATION, format!("{}/user/{}", state.config.server.location, ident.id))],
+            [(header::LOCATION, state.prefix_uri(format!("/user/{}", ident.id)))],
         )
     }
 
@@ -40,9 +37,10 @@ where
         .route("/user/bio", routing::get(redirect))
         .route("/user/bio/{which}", routing::put(info::put))
         .layer(auth_layer)
-        .route("/user/{id}", routing::get(info::get))
-        .route("/user", routing::post(signup::signup))
         .route("/user/login", routing::post(login::login))
+        .route("/user/{id}/{code}", routing::get(signup::confirm))
+        .route("/user", routing::post(signup::signup))
+        .route("/user/{id}", routing::get(info::get))
         .with_state(state)
 }
 

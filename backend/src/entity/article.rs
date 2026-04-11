@@ -18,15 +18,25 @@ pub struct Article {
 
 impl Article {
     /// 插入一篇文章数据，注意此函数不会自动提交事务
-    pub async fn insert<'c>(tx: &mut Transaction<'c, Postgres>, title: String, author: Uuid, tags: &[String]) -> DbResult<AssetHandle> {
+    pub async fn insert<'c>(
+        tx: &mut Transaction<'c, Postgres>,
+        title: String,
+        author: Uuid,
+        tags: &[String],
+    ) -> DbResult<AssetHandle> {
         let asset_id = query!("INSERT INTO asset(owner) VALUES ($1) RETURNING id", author)
             .fetch_one(tx.as_mut())
             .await
             .map(|v| v.id)?;
 
-        query!("INSERT INTO article(id, title, tags) VALUES ($1, $2, $3) RETURNING id", asset_id, title, tags)
-            .fetch_one(tx.as_mut())
-            .await?;
+        query!(
+            "INSERT INTO article(id, title, tags) VALUES ($1, $2, $3) RETURNING id",
+            asset_id,
+            title,
+            tags
+        )
+        .fetch_one(tx.as_mut())
+        .await?;
 
         Ok(asset_id.into())
     }

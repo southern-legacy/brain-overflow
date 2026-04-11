@@ -61,7 +61,11 @@ impl ConfigItem for StaticS3Config {
     fn into_runtime(self) -> FatalResult<Self::RuntimeConfig> {
         if self.bucket.is_empty() {
             let mut errors = MultiFatalError::new();
-            errors.push(FatalError::new(ErrorKind::Io, "S3 bucket must be configured".to_string(), None));
+            errors.push(FatalError::new(
+                ErrorKind::Io,
+                "S3 bucket must be configured".to_string(),
+                None,
+            ));
             return Err(errors);
         }
 

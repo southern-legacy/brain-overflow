@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod db;
+pub mod email;
 pub mod logger;
 pub mod redis;
 pub mod s3;
@@ -8,7 +9,13 @@ pub mod util;
 
 use crate::{
     app_config::{
-        auth::{AuthConfig, StaticAuthConfig}, db::DatabaseConfig, logger::{LoggerConfig, StaticLoggerConfig}, redis::RedisConfig, s3::{S3Config, StaticS3Config}, server::{ServerConfig, StaticServerConfig}
+        auth::{AuthConfig, StaticAuthConfig},
+        db::DatabaseConfig,
+        email::EmailConfig,
+        logger::{LoggerConfig, StaticLoggerConfig},
+        redis::RedisConfig,
+        s3::{S3Config, StaticS3Config},
+        server::{ServerConfig, StaticServerConfig},
     },
     cli::Cli,
     error::fatal::{FatalError, FatalResult, MultiFatalError},
@@ -18,7 +25,7 @@ use self::db::StaticDatabaseConfig;
 use config::Config;
 use serde::Deserialize;
 
-#[derive(Deserialize, Clone, Default)]
+#[derive(Deserialize, Clone)]
 struct StaticAppConfig {
     #[serde(default)]
     server: StaticServerConfig, // server 配置字段
@@ -30,6 +37,7 @@ struct StaticAppConfig {
 
     auth: StaticAuthConfig,
     redis: RedisConfig,
+    email: EmailConfig,
 
     #[serde(default)]
     s3: StaticS3Config,
@@ -40,6 +48,7 @@ pub struct AppConfig {
     pub logger: LoggerConfig,
     pub database: DatabaseConfig,
     pub auth: AuthConfig,
+    pub email: EmailConfig,
     pub redis: RedisConfig,
     pub s3: S3Config,
 }
@@ -53,7 +62,7 @@ pub struct AppConfig {
 /// 在这个转换过程中，可能会出现不同的、大量的错误，我们使用 [`MultiFatalError`](crate::error::fatal::MultiFatalError) 表示
 pub trait ConfigItem
 where
-    Self: for<'de> Deserialize<'de> + Clone + Sized + Default,
+    Self: for<'de> Deserialize<'de> + Sized,
 {
     type RuntimeConfig;
     fn into_runtime(self) -> FatalResult<Self::RuntimeConfig>;
@@ -67,6 +76,7 @@ impl ConfigItem for StaticAppConfig {
             server,
             logger,
             database,
+            email,
             redis,
             auth,
             s3,
@@ -83,6 +93,7 @@ impl ConfigItem for StaticAppConfig {
             Ok(AppConfig {
                 server,
                 logger,
+                email,
                 redis,
                 database: database_res.unwrap(),
                 auth: auth_res.unwrap(),
@@ -101,11 +112,23 @@ impl ConfigItem for StaticAppConfig {
 impl AppConfig {
     pub fn load(path: &str) -> Self {
         let static_config: StaticAppConfig = Config::builder()
-            .add_source(config::File::with_name(path).required(true).format(config::FileFormat::Toml))
+            .add_source(
+                config::File::with_name(path)
+                    .required(true)
+                    .format(config::FileFormat::Toml),
+            )
             .build()
-            .unwrap_or_else(|e| FatalError::from(e).when("while reading the configuration file".into()).exit_now())
+            .unwrap_or_else(|e| {
+                FatalError::from(e)
+                    .when("while reading the configuration file".into())
+                    .exit_now()
+            })
             .try_deserialize()
-            .unwrap_or_else(|e| FatalError::from(e).when("while deserializing the configuration file".into()).exit_now());
+            .unwrap_or_else(|e| {
+                FatalError::from(e)
+                    .when("while deserializing the configuration file".into())
+                    .exit_now()
+            });
 
         static_config.into_runtime().map_err(|e| e.exit_now()).unwrap()
     }

@@ -5,6 +5,7 @@ use aws_config::BehaviorVersion;
 use aws_sdk_s3::{Client as S3Client, config::Credentials};
 use axum::extract::{DefaultBodyLimit, Request};
 use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
+use lettre::{Message, SmtpTransport, Transport, message::MessageBuilder};
 use sqlx::PgPool;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
@@ -24,6 +25,7 @@ use tracing::info;
 #[derive(Clone)]
 pub struct ServerState {
     pub config: Arc<AppConfig>,
+    pub smtp_transport: SmtpTransport,
     pub database: PgPool,
     pub redis: MultiplexedConnection,
     pub s3_client: S3Client,
@@ -69,10 +71,20 @@ pub async fn start(cli: &Cli) {
     let mut redis = redis::init(&config).await;
     let _: Result<(), _> = redis.set("brain-overflow-running", true).await;
 
+    // smtp 邮箱连接
+    let smtp_transport = SmtpTransport::relay(&config.email.smtp_addr)
+        .unwrap()
+        .credentials(lettre::transport::smtp::authentication::Credentials::new(
+            config.email.from.email.to_string(),
+            config.email.password.clone(),
+        ))
+        .build();
+
     // S3 客户端
     let s3_client = S3Client::from_conf({
         let s3_config = &config.s3;
-        let mut config_loader = aws_config::defaults(BehaviorVersion::latest()).region(aws_sdk_s3::config::Region::new(s3_config.region.clone()));
+        let mut config_loader = aws_config::defaults(BehaviorVersion::latest())
+            .region(aws_sdk_s3::config::Region::new(s3_config.region.clone()));
 
         // 设置 credential
         if let Some(access_key_id) = &s3_config.access_key_id
@@ -132,6 +144,7 @@ pub async fn start(cli: &Cli) {
         http::build_router(ServerState {
             config,
             database,
+            smtp_transport,
             redis,
             s3_client,
         })
@@ -150,4 +163,25 @@ pub async fn start(cli: &Cli) {
 
     info!("Listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, router).await.unwrap()
+}
+
+impl ServerState {
+    /// uri 应该以 `/` 开头
+    #[inline]
+    pub fn prefix_uri(&self, uri: impl std::fmt::Display) -> String {
+        format!("{}{}", self.config.server.location, uri)
+    }
+
+    #[inline]
+    pub async fn begin_transaction(&self) -> crate::error::db::DbResult<sqlx::PgTransaction<'static>> {
+        use crate::error::db::DbError;
+        self.database.begin().await.map_err(DbError::from)
+    }
+
+    /// fill 在调用时会被填入一个 `from` 被填好的 [`MessageBuilder`]
+    pub fn email_to(&self, fill: impl FnOnce(MessageBuilder) -> Message + Send + 'static) {
+        let mailer = self.smtp_transport.clone();
+        let from = self.config.email.from.clone();
+        tokio::spawn(async move { mailer.send(&fill(Message::builder().from(from))) });
+    }
 }

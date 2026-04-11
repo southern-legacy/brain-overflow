@@ -160,26 +160,28 @@ impl ConfigItem for StaticJwtDecoderConfig {
 
 impl Key {
     fn get_key(&self) -> Result<Vec<u8>, FatalError> {
-        let res = match self.form {
-            KeyForm::DerInline => BASE64_STANDARD.decode(self.key.clone()).map_err(|e| {
-                FatalError::from(e).when(format!(
+        let res =
+            match self.form {
+                KeyForm::DerInline => BASE64_STANDARD.decode(self.key.clone()).map_err(|e| {
+                    FatalError::from(e).when(format!(
                     "while decoding the secrete key `{}` into binary, note this should be encoded in standard base64",
                     self.key.get(0..4).map(|val| format!("{val}...")).unwrap_or(self.key.clone())
                 ))
-            })?,
-            KeyForm::DerFile => {
-                std::fs::read(&self.key).map_err(|e| FatalError::from(e).when(format!("while reading the der key from {}", self.key)))?
-            }
-            KeyForm::PemInline => self.key.clone().into_bytes(),
-            KeyForm::PemFile => {
-                std::fs::read(&self.key).map_err(|e| FatalError::from(e).when(format!("while reading the pem key from {}", self.key)))?
-            }
-        };
+                })?,
+                KeyForm::DerFile => std::fs::read(&self.key)
+                    .map_err(|e| FatalError::from(e).when(format!("while reading the der key from {}", self.key)))?,
+                KeyForm::PemInline => self.key.clone().into_bytes(),
+                KeyForm::PemFile => std::fs::read(&self.key)
+                    .map_err(|e| FatalError::from(e).when(format!("while reading the pem key from {}", self.key)))?,
+            };
 
         if res.len() < 32 {
             tracing::warn!(
                 "the secret key `{}` is too short to prevent brute cracking",
-                self.key.get(0..4).map(|val| format!("{val}...")).unwrap_or(self.key.clone())
+                self.key
+                    .get(0..4)
+                    .map(|val| format!("{val}..."))
+                    .unwrap_or(self.key.clone())
             )
         }
 
@@ -240,7 +242,9 @@ impl Key {
                 })?,
             ))
         } else {
-            unreachable!("Sylvan, 你加了新的变体但是没有添加相应的条件判断，去检查你的 is_der 和 is_pem 方法是否包含了所有的情况")
+            unreachable!(
+                "Sylvan, 你加了新的变体但是没有添加相应的条件判断，去检查你的 is_der 和 is_pem 方法是否包含了所有的情况"
+            )
         }
     }
 
@@ -293,7 +297,9 @@ impl Key {
                 })?,
             ))
         } else {
-            unreachable!("Sylvan, 你加了新的变体但是没有添加相应的条件判断，去检查你的 is_der 和 is_pem 方法是否包含了所有的情况")
+            unreachable!(
+                "Sylvan, 你加了新的变体但是没有添加相应的条件判断，去检查你的 is_der 和 is_pem 方法是否包含了所有的情况"
+            )
         }
     }
 }

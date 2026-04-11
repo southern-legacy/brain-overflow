@@ -110,7 +110,11 @@ fn test_expiration_error() {
     let token = encoder.encode(&claims, &kid).unwrap();
     let result = decoder.decode::<UserPayload>(&token);
 
-    assert!(result.is_err(), "Should have returned TokenExpired error, got {:?}", result)
+    assert!(
+        result.is_err(),
+        "Should have returned TokenExpired error, got {:?}",
+        result
+    )
 }
 
 #[test]
