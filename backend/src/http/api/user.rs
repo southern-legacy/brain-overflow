@@ -33,7 +33,6 @@ pub struct RefreshToken {
 }
 
 #[derive(Deserialize, Serialize, Clone, Copy, Debug)]
-#[serde(transparent)]
 pub struct AccessToken {
     pub id: Uuid,
 }
