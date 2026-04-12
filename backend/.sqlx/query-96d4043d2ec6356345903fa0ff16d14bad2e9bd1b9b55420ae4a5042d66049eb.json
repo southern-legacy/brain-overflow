@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT x.id, x.title, x.likes, x.views, x.tags\n            FROM article AS x\n                JOIN asset ON asset.id = x.id AND asset.status = 'available' AND asset.deleted_at IS NULL\n            WHERE x.title = $1\n            ORDER BY asset.created_at DESC\n            LIMIT $2 OFFSET $3",
+  "query": "SELECT x.id, x.title, x.likes, x.views, x.tags, a.owner as author, a.created_at\n            FROM article AS x JOIN asset AS a \n            ON a.owner = $1 AND a.status = 'available' AND a.id = x.id AND a.deleted_at IS NULL\n            ORDER BY a.created_at DESC\n            LIMIT $2 OFFSET $3;",
   "describe": {
     "columns": [
       {
@@ -27,11 +27,21 @@
         "ordinal": 4,
         "name": "tags",
         "type_info": "TextArray"
+      },
+      {
+        "ordinal": 5,
+        "name": "author",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
+        "Uuid",
         "Int8",
         "Int8"
       ]
@@ -41,8 +51,10 @@
       false,
       false,
       false,
+      false,
+      false,
       false
     ]
   },
-  "hash": "b8fa2e93783ccc53a6a7bd5b1c1df81360bf177c478b9335b3b9acd1a5014b4a"
+  "hash": "96d4043d2ec6356345903fa0ff16d14bad2e9bd1b9b55420ae4a5042d66049eb"
 }

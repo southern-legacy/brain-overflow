@@ -51,13 +51,9 @@ impl ApiErrorKind {
             | ApiErrorKind::ValueParsingError => StatusCode::UNPROCESSABLE_ENTITY,
 
             ApiErrorKind::MethodNotAllowed => StatusCode::METHOD_NOT_ALLOWED,
-
             ApiErrorKind::BadRequest => StatusCode::BAD_REQUEST,
-
             ApiErrorKind::Unauthorized => StatusCode::UNAUTHORIZED,
-
             ApiErrorKind::UriInvalid => StatusCode::NOT_FOUND,
-
             ApiErrorKind::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

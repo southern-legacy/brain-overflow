@@ -27,9 +27,8 @@ CREATE TABLE "asset"(
     "updated_at"    TIMESTAMPTZ     NOT NULL        DEFAULT now(),
     "deleted_at"    TIMESTAMPTZ                     DEFAULT NULL
 );
--- 用于加速查询 "谁有哪些未删除的 asset"
-CREATE INDEX "idx_asset_owner" ON "asset"("owner") WHERE "deleted_at" IS NOT NULL;
-CREATE INDEX "idx_asset_status" ON "asset"("status");
+-- 重大优化索引，加速查询某某人的文章、评论等；条件索引，避免索引文件过大
+CREATE index "idx_asset_alive" ON "asset"("owner", "status") where "deleted_at" IS NULL;
 
 -- 用户
 CREATE SCHEMA "user" AUTHORIZATION postgres;

@@ -67,9 +67,9 @@ services:
       - brain-overflow-network
     entrypoint: >
       /bin/sh -c "
-      until mc alias set brain-overflow http://minio:9000 minioadmin minioadmin 2>/dev/null; do
+      until mc alias set brain-overflow http://minio:9000 minioadmin minioadmin; do
           echo 'Waiting for MinIO to be ready...';
-          sleep 2;
+          sleep 1;
       done &&
       echo 'Creating bucket brain-overflow if not exists...' &&
           mc mb brain-overflow/brain-overflow --ignore-existing &&

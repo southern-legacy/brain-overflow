@@ -42,5 +42,10 @@ pub fn build_router(state: ServerState) -> Router {
         .merge(asset::build_router(state.clone(), auth_layer))
         .merge(webhook::build_router(state))
         .method_not_allowed_fallback(|| async { StatusCode::METHOD_NOT_ALLOWED })
-        .fallback(|| async { StatusCode::NOT_FOUND })
+        .fallback(|| async {
+            (
+                StatusCode::NOT_FOUND,
+                axum::Json(serde_json::json!({"code": "noSuchApi"})),
+            )
+        })
 }

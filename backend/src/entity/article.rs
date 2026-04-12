@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgExecutor, Postgres, Transaction, query, query_as};
 use uuid::Uuid;
@@ -14,6 +15,8 @@ pub struct Article {
     pub likes: i64,
     pub views: i64,
     pub tags: Vec<String>,
+    pub author: Uuid,
+    pub created_at: DateTime<Utc>,
 }
 
 impl Article {
@@ -48,17 +51,31 @@ impl Article {
     {
         Ok(query_as!(
             Article,
-            r#"SELECT x.id, x.title, x.likes, x.views, x.tags
-            FROM article AS x
-                JOIN asset ON asset.id = x.id AND asset.status = 'available' AND asset.deleted_at IS NULL
+            r#"SELECT x.id, x.title, x.likes, x.views, x.tags, a.owner as author, a.created_at
+            FROM article AS x JOIN asset AS a
+            ON a.id = x.id AND a.status = 'available' AND a.deleted_at IS NULL
             WHERE x.title = $1
-            ORDER BY asset.created_at DESC
+            ORDER BY a.created_at DESC
             LIMIT $2 OFFSET $3"#,
             title,
             opt.limit(),
             opt.offset()
         )
         .fetch_all(db)
+        .await?)
+    }
+
+    /// 按照 id 获取文章，信息
+    pub async fn by_id<'c>(db: impl PgExecutor<'c>, id: Uuid) -> DbResult<Option<Article>> {
+        Ok(query_as!(
+            Article,
+            r#"SELECT x.id, x.title, x.likes, x.views, x.tags, a.owner as author, a.created_at
+            FROM article AS x JOIN asset AS a
+            ON a.id = x.id AND a.status = 'available' AND a.deleted_at IS NULL
+            WHERE x.id = $1"#,
+            id,
+        )
+        .fetch_optional(db)
         .await?)
     }
 
@@ -69,10 +86,10 @@ impl Article {
     {
         Ok(query_as!(
             Article,
-            r#"SELECT x.id, x.title, x.likes, x.views, x.tags
-            FROM article AS x
-                JOIN asset ON asset.owner = $1 AND asset.status = 'available' AND asset.id = x.id AND asset.deleted_at IS NULL
-            ORDER BY asset.created_at DESC
+            r#"SELECT x.id, x.title, x.likes, x.views, x.tags, a.owner as author, a.created_at
+            FROM article AS x JOIN asset AS a 
+            ON a.owner = $1 AND a.status = 'available' AND a.id = x.id AND a.deleted_at IS NULL
+            ORDER BY a.created_at DESC
             LIMIT $2 OFFSET $3;"#,
             id,
             opt.limit(),

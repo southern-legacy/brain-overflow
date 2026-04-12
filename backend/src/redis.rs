@@ -11,3 +11,5 @@ pub async fn init(config: &AppConfig) -> MultiplexedConnection {
         .await
         .unwrap()
 }
+
+pub const ARTICLE_CACHE_TTL: u64 = 30 * 60;

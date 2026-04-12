@@ -62,7 +62,7 @@ pub struct AppConfig {
 /// 在这个转换过程中，可能会出现不同的、大量的错误，我们使用 [`MultiFatalError`](crate::error::fatal::MultiFatalError) 表示
 pub trait ConfigItem
 where
-    Self: for<'de> Deserialize<'de> + Sized,
+    Self: for<'de> Deserialize<'de>,
 {
     type RuntimeConfig;
     fn into_runtime(self) -> FatalResult<Self::RuntimeConfig>;

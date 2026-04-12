@@ -21,12 +21,18 @@ impl Default for PageOption {
 
 impl PageOption {
     #[inline]
-    pub fn limit(self) -> i64 {
+    pub const fn limit(self) -> i64 {
         self.page_size as i64
     }
 
     #[inline]
-    pub fn offset(self) -> i64 {
+    pub const fn offset(self) -> i64 {
         (self.index * self.page_size) as i64
+    }
+
+    #[inline]
+    #[allow(unused)]
+    pub const fn end(self) -> i64 {
+        self.offset() + self.page_size as i64
     }
 }
