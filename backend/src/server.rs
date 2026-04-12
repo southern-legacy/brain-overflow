@@ -21,6 +21,7 @@ use tower_http::{
 };
 use tracing::info;
 
+/// 相当便宜的克隆，懒加载获取里面的字段
 #[derive(Clone)]
 pub struct ServerState(Arc<ServerStateImpl>);
 

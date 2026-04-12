@@ -116,7 +116,7 @@ where
         let mut inner_service = std::mem::replace(&mut self.inner_service, cloned);
 
         Box::pin(async move {
-            match extract_token::<T>(req.headers(), &state.config().auth.decoder_config.decoder).await {
+            match extract_token::<T>(req.headers(), &state.config().auth.decoder).await {
                 Ok(token) => match validate_token(state, &req, token).await {
                     Ok(ext) => {
                         req.extensions_mut().insert(ext);

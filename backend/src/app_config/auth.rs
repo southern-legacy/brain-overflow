@@ -1,45 +1,53 @@
+use auth::JwtDecoder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     app_config::{
         ConfigItem,
-        util::{JwtDecoderConfig, JwtEncoderConfig, StaticJwtDecoderConfig, StaticJwtEncoderConfig},
+        util::{JwtEncoderConfig, StaticJwtDecoderConfig, StaticJwtEncoderConfig},
     },
     error::fatal::{FatalResult, MultiFatalError},
 };
 
-#[derive(Serialize, Deserialize, Default, Clone)]
-#[serde(deny_unknown_fields, default)]
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub(super) struct StaticAuthConfig {
-    #[serde(default)]
-    encoder: StaticJwtEncoderConfig,
+    access: StaticJwtEncoderConfig,
+    refresh: StaticJwtEncoderConfig,
 
     /// jwt 鉴权相关设置
-    #[serde(default)]
     decoder: StaticJwtDecoderConfig,
 }
 
 pub struct AuthConfig {
-    pub encoder_config: JwtEncoderConfig,
-    pub decoder_config: JwtDecoderConfig,
+    pub access: JwtEncoderConfig,
+    pub refresh: JwtEncoderConfig,
+    pub decoder: JwtDecoder,
 }
 
 impl ConfigItem for StaticAuthConfig {
     type RuntimeConfig = AuthConfig;
 
     fn into_runtime(self) -> FatalResult<AuthConfig> {
-        let StaticAuthConfig { encoder, decoder } = self;
+        let StaticAuthConfig {
+            access,
+            refresh,
+            decoder,
+        } = self;
         let mut errors = MultiFatalError::new();
 
-        let encoder = encoder.into_runtime().map_err(|mut e| errors.append(&mut e));
+        let access = access.into_runtime().map_err(|mut e| errors.append(&mut e));
+        let refresh = refresh.into_runtime().map_err(|mut e| errors.append(&mut e));
         let decoder = decoder.into_runtime().map_err(|mut e| errors.append(&mut e));
 
-        if let Ok(encoder) = encoder
+        if let Ok(access) = access
+            && let Ok(refresh) = refresh
             && let Ok(decoder) = decoder
         {
             Ok(AuthConfig {
-                encoder_config: encoder,
-                decoder_config: decoder,
+                access,
+                refresh,
+                decoder,
             })
         } else {
             Err(errors)

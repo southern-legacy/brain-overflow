@@ -1,6 +1,7 @@
 mod danger_zone;
 mod info;
 mod login;
+mod refresh;
 mod signup;
 
 use ::auth::{Jwt, error::AuthError};
@@ -23,70 +24,50 @@ use crate::{entity::user::user_info::UserInfo, http::middleware::auth::AuthLayer
 
 static ARGON2_CONFIG: LazyLock<argon2::Config> = LazyLock::new(argon2::Config::default);
 
-pub(super) fn build_router(state: ServerState, auth_layer: AuthLayer<UserIdent, impl Judgement<UserIdent>>) -> Router {
-    async fn redirect(state: State<ServerState>, ident: Extension<UserIdent>) -> impl IntoResponse {
-        (
-            StatusCode::TEMPORARY_REDIRECT,
-            [(header::LOCATION, state.prefix_uri(format!("/user/{}", ident.id)))],
-        )
-    }
-
-    Router::new()
-        .route("/user", routing::delete(danger_zone::delete_account))
-        .route("/user", routing::put(danger_zone::change_auth_info))
-        .route("/user/bio", routing::get(redirect))
-        .route("/user/bio/{which}", routing::put(info::put))
-        .layer(auth_layer)
-        .route("/user/login", routing::post(login::login))
-        .route("/user/{id}/{code}", routing::get(signup::confirm))
-        .route("/user", routing::post(signup::signup))
-        .route("/user/{id}", routing::get(info::get))
-        .with_state(state)
-}
-
 #[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct UserIdent {
+pub struct RefreshToken {
     pub id: Uuid,
     pub name: String,
     pub email: Option<String>,
     pub phone: Option<String>,
 }
 
-impl UserIdent {
-    pub async fn retrieve_self_from_db<'c, E>(&self, db: E) -> Result<UserInfo, Response>
-    where
-        E: PgExecutor<'c>,
-    {
-        match UserInfo::fetch_all_fields_by_id(db, self.id).await {
-            Ok(user_info) => Ok(user_info),
-            Err(e) => {
-                if e.is_not_found() {
-                    Err(StatusCode::UNAUTHORIZED.into_response())
-                } else {
-                    Err(Response::from(e))
-                }
-            }
-        }
-    }
-
-    pub fn into_jwt(self, config: &JwtEncoderConfig) -> Result<String, AuthError> {
-        config.encoder.encode_randomly(
-            &Jwt::new(&config.issue_as, &config.audience, self)
-                .expires_in(config.expires_in)
-                .not_valid_in(config.not_valid_in),
-        )
-    }
+#[derive(Deserialize, Serialize, Clone, Copy, Debug)]
+#[serde(transparent)]
+pub struct AccessToken {
+    pub id: Uuid,
 }
 
-impl From<UserInfo> for UserIdent {
-    fn from(user: UserInfo) -> Self {
-        Self {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-        }
+pub(super) fn build_router(
+    state: ServerState,
+    auth_layer: AuthLayer<AccessToken, impl Judgement<AccessToken>>,
+    strict_layer: AuthLayer<RefreshToken, impl Judgement<RefreshToken>>,
+) -> Router {
+    async fn redirect(state: State<ServerState>, ident: Extension<AccessToken>) -> impl IntoResponse {
+        (
+            StatusCode::TEMPORARY_REDIRECT,
+            [(header::LOCATION, state.prefix_uri(format!("/user/{}", ident.id)))],
+        )
     }
+
+    let danger = Router::new()
+        .route("/user", routing::delete(danger_zone::delete_account))
+        .route("/user", routing::put(danger_zone::change_auth_info))
+        .route("/user/refresh", routing::any(refresh::refresh))
+        .layer(strict_layer)
+        .with_state(state.clone());
+
+    danger.merge(
+        Router::new()
+            .route("/user/bio", routing::get(redirect))
+            .route("/user/bio/{which}", routing::put(info::put))
+            .layer(auth_layer)
+            .route("/user/login", routing::post(login::login))
+            .route("/user/{id}/{code}", routing::get(signup::confirm))
+            .route("/user", routing::post(signup::signup))
+            .route("/user/{id}", routing::get(info::get))
+            .with_state(state),
+    )
 }
 
 /// 检查密码是否正确
@@ -119,5 +100,95 @@ async fn generate_password_hash(password: &str) -> Result<String, Response> {
             tracing::error!("Error occurred while hashing the password! Details: {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
         }
+    }
+}
+
+impl RefreshToken {
+    pub async fn retrieve_self_from<'c, E>(&self, db: E) -> Result<UserInfo, Response>
+    where
+        E: PgExecutor<'c>,
+    {
+        match UserInfo::fetch_all_fields_by_id(db, self.id).await {
+            Ok(user_info) => Ok(user_info),
+            Err(e) => {
+                if e.is_not_found() {
+                    Err(StatusCode::UNAUTHORIZED.into_response())
+                } else {
+                    Err(Response::from(e))
+                }
+            }
+        }
+    }
+
+    pub fn into_jwt(self, config: &JwtEncoderConfig) -> Result<String, AuthError> {
+        let mut jwt = Jwt::new(&config.issue_as, &config.audience, self).not_valid_in(config.not_valid_in);
+
+        if config.never_expires {
+            jwt = jwt.never_expires();
+        } else {
+            jwt = jwt.expires_in(config.expires_in);
+        }
+
+        config.encoder.encode_randomly(&jwt)
+    }
+}
+
+impl From<UserInfo> for RefreshToken {
+    fn from(user: UserInfo) -> Self {
+        Self {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+        }
+    }
+}
+
+impl AccessToken {
+    #[allow(dead_code)]
+    pub async fn retrieve_self_from<'c, E>(&self, db: E) -> Result<UserInfo, Response>
+    where
+        E: PgExecutor<'c>,
+    {
+        match UserInfo::fetch_all_fields_by_id(db, self.id).await {
+            Ok(user_info) => Ok(user_info),
+            Err(e) => {
+                if e.is_not_found() {
+                    Err(StatusCode::UNAUTHORIZED.into_response())
+                } else {
+                    Err(Response::from(e))
+                }
+            }
+        }
+    }
+
+    pub fn into_jwt(self, config: &JwtEncoderConfig) -> Result<String, AuthError> {
+        let mut jwt = Jwt::new(&config.issue_as, &config.audience, self).not_valid_in(config.not_valid_in);
+
+        if config.never_expires {
+            jwt = jwt.never_expires();
+        } else {
+            jwt = jwt.expires_in(config.expires_in);
+        }
+
+        config.encoder.encode_randomly(&jwt)
+    }
+}
+
+impl From<Uuid> for AccessToken {
+    fn from(id: Uuid) -> Self {
+        Self { id }
+    }
+}
+
+impl From<AccessToken> for Uuid {
+    fn from(AccessToken { id }: AccessToken) -> Self {
+        id
+    }
+}
+
+impl AsRef<Uuid> for AccessToken {
+    fn as_ref(&self) -> &Uuid {
+        &self.id
     }
 }

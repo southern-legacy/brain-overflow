@@ -6,7 +6,7 @@ use crate::{
     http::{
         api::{
             ApiResult,
-            user::{UserIdent, check_password},
+            user::{RefreshToken, check_password},
         },
         extractor::Json,
     },
@@ -64,7 +64,7 @@ pub(super) async fn login(State(state): State<ServerState>, Json(param): Json<Lo
 
     check_password(&res, &param.password).await?;
 
-    let user = UserIdent::from(res);
+    let user = RefreshToken::from(res);
 
     Ok((
         StatusCode::OK,
@@ -73,7 +73,7 @@ pub(super) async fn login(State(state): State<ServerState>, Json(param): Json<Lo
             "name": user.name,
             "email": user.email,
             "phone": user.phone,
-            "token": user.into_jwt(&state.config().auth.encoder_config)?
+            "token": user.into_jwt(&state.config().auth.refresh)?
         })
         .to_string(),
     )

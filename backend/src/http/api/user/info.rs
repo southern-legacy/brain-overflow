@@ -16,7 +16,7 @@ use crate::{
         db::DbError,
     },
     http::{
-        api::{ApiResult, user::UserIdent},
+        api::{ApiResult, user::AccessToken},
         extractor::{Json, Path},
     },
     server::ServerState,
@@ -51,7 +51,7 @@ pub(super) struct JsonBody {
 pub(super) async fn put(
     State(state): State<ServerState>,
     Path(part): Path<PathParam>,
-    Extension(ident): Extension<UserIdent>,
+    Extension(ident): Extension<AccessToken>,
     info: Option<Json<JsonBody>>,
 ) -> ApiResult {
     if let PathParam::Other = part {
@@ -103,16 +103,16 @@ pub(super) async fn put(
 }
 
 async fn update_name_or_contact_method(state: ServerState, id: Uuid, info: Option<Json<JsonBody>>) -> ApiResult {
-    let database = state.database();
     if let Some(Json(info)) = info {
         if let Some(name) = info.name {
-            UserInfo::update_name(&database, id, &name).await?;
+            UserInfo::update_name(&state.database(), id, &name).await?;
         }
         if let Some(contact_me) = info.contact_me {
-            let mut transaction = database.begin().await.map_err(DbError::from)?;
+            let mut transaction = state.begin_transaction().await?;
             let mut user_profile = UserProfile::fetch_all_fields_by_id(transaction.as_mut(), id).await?;
             user_profile.contact_me = contact_me;
             user_profile.write_back(transaction.as_mut()).await?;
+            transaction.commit().await.map_err(DbError::from)?;
         }
 
         Ok(StatusCode::NO_CONTENT.into_response())

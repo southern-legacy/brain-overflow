@@ -12,13 +12,20 @@ use crate::{
     error::fatal::{FatalError, FatalResult, MultiFatalError},
 };
 
-#[derive(Serialize, Deserialize, Default, Clone)]
-#[serde(deny_unknown_fields, default)]
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct StaticJwtEncoderConfig {
     encoding_keys: Vec<Key>,
     issue_as: String,
     audience: Vec<String>,
+
+    #[serde(default = "StaticJwtEncoderConfig::never_expires")]
+    never_expires: bool,
+
+    #[serde(default = "StaticJwtEncoderConfig::expires_in")]
     expires_in: i64,
+
+    #[serde(default)]
     not_valid_in: i64,
 }
 
@@ -26,12 +33,13 @@ pub struct JwtEncoderConfig {
     pub encoder: JwtEncoder,
     pub issue_as: String,
     pub audience: Vec<String>,
+    pub never_expires: bool,
     pub expires_in: TimeDelta,
     pub not_valid_in: TimeDelta,
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
-#[serde(deny_unknown_fields, default)]
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct StaticJwtDecoderConfig {
     /// 主键是 issuer，对应的值是 [`KeyInfo`]
     decoding_keys: Vec<(String, Key)>,
@@ -40,14 +48,13 @@ pub struct StaticJwtDecoderConfig {
     audience: Vec<String>,
 }
 
-pub struct JwtDecoderConfig {
-    pub decoder: JwtDecoder,
-}
-
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Key {
+    #[serde(default)]
     pub algorithm: Algorithm,
+    #[serde(default)]
     pub form: KeyForm,
+    #[serde(default)]
     pub kid: String,
 
     #[serde(alias = "path")]
@@ -64,6 +71,16 @@ pub enum KeyForm {
     PemFile,
 }
 
+impl StaticJwtEncoderConfig {
+    const fn expires_in() -> i64 {
+        24 * 60 * 60
+    }
+
+    const fn never_expires() -> bool {
+        false
+    }
+}
+
 impl ConfigItem for StaticJwtEncoderConfig {
     type RuntimeConfig = JwtEncoderConfig;
 
@@ -72,6 +89,7 @@ impl ConfigItem for StaticJwtEncoderConfig {
             encoding_keys,
             issue_as,
             audience,
+            never_expires,
             expires_in,
             not_valid_in,
         } = self;
@@ -104,6 +122,7 @@ impl ConfigItem for StaticJwtEncoderConfig {
                 encoder: JwtEncoder::new(keys),
                 issue_as,
                 audience,
+                never_expires,
                 expires_in: TimeDelta::new(expires_in, 0).unwrap(),
                 not_valid_in: TimeDelta::new(not_valid_in, 0).unwrap(),
             })
@@ -114,9 +133,9 @@ impl ConfigItem for StaticJwtEncoderConfig {
 }
 
 impl ConfigItem for StaticJwtDecoderConfig {
-    type RuntimeConfig = JwtDecoderConfig;
+    type RuntimeConfig = JwtDecoder;
 
-    fn into_runtime(self) -> FatalResult<JwtDecoderConfig> {
+    fn into_runtime(self) -> FatalResult<JwtDecoder> {
         let StaticJwtDecoderConfig {
             decoding_keys,
             leeway,
@@ -147,11 +166,9 @@ impl ConfigItem for StaticJwtDecoderConfig {
         }
 
         if errors.is_empty() {
-            Ok(JwtDecoderConfig {
-                decoder: JwtDecoder::new(keys, &algs, &issuers, &aud)
-                    .reject_tokens_expiring_in_less_than(reject_tokens_expiring_in_less_than)
-                    .leeway(leeway),
-            })
+            Ok(JwtDecoder::new(keys, &algs, &issuers, &aud)
+                .reject_tokens_expiring_in_less_than(reject_tokens_expiring_in_less_than)
+                .leeway(leeway))
         } else {
             Err(errors)
         }

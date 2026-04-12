@@ -14,13 +14,16 @@ use crate::{
     entity::asset::{AssetHandle, AssetStatus},
     error::db::DbError,
     http::{
-        api::{ApiResult, user::UserIdent},
+        api::{
+            ApiResult,
+            user::AccessToken,
+        },
         middleware::auth::{AuthLayer, Judgement},
     },
     server::ServerState,
 };
 
-pub fn build_router(state: ServerState, auth_layer: AuthLayer<UserIdent, impl Judgement<UserIdent>>) -> Router {
+pub fn build_router(state: ServerState, auth_layer: AuthLayer<AccessToken, impl Judgement<AccessToken>>) -> Router {
     Router::new()
         // .route("/asset/{id}", routing::delete(delete))
         .route("/asset/{id}", routing::put(start_upload))
@@ -35,7 +38,7 @@ async fn safe(
     State(state): State<ServerState>,
     method: http::Method,
     Path(id): Path<Uuid>,
-    _user_ident: Option<Extension<UserIdent>>,
+    _user_ident: Option<Extension<AccessToken>>,
 ) -> ApiResult {
     let database = state.database();
 
@@ -83,7 +86,7 @@ async fn safe(
 async fn start_upload(
     State(state): State<ServerState>,
     Path(id): Path<Uuid>,
-    Extension(user_ident): Extension<UserIdent>,
+    Extension(user_ident): Extension<AccessToken>,
 ) -> ApiResult {
     let config = state.config();
     let (bucket, url_ttl) = (&config.s3.bucket, config.s3.url_ttl);
@@ -135,7 +138,7 @@ async fn start_upload(
 async fn delete(
     State(state): State<ServerState>,
     Path(id): Path<Uuid>,
-    Extension(_user_ident): Extension<UserIdent>,
+    Extension(_user_ident): Extension<AccessToken>,
 ) -> ApiResult {
     {
         let _owner = AssetHandle::from(id).logically_delete(&state.database()).await?;

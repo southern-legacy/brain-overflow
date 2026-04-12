@@ -17,7 +17,7 @@ use validator::{Validate, ValidationError};
 use crate::{
     entity::user::user_info::UserInfo,
     http::{
-        api::user::{UserIdent, check_password},
+        api::user::{RefreshToken, check_password},
         extractor::ValidJson,
     },
     server::ServerState,
@@ -27,11 +27,11 @@ use crate::{
 #[tracing::instrument(name = "[user/delete_account]", skip_all, fields(user_id = %ident.id))]
 pub(super) async fn delete_account(
     state: State<ServerState>,
-    ident: Extension<UserIdent>,
+    ident: Extension<RefreshToken>,
     password: String,
 ) -> ApiResult {
     let database = state.database();
-    let user_info = ident.retrieve_self_from_db(&database).await?;
+    let user_info = ident.retrieve_self_from(&database).await?;
     check_password(&user_info, &password).await?;
     try_delete_account(&database, ident.id).await
 }
@@ -95,7 +95,7 @@ impl ChangeAuthParam {
 #[tracing::instrument(name = "[user/change auth info]", skip_all, fields(user_id = %ident.id))]
 pub(super) async fn change_auth_info(
     state: State<ServerState>,
-    ident: Extension<UserIdent>,
+    ident: Extension<RefreshToken>,
     ValidJson(ChangeAuthParam {
         new_email,
         new_phone,
@@ -103,7 +103,7 @@ pub(super) async fn change_auth_info(
         password,
     }): ValidJson<ChangeAuthParam>,
 ) -> ApiResult {
-    let user_info = ident.retrieve_self_from_db(&state.database()).await?;
+    let user_info = ident.retrieve_self_from(&state.database()).await?;
 
     check_password(&user_info, &password).await?;
 
@@ -151,7 +151,7 @@ async fn try_change_auth_info(
 
     match res {
         Ok(res) => {
-            let ident = UserIdent::from(res);
+            let ident = RefreshToken::from(res);
             Ok((
                 StatusCode::OK,
                 json!({
@@ -159,7 +159,7 @@ async fn try_change_auth_info(
                     "name": ident.name,
                     "phone": ident.phone,
                     "email": ident.email,
-                    "token": ident.into_jwt(&state.config().auth.encoder_config)?
+                    "token": ident.into_jwt(&state.config().auth.access)?
                 })
                 .to_string(),
             )

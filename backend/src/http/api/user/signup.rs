@@ -20,7 +20,7 @@ use crate::{
     http::{
         api::{
             ApiResult,
-            user::{UserIdent, generate_password_hash},
+            user::{RefreshToken, generate_password_hash},
         },
         extractor::ValidJson,
         utils::{validate_email, validate_password_complexity, validate_password_length, validate_phone},
@@ -91,7 +91,7 @@ pub(super) async fn confirm(State(state): State<ServerState>, Path((id, code)): 
         transacton.commit().await.map_err(DbError::from)?;
     }
 
-    let user_ident = UserIdent {
+    let user_ident = RefreshToken {
         id,
         name: new_user.name,
         email: new_user.email,
@@ -106,7 +106,7 @@ pub(super) async fn confirm(State(state): State<ServerState>, Path((id, code)): 
             "name": user_ident.name,
             "email": user_ident.email,
             "phone": user_ident.phone,
-            "token": user_ident.into_jwt(&state.config().auth.encoder_config)?
+            "token": user_ident.into_jwt(&state.config().auth.refresh)?
         })
         .to_string(),
     )

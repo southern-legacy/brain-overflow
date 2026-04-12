@@ -13,13 +13,13 @@ use crate::{
     entity::{article::Article, page::PageOption},
     error::db::DbError,
     http::{
-        api::{ApiResult, user::UserIdent},
+        api::{ApiResult, user::AccessToken},
         middleware::auth::{AuthLayer, Judgement},
     },
     server::ServerState,
 };
 
-pub(super) fn build_router(state: ServerState, auth_layer: AuthLayer<UserIdent, impl Judgement<UserIdent>>) -> Router {
+pub(super) fn build_router(state: ServerState, auth_layer: AuthLayer<AccessToken, impl Judgement<AccessToken>>) -> Router {
     Router::new()
         .route("/article", routing::post(post_article))
         .layer(auth_layer)
@@ -37,12 +37,12 @@ struct PostArticle {
 #[debug_handler]
 async fn post_article(
     State(state): State<ServerState>,
-    Extension(ident): Extension<UserIdent>,
+    Extension(id): Extension<AccessToken>,
     Json(PostArticle { title, tags }): Json<PostArticle>,
 ) -> ApiResult {
     let new_article = {
         let mut transaction = state.begin_transaction().await?;
-        let res = Article::insert(&mut transaction, title, ident.id, &tags).await?;
+        let res = Article::insert(&mut transaction, title, id.into(), &tags).await?;
         transaction.commit().await.map_err(DbError::from)?;
         res.id
     };
