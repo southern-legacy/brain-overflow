@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use crate::{app_config::AppConfig, cli::Cli, database, http, logger, redis};
 use ::http::StatusCode;
 use ::redis::{AsyncCommands, aio::MultiplexedConnection};
