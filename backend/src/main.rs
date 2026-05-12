@@ -1,8 +1,8 @@
 use clap::Parser;
-use tokio::{
-    select,
-    signal::{self, unix::SignalKind},
-};
+use tokio::{select, signal};
+
+#[cfg(unix)]
+use tokio::signal::unix::SignalKind;
 
 use crate::cli::Cli;
 
@@ -29,7 +29,8 @@ async fn main() {
             }
         });
 
-        if !cfg!(windows) {
+        #[cfg(unix)]
+        {
             let sigterm = match signal::unix::signal(SignalKind::terminate()) {
                 Ok(mut sig) => tokio::spawn(async move {
                     sig.recv().await;
@@ -43,9 +44,9 @@ async fn main() {
                 _ = ctrl_c => {},
                 _ = sigterm => {},
             };
-        } else {
-            ctrl_c.await.unwrap()
         }
+
+        ctrl_c.await.unwrap()
     });
 
     select! {
