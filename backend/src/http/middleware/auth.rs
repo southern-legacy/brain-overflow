@@ -45,9 +45,9 @@ where
     F: Judgement<T>,
     T: TokenContent,
 {
-    inner_service: Inner,
+    inner: Inner,
     state: ServerState,
-    validator: F,
+    judge: F,
     _p: PhantomData<T>,
 }
 
@@ -57,7 +57,7 @@ where
     F: Judgement<T>,
     T: TokenContent,
 {
-    validator: F,
+    judge: F,
     state: ServerState,
     _p: PhantomData<T>,
 }
@@ -81,10 +81,10 @@ where
     ///
     /// - `Ok(_)` 时，表示里面的 token 合法，现在将这个校验后的 `T` 给到 `Inner` 服务
     /// - `Err(response)` 时，表示 token 不合法，直接给客户端返回相应的错误
-    pub fn new(state: ServerState, validator: F) -> Self {
+    pub fn new(state: ServerState, judge: F) -> Self {
         Self {
             state,
-            validator,
+            judge,
             _p: PhantomData,
         }
     }
@@ -106,18 +106,18 @@ where
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner_service.poll_ready(cx).map_err(|_| unreachable!())
+        self.inner.poll_ready(cx).map_err(|_| unreachable!())
     }
 
     fn call(&mut self, mut req: Request) -> Self::Future {
-        let cloned = self.inner_service.clone();
-        let validate_token = self.validator.clone();
+        let cloned = self.inner.clone();
+        let judge = self.judge.clone();
         let state = self.state.clone();
-        let mut inner_service = std::mem::replace(&mut self.inner_service, cloned);
+        let mut inner_service = std::mem::replace(&mut self.inner, cloned);
 
         Box::pin(async move {
             match extract_token::<T>(req.headers(), &state.config().auth.decoder).await {
-                Ok(token) => match validate_token(state, &req, token).await {
+                Ok(token) => match judge(state, &req, token).await {
                     Ok(ext) => {
                         req.extensions_mut().insert(ext);
                         match inner_service.call(req).await {
@@ -150,12 +150,12 @@ where
     type Service = Auth<Inner, T, F>;
 
     fn layer(&self, inner: Inner) -> Self::Service {
-        let Self { state, validator, _p } = self.clone();
+        let Self { state, judge, _p } = self.clone();
 
         Auth {
-            inner_service: inner,
+            inner,
             state,
-            validator,
+            judge,
             _p: PhantomData,
         }
     }
